@@ -72,12 +72,6 @@ export default function HomePage() {
     if (search.trim()) window.location.href = `/faqs?q=${encodeURIComponent(search.trim())}`;
   };
 
-  const searchResults = useMemo(() => {
-    if (!search.trim() || search.trim().length < 2) return [];
-    const q = search.toLowerCase();
-    return faqs.filter((f) => f.question?.toLowerCase().includes(q)).slice(0, 6);
-  }, [search, faqs]);
-
   // 1. Verified FAQs (Official Knowledge)
   const { data: faqs = [], isLoading: loadingFaqs } = useQuery({
     queryKey: ["faqs"],
@@ -88,6 +82,12 @@ export default function HomePage() {
   const topFaqs = useMemo(() =>
     [...faqs].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
   [faqs]);
+
+  const searchResults = useMemo(() => {
+    if (!search.trim() || search.trim().length < 2) return [];
+    const q = search.toLowerCase();
+    return faqs.filter((f) => f.question?.toLowerCase().includes(q)).slice(0, 6);
+  }, [search, faqs]);
 
   // 2. Categories
   const { data: categories = [], isLoading: loadingCats } = useQuery({
