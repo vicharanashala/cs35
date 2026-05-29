@@ -172,8 +172,8 @@ export default function QueuePage() {
         </div>
 
         <div className="space-y-4">
-          <div className="card p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center relative" onClick={() => filterOpen && setFilterOpen(false)}>
-            <div className="search-wrap flex-1">
+          <div className="card p-4 flex flex-col sm:flex-row gap-3 items-center relative" onClick={() => setFilterOpen(false)}>
+            <div className="search-wrap flex-1 w-full" onClick={(e) => e.stopPropagation()}>
               <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -202,7 +202,7 @@ export default function QueuePage() {
               </button>
 
               {filterOpen && (
-                <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl border shadow-xl z-50 p-4 animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 bg-white rounded-xl border shadow-xl z-50 p-4 animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold" style={{ color: "#1F2937" }}>Filters</h3>
                     {activeFilterCount > 0 && (
@@ -273,7 +273,7 @@ export default function QueuePage() {
               )}
             </div>
 
-            <select className="input w-auto text-sm py-2 cursor-pointer"
+            <select className="input w-auto text-sm py-2 cursor-pointer shrink-0"
               value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
