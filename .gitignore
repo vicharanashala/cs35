@@ -1,6 +1,15 @@
 node_modules
 dist
-.env
 .vscode
 coverage
 .DS_Store
+
+# Environment files — NEVER commit real credentials
+*.env
+backend.env
+
+# Debug/test scripts
+backend/scripts/
+
+# Planning docs (keep locally)
+prompts.md
