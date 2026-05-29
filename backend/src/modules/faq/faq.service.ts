@@ -1,4 +1,4 @@
-import { Injectable, Inject, Optional, OnModuleInit } from '@nestjs/common';
+import { Injectable, Optional, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { readFileSync } from 'fs';

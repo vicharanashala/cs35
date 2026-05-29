@@ -286,7 +286,9 @@ export class AuthService {
     name?: string;
   }> {
     if (!this.hasMongoDB) {
-      if (email === 'admin@asksam.com' && password === 'admin123') {
+      const demoEmail = process.env.DEMO_ADMIN_EMAIL || 'admin@asksam.com';
+      const demoPass  = process.env.DEMO_ADMIN_PASSWORD || 'admin123';
+      if (email === demoEmail && password === demoPass) {
         return {
           success: true,
           message: 'Login successful',

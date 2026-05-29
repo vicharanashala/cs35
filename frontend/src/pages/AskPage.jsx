@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi, faqApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
@@ -44,6 +44,7 @@ function SuccessModal({ show, question, onClose }) {
 export default function AskPage() {
   const navigate      = useNavigate();
   const textareaRef   = useRef(null);
+  const queryClient  = useQueryClient();
   const { user } = useAuth();
 
   const [title, setTitle]               = useState("");
@@ -106,9 +107,11 @@ export default function AskPage() {
     setIsSubmitting(true);
     try {
       const contributorName = user?.name || "Student";
-      await questionApi.create({ question: title.trim(), category, details: details.trim(), tags, contributor: contributorName });
+      await questionApi.create({ question: title.trim(), category, details: details.trim(), tags, contributorName });
       setSubmitted(title);
       setShowSuccess(true);
+      queryClient.invalidateQueries({ queryKey: ["questions-open"] });
+      queryClient.invalidateQueries({ queryKey: ["my-questions"] });
     } catch (err) {
       console.error("Failed to submit question:", err);
       setError("Failed to submit question. Please try again.");

@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "../hooks/useAuth";
 
 const NAV_LINKS = [
   { to: "/",           label: "Home" },
@@ -14,9 +15,10 @@ export default function MainLayout({ children }) {
   const [search, setSearch]     = useState("");
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout, isAuthenticated } = useAuth();
 
-  const userName = localStorage.getItem("userName") || "Student";
-  const userRole = localStorage.getItem("userRole") || "student";
+  const userName = user?.name || "Student";
+  const userRole = user?.role || "student";
 
   const isActive = (p) => (p === "/" ? location.pathname === "/" : location.pathname.startsWith(p));
 
@@ -26,9 +28,10 @@ export default function MainLayout({ children }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    navigate("/login");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("authUser");
+    logout();
+    window.location.href = "/login";
   };
 
   return (
@@ -87,30 +90,36 @@ export default function MainLayout({ children }) {
 
           {/* Avatar & Dropdown */}
           <div className="relative">
-            <button 
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 transition-transform hover:scale-105"
-              style={{ background: "#5E7A5A" }}
-            >
-              {userName.charAt(0).toUpperCase()}
-            </button>
-            
-            {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border py-1 z-50 animate-fade-in" style={{ borderColor: "#E2E8DE" }}>
-                <div className="px-4 py-2 border-b mb-1" style={{ borderColor: "#F5F7F2" }}>
-                  <p className="text-sm font-semibold truncate" style={{ color: "#1F2937" }}>{userName}</p>
-                  <p className="text-xs" style={{ color: "#9CA3AF" }}>{userRole === "admin" ? "Admin" : "Student"}</p>
-                </div>
-                <button 
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+            {isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 transition-transform hover:scale-105"
+                  style={{ background: "#5E7A5A" }}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  Sign Out
+                  {userName.charAt(0).toUpperCase()}
                 </button>
-              </div>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border py-1 z-50 animate-fade-in" style={{ borderColor: "#E2E8DE" }}>
+                    <div className="px-4 py-2 border-b mb-1" style={{ borderColor: "#F5F7F2" }}>
+                      <p className="text-sm font-semibold truncate" style={{ color: "#1F2937" }}>{userName}</p>
+                      <p className="text-xs" style={{ color: "#9CA3AF" }}>{userRole === "admin" ? "Admin" : "Student"}</p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Link to="/login" className="btn-secondary text-sm">Sign In</Link>
             )}
           </div>
 

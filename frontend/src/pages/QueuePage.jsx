@@ -128,6 +128,7 @@ export default function QueuePage() {
     queryKey: ["questions-open"],
     queryFn: () => questionApi.listOpen(),
     staleTime: 1000 * 30,
+    refetchInterval: 30000,
   });
 
   const filtered = useMemo(() => {

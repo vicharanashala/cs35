@@ -1,7 +1,18 @@
 import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi } from "../services/api";
+import { useAuth } from "../hooks/useAuth";
+
+function getContributorId() {
+  try {
+    const token = localStorage.getItem("authToken") || "";
+    const decoded = atob(token);
+    return decoded.split(":")[0] || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -96,19 +107,23 @@ function AnswerCard({ answer, onVote, userVotes }) {
 
 export default function QuestionPage() {
   const { id } = useParams();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [localAnswers, setLocalAnswers] = useState([]);
   const [userVotes, setUserVotes]       = useState({});
   const [sortBy, setSortBy]             = useState("verified");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [answerContent, setAnswerContent] = useState("");
-  const [answerName, setAnswerName] = useState("");
+  const [answerName, setAnswerName] = useState(user?.name || "");
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [voteError, setVoteError] = useState("");
 
   const { data: question, isLoading, isError } = useQuery({
     queryKey: ["question", id],
     queryFn: () => questionApi.getById(id),
     enabled: !!id,
+    refetchInterval: 15000,
   });
 
   const sorted = useMemo(() => {
@@ -136,8 +151,11 @@ export default function QuestionPage() {
     });
     try {
       await questionApi.vote(id, answerId, newDir);
+      setVoteError("");
     } catch (err) {
       console.error("Failed to vote:", err);
+      setVoteError("Vote could not be recorded — backend unavailable.");
+      setTimeout(() => setVoteError(""), 4000);
     }
   };
 
@@ -157,11 +175,13 @@ export default function QuestionPage() {
     };
 
     try {
-      await questionApi.addAnswer(id, { contributorName: answerName, content: answerContent });
+      await questionApi.addAnswer(id, { contributorName: answerName, content: answerContent, contributorId: getContributorId() });
       setLocalAnswers((prev) => [newAnswer, ...prev]);
       setAnswerContent("");
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 3000);
+      queryClient.invalidateQueries({ queryKey: ["question", id] });
+      queryClient.invalidateQueries({ queryKey: ["questions-open"] });
     } catch (err) {
       console.error("Failed to post answer:", err);
       setSubmitError("Failed to post answer. Please try again.");
@@ -247,6 +267,12 @@ export default function QuestionPage() {
                     </select>
                   )}
                 </div>
+
+                {voteError && (
+                  <div className="mb-3 p-2 rounded-md text-xs animate-fade-in" style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}>
+                    {voteError}
+                  </div>
+                )}
 
                 <div className="space-y-4 mb-10">
                   {sorted.map((a) => <AnswerCard key={a._id} answer={a} onVote={handleVote} userVotes={userVotes} />)}

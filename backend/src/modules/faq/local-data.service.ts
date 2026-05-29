@@ -2,6 +2,8 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Question } from '../../schemas/question.schema';
+import { Answer } from '../../schemas/answer.schema';
 
 interface FaqEntry {
   category: string;
@@ -67,26 +69,26 @@ export class LocalDataService {
     };
   }
 
-  getOpenQuestions() {
+  getOpenQuestions(): Question[] {
     return [];
   }
 
-  getQuestionById(_id: string) {
+  getQuestionById(_id: string): (Question & { answers: Answer[] }) | null {
     return null;
   }
 
-  createQuestion(_data: unknown) {
+  createQuestion(_data: Partial<Question>): Question | null {
     return null;
   }
 
   addAnswer(
     _questionId: string,
     _data: { content: string; contributorName: string },
-  ) {
+  ): Answer | null {
     return null;
   }
 
-  reopenQuestion(_id: string) {
+  reopenQuestion(_id: string): Question | null {
     return null;
   }
 }
