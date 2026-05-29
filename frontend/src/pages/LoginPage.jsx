@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { authApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
@@ -8,93 +8,98 @@ export default function LoginPage() {
   const { login } = useAuth();
 
   const [activeTab, setActiveTab] = useState("student");
-  const [step, setStep] = useState("form");
+  const [isRegister, setIsRegister] = useState(true);
 
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [otp, setOtp] = useState("");
+  const [form, setForm] = useState({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
+  const [forgotForm, setForgotForm] = useState({ username: "", newPassword: "", confirmNewPassword: "" });
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [emailForOtp, setEmailForOtp] = useState("");
-
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
 
   const setField = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
+  const setForgotField = (k) => (e) => setForgotForm((p) => ({ ...p, [k]: e.target.value }));
 
-  const handleSendOtp = async (e) => {
+  const handleStudentSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!emailRegex.test(form.email)) {
-      setError("Please enter a valid @gmail.com address");
-      return;
-    }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await authApi.sendOtp(form.email);
-      if (!res.success) {
-        setError(res.message);
-        setIsLoading(false);
+    if (isRegister) {
+      if (!form.fullName.trim()) {
+        setError("Please enter your full name");
         return;
       }
-      setEmailForOtp(form.email);
-      setOtpSent(true);
-      setStep("otp");
-      setError("");
-    } catch (_) {
-      setError("Failed to send OTP. Is the backend running?");
-    }
-    setIsLoading(false);
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setError("");
-
-    if (otp.trim().length !== 6) {
-      setError("Please enter the 6-digit code");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await authApi.verifyOtp(emailForOtp, otp.trim());
-      if (!res.success) {
-        setError(res.message);
-        setIsLoading(false);
+      if (!form.username.trim() || form.username.trim().length < 3) {
+        setError("Username must be at least 3 characters");
+        return;
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(form.username)) {
+        setError("Username can only contain letters, numbers, and underscores");
+        return;
+      }
+      if (form.password.length < 6) {
+        setError("Password must be at least 6 characters");
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError("Passwords do not match");
         return;
       }
 
-      const signupRes = await authApi.signup({
-        email: form.email,
-        password: form.password,
-        name: form.name,
-      });
-
-      if (!signupRes.success) {
-        setError(signupRes.message);
-        setIsLoading(false);
+      setIsLoading(true);
+      try {
+        const res = await authApi.signup({
+          fullName: form.fullName,
+          username: form.username,
+          password: form.password,
+        });
+        if (!res.success) {
+          setError(res.message);
+          setIsLoading(false);
+          return;
+        }
+        login({ username: form.username, name: form.fullName, role: "student", token: res.token });
+        navigate("/");
+      } catch (_) {
+        setError("Signup failed. Please try again.");
+      }
+      setIsLoading(false);
+    } else {
+      if (!form.username.trim()) {
+        setError("Please enter your username");
+        return;
+      }
+      if (!form.password) {
+        setError("Please enter your password");
         return;
       }
 
-      login({ email: form.email, name: form.name, role: "student", token: signupRes.token });
-      navigate("/");
-    } catch (_) {
-      setError("Verification failed. Please try again.");
+      setIsLoading(true);
+      try {
+        const res = await authApi.login({ username: form.username, password: form.password, role: "student" });
+        if (!res.success) {
+          setError(res.message);
+          setIsLoading(false);
+          return;
+        }
+        login({ username: form.username, name: res.name || "Student", role: "student", token: res.token });
+        navigate("/");
+      } catch (_) {
+        setError("Login failed. Please check your connection.");
+      }
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleAdminLogin = async (e) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
+    if (!form.email || !form.password) {
+      setError("Please enter email and password");
+      return;
+    }
 
+    setIsLoading(true);
     try {
       const res = await authApi.login({ email: form.email, password: form.password, role: "admin" });
       if (!res.success) {
@@ -110,16 +115,52 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
-  const handleResendOtp = async () => {
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
     setError("");
+
+    if (!forgotForm.username.trim()) {
+      setError("Please enter your username");
+      return;
+    }
+    if (!forgotForm.newPassword || forgotForm.newPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    if (forgotForm.newPassword !== forgotForm.confirmNewPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const res = await authApi.sendOtp(form.email);
-      if (!res.success) { setError(res.message); setIsLoading(false); return; }
-      setOtpSent(true);
-      setOtp("");
-    } catch (_) { setError("Failed to resend OTP."); }
+      const res = await authApi.forgotPassword({
+        username: forgotForm.username,
+        newPassword: forgotForm.newPassword,
+        confirmNewPassword: forgotForm.confirmNewPassword,
+      });
+      if (!res.success) {
+        setError(res.message);
+        setIsLoading(false);
+        return;
+      }
+      setForgotSuccess(true);
+      setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" });
+      setIsLoading(false);
+    } catch (_) {
+      setError("Password reset failed. Please try again.");
+    }
     setIsLoading(false);
+  };
+
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
+    setError("");
+    setForm({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
+    setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" });
+    setShowForgotPassword(false);
+    setForgotSuccess(false);
+    setIsRegister(true);
   };
 
   return (
@@ -139,7 +180,7 @@ export default function LoginPage() {
         <div className="flex p-1 mb-8 rounded-lg" style={{ background: "#F5F7F2", border: "1px solid #E2E8DE" }}>
           {[{ id: "student", label: "Student" }, { id: "admin", label: "Admin" }].map(({ id, label }) => (
             <button key={id} type="button"
-              onClick={() => { setActiveTab(id); setError(""); setStep("form"); setForm({ name: "", email: "", password: "" }); setOtp(""); }}
+              onClick={() => handleTabSwitch(id)}
               className="flex-1 py-2 text-sm font-semibold rounded-md transition-all"
               style={activeTab === id ? { background: "#fff", color: "#5E7A5A" } : { color: "#6B7280" }}>
               {label}
@@ -166,113 +207,123 @@ export default function LoginPage() {
               <input type="password" className="input py-2.5" value={form.password} onChange={setField("password")}
                 placeholder="••••••••" />
             </div>
-            <button type="submit" disabled={isLoading || !form.email || !form.password} className="btn-primary w-full py-2.5 justify-center">
+            <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
               {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Logging in...</> : "Login to Dashboard"}
             </button>
           </form>
-        ) : step === "otp" ? (
-          <div className="animate-fade-in">
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: "#f0f4ef" }}>
-                <svg className="w-7 h-7" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h2 className="text-lg font-bold mb-1" style={{ color: "#1F2937" }}>Check your email</h2>
-              <p className="text-sm" style={{ color: "#6B7280" }}>We sent a 6-digit code to<br /><strong style={{ color: "#374151" }}>{emailForOtp}</strong></p>
-            </div>
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div>
-                <label className="label">Verification Code</label>
-                <input type="text" className="input py-3 text-center text-xl tracking-widest font-mono"
-                  value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="000000" maxLength={6} autoFocus />
-              </div>
-              <button type="submit" disabled={isLoading || otp.trim().length !== 6} className="btn-primary w-full py-2.5 justify-center">
-                {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Verifying...</> : "Verify & Create Account"}
-              </button>
-              <div className="flex items-center justify-between text-xs" style={{ color: "#9CA3AF" }}>
-                <button type="button" onClick={handleResendOtp} disabled={isLoading} className="hover:underline" style={{ color: "#5E7A5A" }}>
-                  Didn't get the code? Resend
-                </button>
-                <button type="button" onClick={() => { setStep("form"); setOtp(""); setError(""); }} className="hover:underline">
-                  Change email
-                </button>
-              </div>
-            </form>
-          </div>
         ) : (
-          <form onSubmit={handleSendOtp} className="space-y-5 animate-fade-in">
-            <div>
-              <label className="label">Full Name</label>
-              <input type="text" className="input py-2.5" value={form.name} onChange={setField("name")}
-                placeholder="e.g. Arjun Sharma" autoFocus />
-            </div>
-            <div>
-              <label className="label">Gmail Address</label>
-              <input type="email" className="input py-2.5" value={form.email} onChange={setField("email")}
-                placeholder="you@gmail.com" />
-              <p className="input-hint">Only @gmail.com addresses are accepted</p>
-            </div>
-            <div>
-              <label className="label">Password</label>
-              <input type="password" className="input py-2.5" value={form.password} onChange={setField("password")}
-                placeholder="Min. 6 characters" />
-            </div>
-            <button type="submit" disabled={isLoading || !form.name || !form.email || !form.password} className="btn-primary w-full py-2.5 justify-center">
-              {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending code...</> : "Continue with Email"}
-            </button>
-            <p className="text-xs text-center" style={{ color: "#9CA3AF" }}>
-              By signing up, you agree to our community guidelines.
-            </p>
-          </form>
-        )}
-
-        {activeTab === "student" && step === "form" && (
-          <div className="mt-6 pt-5 border-t text-center" style={{ borderColor: "#E2E8DE" }}>
-            <p className="text-sm" style={{ color: "#6B7280" }}>
-              Already have an account?{" "}
-              <button onClick={() => { setActiveTab("student"); setError(""); setStep("loginTab"); }}
-                className="font-medium hover:underline" style={{ color: "#5E7A5A" }}>
-                Log in here
-              </button>
-            </p>
-          </div>
-        )}
-
-        {(activeTab === "student" && step === "loginTab") && (
-          <div className="animate-fade-in mt-6 pt-5 border-t" style={{ borderColor: "#E2E8DE" }}>
-            <p className="text-sm font-medium mb-1" style={{ color: "#1F2937" }}>Log in to your account</p>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setError("");
-              setIsLoading(true);
-              try {
-                const res = await authApi.login({ email: form.email, password: form.password, role: "student" });
-                if (!res.success) { setError(res.message); setIsLoading(false); return; }
-                login({ email: form.email, name: res.name || "Student", role: "student", token: res.token });
-                navigate("/");
-              } catch (_) { setError("Login failed. Please check your connection."); }
-              setIsLoading(false);
-            }} className="space-y-4">
+          <div className="animate-fade-in">
+            {isRegister ? (
+              <form onSubmit={handleStudentSubmit} className="space-y-4">
+                <div>
+                  <label className="label">Full Name</label>
+                  <input type="text" className="input py-2.5" value={form.fullName} onChange={setField("fullName")}
+                    placeholder="e.g. Arjun Sharma" autoFocus />
+                </div>
+                <div>
+                  <label className="label">Username</label>
+                  <input type="text" className="input py-2.5" value={form.username} onChange={setField("username")}
+                    placeholder="e.g. arjun_sharma" />
+                  <p className="input-hint">Letters, numbers, and underscores only</p>
+                </div>
+                <div>
+                  <label className="label">Password</label>
+                  <input type="password" className="input py-2.5" value={form.password} onChange={setField("password")}
+                    placeholder="Min. 6 characters" />
+                </div>
+                <div>
+                  <label className="label">Confirm Password</label>
+                  <input type="password" className="input py-2.5" value={form.confirmPassword} onChange={setField("confirmPassword")}
+                    placeholder="Repeat password" />
+                </div>
+                <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
+                  {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creating account...</> : "Create Account"}
+                </button>
+              </form>
+            ) : (
               <div>
-                <label className="label">Email</label>
-                <input type="email" className="input py-2.5" value={form.email} onChange={setField("email")}
-                  placeholder="you@gmail.com" autoFocus />
+                {showForgotPassword ? (
+                  forgotSuccess ? (
+                    <div className="text-center py-4 animate-fade-in">
+                      <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: "#f0f4ef" }}>
+                        <svg className="w-7 h-7" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-bold mb-2" style={{ color: "#1F2937" }}>Password Reset!</h3>
+                      <p className="text-sm mb-4" style={{ color: "#6B7280" }}>Your password has been changed successfully.</p>
+                      <button onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" }); setError(""); }}
+                        className="btn-primary w-full py-2.5 justify-center">
+                        Back to Login
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleForgotPassword} className="space-y-4 animate-fade-in">
+                      <div className="text-center mb-4">
+                        <h3 className="text-base font-bold" style={{ color: "#1F2937" }}>Reset Password</h3>
+                        <p className="text-xs mt-1" style={{ color: "#6B7280" }}>Enter your username and new password</p>
+                      </div>
+                      <div>
+                        <label className="label">Username</label>
+                        <input type="text" className="input py-2.5" value={forgotForm.username} onChange={setForgotField("username")}
+                          placeholder="your username" autoFocus />
+                      </div>
+                      <div>
+                        <label className="label">New Password</label>
+                        <input type="password" className="input py-2.5" value={forgotForm.newPassword} onChange={setForgotField("newPassword")}
+                          placeholder="Min. 6 characters" />
+                      </div>
+                      <div>
+                        <label className="label">Confirm New Password</label>
+                        <input type="password" className="input py-2.5" value={forgotForm.confirmNewPassword} onChange={setForgotField("confirmNewPassword")}
+                          placeholder="Repeat new password" />
+                      </div>
+                      <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
+                        {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Resetting...</> : "Reset Password"}
+                      </button>
+                      <div className="text-center">
+                        <button type="button" onClick={() => { setShowForgotPassword(false); setError(""); }}
+                          className="text-sm hover:underline" style={{ color: "#5E7A5A" }}>
+                          Back to Login
+                        </button>
+                      </div>
+                    </form>
+                  )
+                ) : (
+                  <form onSubmit={handleStudentSubmit} className="space-y-4">
+                    <div>
+                      <label className="label">Username</label>
+                      <input type="text" className="input py-2.5" value={form.username} onChange={setField("username")}
+                        placeholder="your username" autoFocus />
+                    </div>
+                    <div>
+                      <label className="label">Password</label>
+                      <input type="password" className="input py-2.5" value={form.password} onChange={setField("password")}
+                        placeholder="••••••••" />
+                    </div>
+                    <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
+                      {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Logging in...</> : "Login"}
+                    </button>
+                    <div className="text-center">
+                      <button type="button" onClick={() => setShowForgotPassword(true)}
+                        className="text-sm hover:underline" style={{ color: "#5E7A5A" }}>
+                        Forgot Password?
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
-              <div>
-                <label className="label">Password</label>
-                <input type="password" className="input py-2.5" value={form.password} onChange={setField("password")}
-                  placeholder="••••••••" />
-              </div>
-              {error && <p className="text-xs" style={{ color: "#dc2626" }}>{error}</p>}
-              <button type="submit" disabled={isLoading || !form.email || !form.password} className="btn-primary w-full py-2.5 justify-center">
-                {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Logging in...</> : "Login"}
-              </button>
-            </form>
-            <button onClick={() => setStep("form")} className="w-full text-center text-sm mt-3 hover:underline" style={{ color: "#5E7A5A" }}>
-              Back to sign up
-            </button>
+            )}
+
+            <div className="mt-5 pt-4 border-t text-center" style={{ borderColor: "#E2E8DE" }}>
+              <p className="text-sm" style={{ color: "#6B7280" }}>
+                {isRegister ? "Already have an account? " : "Don't have an account? "}
+                <button onClick={() => setIsRegister(!isRegister)}
+                  className="font-medium hover:underline" style={{ color: "#5E7A5A" }}>
+                  {isRegister ? "Login" : "Sign up"}
+                </button>
+              </p>
+            </div>
           </div>
         )}
       </div>

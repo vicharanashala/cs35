@@ -1,12 +1,13 @@
-const mongoose = require('mongoose');
-const { readFileSync } = require('fs');
-const { fileURLToPath } = require('url');
-const { dirname, join } = require('path');
+import 'dotenv/config';
+import mongoose from 'mongoose';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const faqData = JSON.parse(readFileSync(join(__dirname, '..', '..', 'faqData.json'), 'utf-8'));
+const faqData = JSON.parse(readFileSync(join(__dirname, '..', 'faqData.json'), 'utf-8'));
 
 const FAQ_SCHEMA = new mongoose.Schema({
   question: { type: String, required: true },

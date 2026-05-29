@@ -8,9 +8,15 @@ import { Otp, OtpSchema } from '../../schemas/otp.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: User.name, schema: UserSchema },
-      { name: Otp.name, schema: OtpSchema },
+    MongooseModule.forFeatureAsync([
+      {
+        name: User.name,
+        useFactory: () => UserSchema,
+      },
+      {
+        name: Otp.name,
+        useFactory: () => OtpSchema,
+      },
     ]),
   ],
   controllers: [AuthController],

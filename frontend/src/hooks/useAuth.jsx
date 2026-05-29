@@ -22,8 +22,8 @@ export function AuthProvider({ children }) {
 
   const login = useCallback((data) => {
     localStorage.setItem("authToken", data.token);
-    localStorage.setItem("authUser", JSON.stringify({ email: data.email, name: data.name, role: data.role }));
-    setUser({ email: data.email, name: data.name, role: data.role });
+    localStorage.setItem("authUser", JSON.stringify({ email: data.email || data.username || "", name: data.name, role: data.role }));
+    setUser({ email: data.email || data.username || "", name: data.name, role: data.role });
   }, []);
 
   const logout = useCallback(() => {

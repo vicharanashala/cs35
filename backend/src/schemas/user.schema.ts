@@ -1,9 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-@Schema({ timestamps: { createdAt: true, updatedAt: false } })
+@Schema({ timestamps: { createdAt: true, updatedAt: true } })
 export class User extends Document {
-  @Prop({ required: true, unique: true }) email: string;
+  @Prop({ unique: true, sparse: true }) username: string;
+  @Prop({ unique: true }) email: string;
   @Prop({ required: true }) password: string;
   @Prop({ required: true, enum: ['student', 'admin'] }) role: 'student' | 'admin';
   @Prop({ default: true }) isActive: boolean;

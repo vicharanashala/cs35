@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 const NAV_LINKS = [
   { label: "Home", to: "/" },
@@ -10,8 +11,11 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout, isAuthenticated } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,6 +24,8 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -99,13 +105,43 @@ export default function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-2">
-            <button
-              type="button"
-              className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50/80 rounded-lg
-                         hover:bg-blue-100 transition-all duration-200 border border-blue-100/50"
-            >
-              Sign In
-            </button>
+            {isAuthenticated ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 transition-transform hover:scale-105"
+                  style={{ background: "#5E7A5A" }}
+                >
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </button>
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border py-1 z-50 animate-fade-in" style={{ borderColor: "#E2E8DE" }}>
+                    <div className="px-4 py-2 border-b mb-1" style={{ borderColor: "#F5F7F2" }}>
+                      <p className="text-sm font-semibold truncate" style={{ color: "#1F2937" }}>{user?.name}</p>
+                      <p className="text-xs capitalize" style={{ color: "#9CA3AF" }}>{user?.role}</p>
+                    </div>
+                    <button
+                      onClick={() => { logout(); navigate("/"); setDropdownOpen(false); }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50/80 rounded-lg
+                           hover:bg-blue-100 transition-all duration-200 border border-blue-100/50"
+              >
+                Sign In
+              </Link>
+            )}
             <Link
               to="/ask"
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold
@@ -243,29 +279,44 @@ export default function Navbar() {
               );
             })}
             <div className="pt-3 border-t border-sand-200 mt-3">
-              <button
-                type="button"
-                onClick={closeMenu}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium
-                           text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100
-                           border border-blue-100/50 transition-all duration-200"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => { logout(); navigate("/"); closeMenu(); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium
+                             text-red-600 bg-red-50 rounded-xl hover:bg-red-100
+                             border border-red-100 transition-all duration-200"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-                Sign In
-              </button>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Logout
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={closeMenu}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium
+                             text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100
+                             border border-blue-100/50 transition-all duration-200"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Sign In
+                </Link>
+              )}
             </div>
           </div>
         </div>

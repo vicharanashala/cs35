@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -20,7 +21,14 @@ if (process.env.MONGODB_URI) {
   );
 }
 
+const featureModules: any[] = [];
+if (process.env.MONGODB_URI) {
+  featureModules.push(FaqModule, AuthModule);
+} else {
+  featureModules.push(FaqModule);
+}
+
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), ...mongooseImports, FaqModule, AuthModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), ...mongooseImports, ...featureModules],
 })
 export class AppModule {}

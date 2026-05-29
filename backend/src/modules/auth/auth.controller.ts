@@ -1,27 +1,25 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('send-otp')
-  sendOtp(@Body() body: { email: string }) {
-    return this.authService.sendOtp(body.email);
-  }
-
-  @Post('verify-otp')
-  verifyOtp(@Body() body: { email: string; otp: string }) {
-    return this.authService.verifyOtp(body.email, body.otp);
-  }
-
   @Post('signup')
-  signup(@Body() body: { email: string; password: string; name: string }) {
+  signup(@Body() body: { fullName: string; username: string; password: string }) {
     return this.authService.signup(body);
   }
 
   @Post('login')
-  login(@Body() body: { email: string; password: string; role: 'student' | 'admin' }) {
-    return this.authService.login(body.email, body.password, body.role);
+  login(@Body() body: { email?: string; username?: string; password: string; role: 'student' | 'admin' }) {
+    if (body.role === 'admin') {
+      return this.authService.loginAdmin(body.email || '', body.password);
+    }
+    return this.authService.loginStudent(body.username || '', body.password);
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() body: { username: string; newPassword: string; confirmNewPassword: string }) {
+    return this.authService.forgotPassword(body);
   }
 }

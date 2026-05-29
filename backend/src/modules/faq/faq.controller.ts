@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Patch, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { FaqService } from './faq.service';
 
 @Controller()
 export class FaqController {
   constructor(private readonly faqService: FaqService) {}
+
+  // ── FAQ Routes ──────────────────────────────────────────────
 
   @Get('faqs')
   getAllFAQs(@Query('category') category?: string, @Query('search') search?: string) {
@@ -15,14 +17,57 @@ export class FaqController {
     return this.faqService.getFaqById(id);
   }
 
+  @Post('faqs')
+  createFaq(@Body() body: { question: string; answer: string; category: string; tags?: string[] }) {
+    return this.faqService.createFaq(body);
+  }
+
+  @Patch('faqs/:id')
+  updateFaq(@Param('id') id: string, @Body() body: { question?: string; answer?: string; category?: string; tags?: string[] }) {
+    return this.faqService.updateFaq(id, body);
+  }
+
+  @Delete('faqs/:id')
+  deleteFaq(@Param('id') id: string) {
+    return this.faqService.deleteFaq(id);
+  }
+
+  @Patch('faqs/:id/pin')
+  pinFaq(@Param('id') id: string, @Body() body: { pinned: boolean }) {
+    return this.faqService.pinFaq(id, body.pinned);
+  }
+
+  // ── Category Routes ─────────────────────────────────────────
+
   @Get('categories')
   getCategories() {
     return this.faqService.getCategories();
   }
 
+  @Get('categories/stats')
+  getCategoryStats() {
+    return this.faqService.getCategoryStats();
+  }
+
+  @Post('categories')
+  createCategory(@Body() body: { name: string }) {
+    return this.faqService.createCategory(body.name);
+  }
+
+  // ── Question Routes ─────────────────────────────────────────
+
   @Get('questions/open')
   getOpenQuestions() {
     return this.faqService.getOpenQuestions();
+  }
+
+  @Get('questions')
+  getAllQuestions(
+    @Query('status') status?: string,
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.faqService.getAllQuestions(status, category, search);
   }
 
   @Get('questions/:id')
@@ -32,18 +77,79 @@ export class FaqController {
 
   @Post('questions')
   createQuestion(
-    @Body() body: { question: string; category: string; tags?: string[]; screenshotUrl?: string },
+    @Body() body: { question: string; category: string; tags?: string[]; screenshotUrl?: string; contributorName?: string },
   ) {
     return this.faqService.createQuestion(body);
   }
 
-  @Patch('questions/:id/answer')
-  addAnswer(@Param('id') id: string, @Body() body: { content: string; contributorName: string }) {
-    return this.faqService.addAnswer(id, body);
+  @Patch('questions/:id')
+  updateQuestion(@Param('id') id: string, @Body() body: { question?: string; category?: string; priority?: 'Low' | 'Medium' | 'High' }) {
+    return this.faqService.updateQuestion(id, body);
+  }
+
+  @Delete('questions/:id')
+  deleteQuestion(@Param('id') id: string) {
+    return this.faqService.deleteQuestion(id);
+  }
+
+  @Patch('questions/:id/close')
+  closeQuestion(@Param('id') id: string) {
+    return this.faqService.closeQuestion(id);
   }
 
   @Patch('questions/:id/reopen')
   reopenQuestion(@Param('id') id: string) {
     return this.faqService.reopenQuestion(id);
+  }
+
+  @Patch('questions/:id/convert-to-faq')
+  convertToFaq(@Param('id') id: string, @Body() body: { answerId?: string }) {
+    return this.faqService.convertToFaq(id, body.answerId);
+  }
+
+  // ── Answer Routes ────────────────────────────────────────────
+
+  @Patch('questions/:id/answer')
+  addAnswer(@Param('id') id: string, @Body() body: { content: string; contributorName: string; contributorId?: string }) {
+    return this.faqService.addAnswer(id, body);
+  }
+
+  @Patch('answers/:id')
+  updateAnswer(@Param('id') id: string, @Body() body: { content: string }) {
+    return this.faqService.updateAnswer(id, body);
+  }
+
+  @Delete('answers/:id')
+  deleteAnswer(@Param('id') id: string) {
+    return this.faqService.deleteAnswer(id);
+  }
+
+  @Patch('answers/:id/verify')
+  verifyAnswer(@Param('id') id: string, @Body() body: { verified: boolean }) {
+    return this.faqService.verifyAnswer(id, body.verified);
+  }
+
+  // ── User Routes ──────────────────────────────────────────────
+
+  @Get('users')
+  getAllUsers() {
+    return this.faqService.getAllUsers();
+  }
+
+  @Patch('users/:id')
+  updateUser(@Param('id') id: string, @Body() body: { isActive?: boolean; role?: string }) {
+    return this.faqService.updateUser(id, body);
+  }
+
+  @Delete('users/:id')
+  deleteUser(@Param('id') id: string) {
+    return this.faqService.deleteUser(id);
+  }
+
+  // ── Admin Stats ──────────────────────────────────────────────
+
+  @Get('admin/stats')
+  getStats() {
+    return this.faqService.getStats();
   }
 }
