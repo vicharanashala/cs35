@@ -66,8 +66,9 @@ export class FaqController {
     @Query('status') status?: string,
     @Query('category') category?: string,
     @Query('search') search?: string,
+    @Query('contributor') contributor?: string,
   ) {
-    return this.faqService.getAllQuestions(status, category, search);
+    return this.faqService.getAllQuestions(status, category, search, contributor);
   }
 
   @Get('questions/:id')
@@ -77,7 +78,7 @@ export class FaqController {
 
   @Post('questions')
   createQuestion(
-    @Body() body: { question: string; category: string; tags?: string[]; screenshotUrl?: string; contributorName?: string },
+    @Body() body: { question: string; category: string; details?: string; tags?: string[]; screenshotUrl?: string; contributorName?: string },
   ) {
     return this.faqService.createQuestion(body);
   }
@@ -105,6 +106,11 @@ export class FaqController {
   @Patch('questions/:id/convert-to-faq')
   convertToFaq(@Param('id') id: string, @Body() body: { answerId?: string }) {
     return this.faqService.convertToFaq(id, body.answerId);
+  }
+
+  @Patch('questions/:id/vote')
+  voteQuestion(@Param('id') id: string, @Body() body: { answerId: string; direction: number }) {
+    return this.faqService.voteAnswer(body.answerId, body.direction);
   }
 
   // ── Answer Routes ────────────────────────────────────────────

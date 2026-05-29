@@ -5,6 +5,7 @@ import { Document, Types } from 'mongoose';
 export class Question extends Document {
   @Prop({ required: true }) question: string;
   @Prop({ required: true }) category: string;
+  @Prop() details: string;
   @Prop({ type: [String], default: [] }) tags: string[];
   @Prop() screenshotUrl: string;
   @Prop({ enum: ['open', 'answered', 'reopened', 'closed'], default: 'open' }) status: 'open' | 'answered' | 'reopened' | 'closed';

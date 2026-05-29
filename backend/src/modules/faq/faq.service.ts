@@ -128,13 +128,14 @@ export class FaqService implements OnModuleInit {
 
   // ── Question Methods ─────────────────────────────────────────
 
-  async getAllQuestions(status?: string, category?: string, search?: string) {
+  async getAllQuestions(status?: string, category?: string, search?: string, contributorName?: string) {
     if (!this.hasMongoDB) return [];
     try {
       const filter: Record<string, unknown> = {};
       if (status) filter.status = status;
       if (category) filter.category = category;
       if (search) filter.question = { $regex: search, $options: 'i' };
+      if (contributorName) filter.contributorName = contributorName;
       return await this.questionModel!.find(filter).sort({ createdAt: -1 }).exec();
     } catch {
       return [];
@@ -296,6 +297,19 @@ export class FaqService implements OnModuleInit {
       } else {
         await this.questionModel!.findByIdAndUpdate(answer.questionId, { status: 'open' }).exec();
       }
+      return answer;
+    } catch {
+      return null;
+    }
+  }
+
+  async voteAnswer(id: string, direction: number) {
+    if (!this.hasMongoDB) return null;
+    try {
+      const answer = await this.answerModel!.findById(id).exec();
+      if (!answer) return null;
+      answer.upvotes = Math.max(0, (answer.upvotes || 0) + direction);
+      await answer.save();
       return answer;
     } catch {
       return null;

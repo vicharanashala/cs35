@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { questionApi, faqApi } from "../services/api";
+import { useAuth } from "../hooks/useAuth";
 
 const TIPS = [
   "Be specific and clear",
@@ -43,6 +44,7 @@ function SuccessModal({ show, question, onClose }) {
 export default function AskPage() {
   const navigate      = useNavigate();
   const textareaRef   = useRef(null);
+  const { user } = useAuth();
 
   const [title, setTitle]               = useState("");
   const [category, setCategory]         = useState("");
@@ -53,6 +55,7 @@ export default function AskPage() {
   const [showSuccess, setShowSuccess]   = useState(false);
   const [submitted, setSubmitted]       = useState("");
   const [touched, setTouched]           = useState({});
+  const [error, setError]               = useState("");
 
   const titleError    = touched.title    && title.trim().length < 4;
   const categoryError = touched.category && !category;
@@ -102,11 +105,13 @@ export default function AskPage() {
     if (!isValid) return;
     setIsSubmitting(true);
     try {
-      const contributorName = localStorage.getItem("userName") || "Student";
-      await questionApi.create({ question: title.trim(), category, tags, contributor: contributorName });
-    } catch (_) {}
-    setSubmitted(title);
-    setShowSuccess(true);
+      const contributorName = user?.name || "Student";
+      await questionApi.create({ question: title.trim(), category, details: details.trim(), tags, contributor: contributorName });
+      setSubmitted(title);
+      setShowSuccess(true);
+    } catch (err) {
+      setError("Failed to submit question. Please try again.");
+    }
     setIsSubmitting(false);
   };
 
@@ -137,13 +142,18 @@ export default function AskPage() {
               </p>
 
               <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                {error && (
+                  <div className="p-3 rounded-md text-sm" style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                    {error}
+                  </div>
+                )}
                 {/* Title */}
                 <div>
                   <label className="label">Title <span style={{ color: "#dc2626" }}>*</span></label>
                   <input
                     type="text"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => { setTitle(e.target.value); setError(""); }}
                     onBlur={() => setTouched((t) => ({ ...t, title: true }))}
                     placeholder="What is your question about?"
                     className={`input ${titleError ? "input-error" : ""}`}

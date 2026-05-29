@@ -102,8 +102,10 @@ export default function QuestionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [answerContent, setAnswerContent] = useState("");
   const [answerName, setAnswerName] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const { data: question, isLoading, isError } = useQuery({
+  const { data: question, isLoading, isError, refetch } = useQuery({
     queryKey: ["question", id],
     queryFn: () => questionApi.getById(id),
     enabled: !!id,
@@ -118,27 +120,32 @@ export default function QuestionPage() {
     else if (sortBy === "newest")
       list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     else
-      list.sort((a, b) => (b.helpful || 0) - (a.helpful || 0));
+      list.sort((a, b) => ((b.upvotes || 0) + (userVotes[b._id] || 0)) - ((a.upvotes || 0) + (userVotes[a._id] || 0)));
     return list;
-  }, [answers, sortBy]);
+  }, [answers, sortBy, userVotes]);
 
-  const handleVote = (answerId, dir) => {
+  const handleVote = async (answerId, dir) => {
+    const cur = userVotes[answerId] || 0;
+    const newDir = cur === dir ? 0 : dir;
     setUserVotes((prev) => {
-      const cur = prev[answerId] || 0;
-      if (cur === dir) {
+      if (newDir === 0) {
         const next = { ...prev };
         delete next[answerId];
         return next;
       }
-      return { ...prev, [answerId]: dir };
+      return { ...prev, [answerId]: newDir };
     });
+    try {
+      await questionApi.vote(id, answerId, newDir);
+    } catch (_) {}
   };
 
   const submitAnswer = async (e) => {
     e.preventDefault();
     if (!answerContent.trim() || !answerName.trim()) return;
     setIsSubmitting(true);
-    
+    setSubmitError("");
+
     const newAnswer = {
       _id: `local-${Date.now()}`,
       content: answerContent,
@@ -146,16 +153,18 @@ export default function QuestionPage() {
       isVerified: false,
       createdAt: new Date().toISOString(),
       upvotes: 0,
-      helpful: 0,
     };
-    
+
     try {
       await questionApi.addAnswer(id, { contributorName: answerName, content: answerContent });
-    } catch (_) {}
-    
-    setLocalAnswers((prev) => [newAnswer, ...prev]);
+      setLocalAnswers((prev) => [newAnswer, ...prev]);
+      setAnswerContent("");
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 3000);
+    } catch (err) {
+      setSubmitError("Failed to post answer. Please try again.");
+    }
     setIsSubmitting(false);
-    setAnswerContent("");
   };
 
   return (
@@ -195,7 +204,12 @@ export default function QuestionPage() {
                 <h1 className="text-2xl font-bold leading-snug mb-3" style={{ color: "#1F2937" }}>
                   {question.question}
                 </h1>
-                
+                {question.details && (
+                  <p className="text-sm mb-4 leading-relaxed" style={{ color: "#4B5563" }}>
+                    {question.details}
+                  </p>
+                )}
+
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 text-sm" style={{ color: "#6B7280" }}>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#5E7A5A" }}>
@@ -244,6 +258,16 @@ export default function QuestionPage() {
                 {/* Reply Form */}
                 <div className="card p-5">
                   <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Add an Answer</h3>
+                  {submitError && (
+                    <div className="mb-4 p-3 rounded-md text-sm" style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                      {submitError}
+                    </div>
+                  )}
+                  {submitSuccess && (
+                    <div className="mb-4 p-3 rounded-md text-sm animate-fade-in" style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
+                      Your answer has been posted!
+                    </div>
+                  )}
                   <form onSubmit={submitAnswer} className="space-y-4">
                     <div>
                       <input
@@ -262,7 +286,7 @@ export default function QuestionPage() {
                         onChange={(e) => setAnswerContent(e.target.value)}
                       />
                     </div>
-                    <button type="submit" disabled={isSubmitting || !answerName || !answerContent} className="btn-primary w-full sm:w-auto">
+                    <button type="submit" disabled={isSubmitting || !answerName.trim() || !answerContent.trim()} className="btn-primary w-full sm:w-auto">
                       {isSubmitting ? "Posting..." : "Post Answer"}
                     </button>
                   </form>
