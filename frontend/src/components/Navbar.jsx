@@ -135,31 +135,35 @@ export default function Navbar() {
                 {/* Profile Popup */}
                 {profileOpen && (
                   <div
-                    className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-xl border border-sage-border
+                    role="menu"
+                    aria-label="Profile menu"
+                    className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-sage-border
                                animate-scale-in overflow-hidden"
-                    style={{ transformOrigin: "top right" }}
+                    style={{ transformOrigin: "top right", animationDuration: "0.18s", animationTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
                   >
                     {/* Profile Header Card */}
                     <div className="px-5 py-4 bg-gradient-to-br from-brand-50 to-warm-50 border-b border-sage-border">
                       <div className="flex items-start gap-3">
                         {/* Avatar */}
                         <div className="relative flex-shrink-0">
-                          <div className="w-12 h-12 rounded-full flex items-center justify-center
-                                          text-white text-base font-bold transition-transform duration-200
-                                          hover:scale-105"
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-base font-bold
+                                         ring-2 ring-white shadow-sm"
                                style={{ background: "#5E7A5A" }}>
                             {avatarInitials}
                           </div>
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full
-                                          border-2 border-white" aria-label="Online" />
+                          {/* Decorative presence indicator */}
+                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white"
+                                aria-hidden="true" />
                         </div>
 
                         {/* Name + meta */}
                         <div className="min-w-0 flex-1 pt-0.5">
-                          <p className="text-sm font-bold text-ink-900 truncate">{fullName}</p>
-                          <p className="text-xs text-ink-400 truncate">@{username}</p>
+                          <p className="text-sm font-bold text-ink-900 truncate leading-tight">{fullName}</p>
+                          <p className="text-xs text-ink-400 truncate mt-0.5">
+                            <span aria-hidden="true" className="text-ink-300">@</span>{username}
+                          </p>
                           {role && (
-                            <span className="inline-flex mt-1 text-xs font-semibold px-2 py-0.5 rounded-full
+                            <span className="inline-flex mt-1.5 text-xs font-semibold px-2 py-0.5 rounded-full capitalize
                                             bg-brand-100 text-brand-700 border border-brand-200">
                               {role}
                             </span>
@@ -168,43 +172,60 @@ export default function Navbar() {
                       </div>
                     </div>
 
-                    {/* Stats Row â€” only show if data exists */}
-                    {stats && (
-                      <div className="px-5 py-3 border-b border-sage-border bg-warm-50/50">
-                        <div className="grid grid-cols-3 gap-1">
-                          <div className="text-center py-1.5 rounded-lg bg-white border border-sage-border/60">
-                            <p className="text-base font-bold text-ink-900">{stats.questions}</p>
-                            <p className="text-xs text-ink-500">Questions</p>
+                    {/* Stats Row */}
+                    <div className="px-4 py-3 border-b border-sage-border bg-warm-50/50">
+                      {stats ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Questions */}
+                          <div className="text-center py-2 px-1 rounded-xl bg-white border border-sage-border/60
+                                          hover:border-brand-200 hover:shadow-sm transition-all duration-150 cursor-default">
+                            <p className="text-base font-bold text-ink-900 leading-tight">{stats.questions}</p>
+                            <p className="text-xs text-ink-500 mt-0.5">Questions</p>
                           </div>
-                          <div className="text-center py-1.5 rounded-lg bg-white border border-sage-border/60">
-                            <p className="text-base font-bold text-ink-900">{stats.answers}</p>
-                            <p className="text-xs text-ink-500">Answers</p>
+                          {/* Answers */}
+                          <div className="text-center py-2 px-1 rounded-xl bg-white border border-sage-border/60
+                                          hover:border-brand-200 hover:shadow-sm transition-all duration-150 cursor-default">
+                            <p className="text-base font-bold text-ink-900 leading-tight">{stats.answers}</p>
+                            <p className="text-xs text-ink-500 mt-0.5">Answers</p>
                           </div>
-                          <div className="text-center py-1.5 rounded-lg bg-white border border-sage-border/60">
-                            <p className="text-base font-bold text-brand-600">{stats.verified}</p>
-                            <p className="text-xs text-ink-500">Verified</p>
+                          {/* Verified */}
+                          <div className="text-center py-2 px-1 rounded-xl bg-white border border-brand-200
+                                          hover:shadow-sm transition-all duration-150 cursor-default">
+                            <p className="text-base font-bold text-brand-600 leading-tight">{stats.verified}</p>
+                            <p className="text-xs text-ink-500 mt-0.5">Verified</p>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        /* Loading skeleton */
+                        <div className="grid grid-cols-3 gap-2">
+                          {[0, 1, 2].map((i) => (
+                            <div key={i} className="py-2 px-1 rounded-xl bg-white border border-sage-border/60 animate-pulse">
+                              <div className="mx-auto w-6 h-4 bg-sage-100 rounded" />
+                              <div className="mx-auto w-10 h-2.5 bg-sage-100 rounded mt-1.5" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Action Items */}
-                    <div className="py-1.5">
+                    <div className="py-2">
                       <Link
                         to="/profile"
                         onClick={() => setProfileOpen(false)}
+                        role="menuitem"
                         className="flex items-center gap-3 mx-2 px-3 py-2.5 text-sm font-medium text-ink-700
-                                   rounded-xl hover:bg-brand-50 hover:text-brand-600 transition-all duration-150"
+                                   rounded-xl hover:bg-brand-50 hover:text-brand-600
+                                   active:scale-[0.98] transition-all duration-150"
                       >
-                        <span className="w-8 h-8 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center
-                                        group-hover:bg-brand-200 transition-colors">
+                        <span className="w-8 h-8 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center shrink-0">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </span>
                         My Profile
-                        <svg className="w-3.5 h-3.5 ml-auto text-ink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 ml-auto text-ink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </Link>
@@ -212,34 +233,35 @@ export default function Navbar() {
                       <Link
                         to="/my-questions"
                         onClick={() => setProfileOpen(false)}
+                        role="menuitem"
                         className="flex items-center gap-3 mx-2 px-3 py-2.5 text-sm font-medium text-ink-700
-                                   rounded-xl hover:bg-brand-50 hover:text-brand-600 transition-all duration-150"
+                                   rounded-xl hover:bg-brand-50 hover:text-brand-600
+                                   active:scale-[0.98] transition-all duration-150"
                       >
-                        <span className="w-8 h-8 rounded-lg bg-warm-100 text-warm-600 flex items-center justify-center
-                                        group-hover:bg-warm-200 transition-colors">
+                        <span className="w-8 h-8 rounded-lg bg-warm-100 text-warm-600 flex items-center justify-center shrink-0">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </span>
                         My Questions
-                        <svg className="w-3.5 h-3.5 ml-auto text-ink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 ml-auto text-ink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </Link>
 
-                      <hr className="mx-4 my-1.5 border-sage-border/70" />
+                      {/* Divider */}
+                      <div className="mx-4 my-1.5 h-px bg-sage-border/60" role="none" />
 
+                      {/* Logout */}
                       <button
-                        onClick={() => {
-                          setProfileOpen(false);
-                          logout();
-                        }}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => { setProfileOpen(false); logout(); }}
                         className="w-full flex items-center gap-3 mx-2 px-3 py-2.5 text-sm font-medium text-red-500
-                                   rounded-xl hover:bg-red-50 transition-all duration-150"
+                                   rounded-xl hover:bg-red-50 active:scale-[0.98] transition-all duration-150"
                       >
-                        <span className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center
-                                        group-hover:bg-red-100 transition-colors">
+                        <span className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
