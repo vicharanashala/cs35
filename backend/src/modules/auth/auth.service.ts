@@ -3,6 +3,8 @@ import { Injectable, Inject, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '../../schemas/user.schema';
+import { Question } from '../../schemas/question.schema';
+import { Answer } from '../../schemas/answer.schema';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +12,8 @@ export class AuthService {
 
   constructor(
     @Optional() @InjectModel(User.name) private userModel: Model<User> | undefined,
+    @Optional() @InjectModel(Question.name) private questionModel: Model<Question> | undefined,
+    @Optional() @InjectModel(Answer.name) private answerModel: Model<Answer> | undefined,
   ) {
     if (this.userModel) {
       this.mongoConnected = true;
@@ -122,6 +126,42 @@ export class AuthService {
       return { success: true, message: 'Password reset successfully. You can now login.' };
     } catch (err) {
       return { success: false, message: 'Password reset failed. Please try again.' };
+    }
+  }
+
+  async getMe(token: string): Promise<{ success: boolean; user?: Record<string, unknown>; message?: string }> {
+    if (!this.hasMongoDB || !this.questionModel || !this.answerModel) {
+      return { success: true, user: { name: 'Student', username: 'student', role: 'student', createdAt: new Date().toISOString(), questionsCount: 0, answersCount: 0, verifiedCount: 0 } };
+    }
+
+    try {
+      const decoded = Buffer.from(token, 'base64').toString('utf-8');
+      const username = decoded.split(':')[0];
+      if (!username) return { success: false, message: 'Invalid token' };
+
+      const user = await this.userModel!.findOne({ username, role: 'student' }).select('-password').exec();
+      if (!user) return { success: false, message: 'User not found' };
+
+      const questionsCount = await this.questionModel!.countDocuments({ contributorName: user.username }).exec();
+      const answersCount = await this.answerModel!.countDocuments({ contributorId: user._id.toString() }).exec();
+      const verifiedCount = await this.answerModel!.countDocuments({ contributorId: user._id.toString(), isVerified: true }).exec();
+
+      return {
+        success: true,
+        user: {
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          studentId: user.studentId,
+          createdAt: (user as any).createdAt,
+          questionsCount,
+          answersCount,
+          verifiedCount,
+        },
+      };
+    } catch {
+      return { success: false, message: 'Failed to fetch profile' };
     }
   }
 

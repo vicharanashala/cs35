@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { userApi } from "../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 const NAV_LINKS = [
   { label: "Home", to: "/" },
   { label: "Queue", to: "/queue" },
   { label: "Ask", to: "/ask" },
-  { label: "Admin", to: "/admin" },
+  { label: "Admin", to: "/admin", adminOnly: true },
 ];
 
 export default function Navbar() {
@@ -15,6 +17,13 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const { data: profileData } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: userApi.me,
+    enabled: isAuthenticated,
+    staleTime: 30000,
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -81,7 +90,7 @@ export default function Navbar() {
           </Link>
 
           <div className="hidden lg:flex items-center gap-0.5">
-            {NAV_LINKS.map(({ label, to }) => {
+            {NAV_LINKS.filter(l => !l.adminOnly || user?.role === 'admin').map(({ label, to }) => {
               const isActive = location.pathname === to;
               return (
                 <Link
@@ -115,31 +124,70 @@ export default function Navbar() {
                   {user?.name?.charAt(0)?.toUpperCase() || "U"}
                 </button>
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border py-1 z-50 animate-fade-in" style={{ borderColor: "#E2E8DE" }}>
-                    <div className="px-4 py-2 border-b mb-1" style={{ borderColor: "#F5F7F2" }}>
-                      <p className="text-sm font-semibold truncate" style={{ color: "#1F2937" }}>{user?.name}</p>
-                      <p className="text-xs capitalize" style={{ color: "#9CA3AF" }}>{user?.role}</p>
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-50 animate-fade-in overflow-hidden" style={{ borderColor: "#E2E8DE" }}>
+                    <div className="px-4 py-3 border-b" style={{ borderColor: "#F5F7F2", background: "#F9FAFB" }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: "#5E7A5A" }}>
+                          {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ color: "#1F2937" }}>{user?.name}</p>
+                          <p className="text-xs truncate" style={{ color: "#9CA3AF" }}>@{profileData?.user?.username || user?.email}</p>
+                          <span className="inline-block mt-0.5 text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: "#EEF2FF", color: "#5E7A5A" }}>
+                            {user?.role}
+                          </span>
+                        </div>
+                      </div>
+                      {profileData?.user && (
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                          <div className="bg-white rounded p-1.5">
+                            <p className="text-sm font-bold" style={{ color: "#1F2937" }}>{profileData.user.questionsCount || 0}</p>
+                            <p className="text-xs" style={{ color: "#9CA3AF" }}>Questions</p>
+                          </div>
+                          <div className="bg-white rounded p-1.5">
+                            <p className="text-sm font-bold" style={{ color: "#1F2937" }}>{profileData.user.answersCount || 0}</p>
+                            <p className="text-xs" style={{ color: "#9CA3AF" }}>Answers</p>
+                          </div>
+                          <div className="bg-white rounded p-1.5">
+                            <p className="text-sm font-bold" style={{ color: "#059669" }}>{profileData.user.verifiedCount || 0}</p>
+                            <p className="text-xs" style={{ color: "#9CA3AF" }}>Verified</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <Link
-                      to="/my-questions"
-                      onClick={() => setDropdownOpen(false)}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                      style={{ color: "#374151" }}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      My Questions
-                    </Link>
-                    <button
-                      onClick={() => { setDropdownOpen(false); logout(); }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      Logout
-                    </button>
+                    <div className="py-1">
+                      <Link
+                        to="/profile"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-2"
+                        style={{ color: "#374151" }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        My Profile
+                      </Link>
+                      <Link
+                        to="/my-questions"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-2"
+                        style={{ color: "#374151" }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        My Questions
+                      </Link>
+                      <button
+                        onClick={() => { setDropdownOpen(false); logout(); }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -255,7 +303,7 @@ export default function Navbar() {
                       }`}
         >
           <div className="max-w-6xl mx-auto px-4 py-4 space-y-1">
-            {NAV_LINKS.map(({ label, to }) => {
+            {NAV_LINKS.filter(l => !l.adminOnly || user?.role === 'admin').map(({ label, to }) => {
               const isActive = location.pathname === to;
               return (
                 <Link

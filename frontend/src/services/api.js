@@ -75,6 +75,12 @@ export const categoryApi = {
 // ── User API ──────────────────────────────────────────────────
 
 export const userApi = {
+  me: () => {
+    const token = localStorage.getItem('authToken') || '';
+    return safeRequest(
+      client.get('/auth/me', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.data)
+    );
+  },
   list: () => safeRequest(client.get("/users").then((r) => r.data)),
   update: (id, data) => safeRequest(client.patch(`/users/${id}`, data).then((r) => r.data)),
   delete: (id) => safeRequest(client.delete(`/users/${id}`).then((r) => r.data)),

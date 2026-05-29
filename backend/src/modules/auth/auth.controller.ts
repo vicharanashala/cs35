@@ -1,9 +1,15 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Headers } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('me')
+  getMe(@Headers('authorization') authHeader?: string) {
+    const token = authHeader?.replace('Bearer ', '');
+    return this.authService.getMe(token || '');
+  }
 
   @Post('signup')
   signup(@Body() body: { fullName: string; username: string; password: string }) {
