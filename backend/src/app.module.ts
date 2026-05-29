@@ -1,10 +1,25 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { FaqModule } from './modules/faq/faq.module';
+
+const mongooseImports: any[] = [];
+if (process.env.MONGODB_URI) {
+  mongooseImports.push(
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.get<string>('MONGODB_URI')!,
+        serverSelectionTimeoutMS: 3000,
+        connectTimeoutMS: 3000,
+        bufferCommands: false,
+      }),
+    }),
+  );
+}
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), ...mongooseImports, FaqModule],
 })
 export class AppModule {}

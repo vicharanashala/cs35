@@ -1,122 +1,127 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Suspense, lazy, Component } from "react";
+import MainLayout from "./layouts/MainLayout";
 
-function App() {
-  const [count, setCount] = useState(0)
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const HomePage = lazy(() => import("./pages/HomePage"));
+const FaqsPage = lazy(() => import("./pages/FaqsPage"));
+const QueuePage = lazy(() => import("./pages/QueuePage"));
+const QuestionPage = lazy(() => import("./pages/QuestionPage"));
+const AskPage = lazy(() => import("./pages/AskPage"));
+const FaqPage = lazy(() => import("./pages/FaqPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
 
+function PageLoader() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#5E7A5A", borderTopColor: "transparent" }} />
+    </div>
+  );
 }
 
-export default App
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("App Error:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="w-16 h-16 mb-6 rounded-2xl bg-red-50 flex items-center justify-center">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2" style={{ color: "#1F2937" }}>Something went wrong</h2>
+          <p className="text-sm mb-6 max-w-sm" style={{ color: "#6B7280" }}>
+            We encountered an unexpected error. This has been logged and we're working to fix it.
+          </p>
+          <button onClick={() => window.location.reload()} className="btn-primary">
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function NotFound() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <div className="w-16 h-16 mb-6 rounded-2xl flex items-center justify-center" style={{ background: "#F5F7F2" }}>
+        <svg className="w-8 h-8" style={{ color: "#9CA3AF" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold mb-2" style={{ color: "#1F2937" }}>Page Not Found</h2>
+      <p className="text-sm mb-6" style={{ color: "#6B7280" }}>The page you're looking for doesn't exist.</p>
+      <a href="/" className="btn-primary">Go Home</a>
+    </div>
+  );
+}
+
+// Protected Route Wrapper
+function ProtectedRoute({ children, requireAdmin = false }) {
+  const role = localStorage.getItem("userRole");
+  if (!role) {
+    return <Navigate to="/login" replace />;
+  }
+  if (requireAdmin && role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+// Layout Wrapper
+function AppLayout({ children }) {
+  const location = useLocation();
+  const isAuthPage = location.pathname === "/login";
+  const isAdminDashboard = location.pathname.startsWith("/admin");
+
+  // Don't render MainLayout on Login or Admin dashboard
+  if (isAuthPage || isAdminDashboard) {
+    return children;
+  }
+
+  return <MainLayout>{children}</MainLayout>;
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <AppLayout>
+          <Routes>
+            {/* Auth */}
+            <Route path="/login" element={<LoginPage />} />
+
+            {/* Main Platform (Requires Login) */}
+            <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="/faqs" element={<ProtectedRoute><FaqsPage /></ProtectedRoute>} />
+            <Route path="/faq/:id" element={<ProtectedRoute><FaqPage /></ProtectedRoute>} />
+            <Route path="/queue" element={<ProtectedRoute><QueuePage /></ProtectedRoute>} />
+            <Route path="/ask" element={<ProtectedRoute><AskPage /></ProtectedRoute>} />
+            <Route path="/question/:id" element={<ProtectedRoute><QuestionPage /></ProtectedRoute>} />
+            
+            {/* Admin (Requires Admin Role) */}
+            <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
+            
+            {/* Fallback */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AppLayout>
+      </Suspense>
+    </ErrorBoundary>
+  );
+}

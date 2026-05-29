@@ -1,18 +1,385 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&display=swap");
 @import "tailwindcss";
 
-:root {
-  font-family: Inter, sans-serif;
-  color: #1f2937;
-  background-color: #f8f5f2;
+/* ============================================================
+   ASKSAM DESIGN TOKENS — Sage Green Academic Palette
+   ============================================================ */
+
+@theme {
+  /* Sage green brand */
+  --color-brand-50:  #f0f4ef;
+  --color-brand-100: #dde8db;
+  --color-brand-200: #bdd4ba;
+  --color-brand-300: #93b58f;
+  --color-brand-400: #6e9469;
+  --color-brand-500: #5E7A5A;
+  --color-brand-600: #4A6347;
+  --color-brand-700: #3a4f38;
+  --color-brand-800: #2e3e2c;
+  --color-brand-900: #1f2b1e;
+
+  /* Warm accent (cream/sand) */
+  --color-warm-50:  #fdf9f3;
+  --color-warm-100: #f8f0e0;
+  --color-warm-200: #f0e2c5;
+  --color-warm-300: #e5cfa0;
+  --color-warm-400: #D8C7A1;
+  --color-warm-500: #c9b082;
+  --color-warm-600: #b09363;
+
+  /* Sage background */
+  --color-sage-bg:    #F5F7F2;
+  --color-sage-card:  #FFFFFF;
+  --color-sage-border:#E2E8DE;
+
+  /* Neutral text */
+  --color-ink-900: #1F2937;
+  --color-ink-700: #374151;
+  --color-ink-500: #6B7280;
+  --color-ink-400: #9CA3AF;
+  --color-ink-300: #D1D5DB;
+  --color-ink-200: #E5E7EB;
+  --color-ink-100: #F3F4F6;
+  --color-ink-50:  #F9FAFB;
+
+  /* Status colors */
+  --color-status-green-bg:  #f0fdf4;
+  --color-status-green-txt: #15803d;
+  --color-status-green-bdr: #bbf7d0;
+
+  --color-status-amber-bg:  #fffbeb;
+  --color-status-amber-txt: #b45309;
+  --color-status-amber-bdr: #fde68a;
+
+  --color-status-red-bg:  #fef2f2;
+  --color-status-red-txt: #dc2626;
+  --color-status-red-bdr: #fecaca;
+
+  --color-status-orange-bg:  #fff7ed;
+  --color-status-orange-txt: #c2410c;
+  --color-status-orange-bdr: #fed7aa;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ============================================================
+   BASE RESET
+   ============================================================ */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  min-height: 100vh;
-  background-color: #f8f5f2;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background-color: #F5F7F2;
+  color: #1F2937;
+  line-height: 1.6;
+}
+
+*:focus-visible {
+  outline: 2px solid #5E7A5A;
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #F5F7F2; }
+::-webkit-scrollbar-thumb { background: #E2E8DE; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #bdd4ba; }
+* { scrollbar-width: thin; scrollbar-color: #E2E8DE #F5F7F2; }
+
+/* ============================================================
+   LAYOUT CONTAINERS
+   ============================================================ */
+
+.container-sm { width:100%; max-width:42rem; margin:0 auto; padding:0 1rem; }
+.container-md { width:100%; max-width:56rem; margin:0 auto; padding:0 1rem; }
+.container-lg { width:100%; max-width:72rem; margin:0 auto; padding:0 1rem; }
+.container-xl { width:100%; max-width:84rem; margin:0 auto; padding:0 1rem; }
+
+@media(min-width:640px) {
+  .container-sm,.container-md,.container-lg,.container-xl {
+    padding: 0 1.5rem;
+  }
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+
+.page-title    { font-size:1.75rem; font-weight:700; color:#1F2937; letter-spacing:-0.02em; line-height:1.2; }
+.page-subtitle { font-size:0.9375rem; color:#6B7280; margin-top:0.375rem; }
+.section-title { font-size:1.125rem; font-weight:600; color:#1F2937; }
+.label         { display:block; font-size:0.875rem; font-weight:500; color:#374151; margin-bottom:0.375rem; }
+.input-hint    { font-size:0.75rem; color:#9CA3AF; margin-top:0.25rem; }
+
+@media(min-width:640px) { .page-title { font-size:2.25rem; } }
+
+/* ============================================================
+   CARD
+   ============================================================ */
+
+.card {
+  background:#FFFFFF;
+  border:1px solid #E2E8DE;
+  border-radius:0.75rem;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.card-hover {
+  background:#FFFFFF;
+  border:1px solid #E2E8DE;
+  border-radius:0.75rem;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  cursor:pointer;
+}
+.card-hover:hover {
+  border-color:#bdd4ba;
+  box-shadow:0 2px 12px rgba(94,122,90,0.1);
+}
+
+/* ============================================================
+   BUTTONS — raw CSS (no @apply chains)
+   ============================================================ */
+
+.btn-primary {
+  display:inline-flex; align-items:center; justify-content:center; gap:0.5rem;
+  padding:0.5625rem 1.25rem;
+  font-size:0.875rem; font-weight:500;
+  border-radius:0.5rem; border:1px solid transparent;
+  background-color:#5E7A5A; color:#ffffff;
+  cursor:pointer; text-decoration:none; white-space:nowrap;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+.btn-primary:hover { background-color:#4A6347; }
+.btn-primary:active { background-color:#3a4f38; }
+.btn-primary:focus-visible { outline:2px solid #5E7A5A; outline-offset:2px; }
+.btn-primary:disabled { opacity:0.55; cursor:not-allowed; }
+
+.btn-secondary {
+  display:inline-flex; align-items:center; justify-content:center; gap:0.5rem;
+  padding:0.5625rem 1.25rem;
+  font-size:0.875rem; font-weight:500;
+  border-radius:0.5rem; border:1px solid #E2E8DE;
+  background-color:#ffffff; color:#374151;
+  cursor:pointer; text-decoration:none; white-space:nowrap;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.btn-secondary:hover { background-color:#F5F7F2; border-color:#bdd4ba; color:#1F2937; }
+.btn-secondary:focus-visible { outline:2px solid #5E7A5A; outline-offset:2px; }
+
+.btn-ghost {
+  display:inline-flex; align-items:center; justify-content:center; gap:0.5rem;
+  padding:0.5rem 0.875rem;
+  font-size:0.875rem; font-weight:500;
+  border-radius:0.5rem; border:1px solid transparent;
+  background-color:transparent; color:#6B7280;
+  cursor:pointer; text-decoration:none;
+  transition: background-color 0.15s, color 0.15s;
+}
+.btn-ghost:hover { background-color:#f0f4ef; color:#5E7A5A; }
+
+.btn-sm  { padding:0.375rem 0.75rem; font-size:0.75rem; }
+.btn-lg  { padding:0.75rem 1.5rem; font-size:1rem; }
+.btn-icon { width:2.25rem; height:2.25rem; padding:0; border-radius:0.5rem; }
+
+/* ============================================================
+   INPUT FIELDS
+   ============================================================ */
+
+.input {
+  display:block; width:100%;
+  padding:0.625rem 0.875rem;
+  font-size:0.875rem;
+  border:1px solid #E2E8DE;
+  border-radius:0.5rem;
+  background-color:#ffffff;
+  color:#1F2937;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  line-height:1.5;
+  font-family: inherit;
+}
+.input::placeholder { color:#9CA3AF; }
+.input:hover { border-color:#bdd4ba; }
+.input:focus { outline:none; border-color:#5E7A5A; box-shadow:0 0 0 3px rgba(94,122,90,0.15); }
+.input-error { border-color:#ef4444; background:#fef2f2; }
+.input-error:focus { border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,0.15); }
+
+/* ============================================================
+   TAG / CATEGORY CHIPS
+   ============================================================ */
+
+.tag {
+  display:inline-flex; align-items:center;
+  padding:0.2rem 0.625rem;
+  border-radius:0.375rem;
+  font-size:0.72rem; font-weight:500;
+  white-space:nowrap;
+}
+
+.tag-warm    { background:#f8f0e0; color:#8B6914; }
+.tag-brand   { background:#dde8db; color:#3a4f38; }
+.tag-neutral { background:#F3F4F6; color:#4B5563; }
+
+/* ============================================================
+   BADGES
+   ============================================================ */
+
+.badge {
+  display:inline-flex; align-items:center; gap:0.25rem;
+  padding:0.2rem 0.625rem;
+  border-radius:9999px; font-size:0.7rem; font-weight:500;
+  white-space:nowrap;
+}
+
+.badge-green  { background:#f0fdf4; color:#15803d; }
+.badge-amber  { background:#fffbeb; color:#b45309; }
+.badge-orange { background:#fff7ed; color:#c2410c; }
+.badge-red    { background:#fef2f2; color:#dc2626; }
+.badge-brand  { background:#dde8db; color:#3a4f38; }
+.badge-warm   { background:#f8f0e0; color:#8B6914; }
+.badge-gray   { background:#F3F4F6; color:#4B5563; }
+
+/* priority */
+.priority-high   { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-size:0.68rem; font-weight:600; padding:0.15rem 0.5rem; border-radius:9999px; }
+.priority-medium { background:#fffbeb; color:#b45309; border:1px solid #fde68a; font-size:0.68rem; font-weight:600; padding:0.15rem 0.5rem; border-radius:9999px; }
+.priority-low    { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; font-size:0.68rem; font-weight:600; padding:0.15rem 0.5rem; border-radius:9999px; }
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+
+.divider { width:100%; border:none; border-top:1px solid #E2E8DE; }
+
+/* ============================================================
+   SKELETON
+   ============================================================ */
+
+.skeleton {
+  display:block;
+  background: linear-gradient(90deg, #E2E8DE 0%, #eef2eb 50%, #E2E8DE 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.375rem;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes fade-in {
+  from { opacity:0; transform:translateY(6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity:0; transform:scale(0.95); }
+  to   { opacity:1; transform:scale(1); }
+}
+
+@keyframes fade-in-right {
+  from { opacity:0; transform:translateX(12px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+
+.animate-fade-in       { animation: fade-in       0.25s ease-out forwards; }
+.animate-slide-up      { animation: slide-up      0.3s  ease-out forwards; }
+.animate-scale-in      { animation: scale-in      0.2s  ease-out forwards; }
+.animate-fade-in-right { animation: fade-in-right 0.3s  ease-out forwards; }
+
+/* stagger helpers */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+
+/* ============================================================
+   VERIFIED ANSWER BANNER
+   ============================================================ */
+
+.verified-banner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dde8db 100%);
+  border: 1px solid #bbf7d0;
+  border-left: 4px solid #5E7A5A;
+  border-radius: 0.75rem;
+}
+
+/* ============================================================
+   SIDEBAR NAV (Admin)
+   ============================================================ */
+
+.admin-nav-link {
+  display:flex; align-items:center; gap:0.75rem;
+  padding:0.625rem 1rem;
+  border-radius:0.5rem;
+  font-size:0.875rem; font-weight:500;
+  color:#6B7280;
+  text-decoration:none;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.admin-nav-link:hover { background:#f0f4ef; color:#5E7A5A; }
+
+.admin-nav-link-active {
+  display:flex; align-items:center; gap:0.75rem;
+  padding:0.625rem 1rem;
+  border-radius:0.5rem;
+  font-size:0.875rem; font-weight:600;
+  background:#dde8db; color:#3a4f38;
+  text-decoration:none;
+}
+
+/* ============================================================
+   STATS CARD
+   ============================================================ */
+
+.stat-card {
+  background:#FFFFFF;
+  border:1px solid #E2E8DE;
+  border-radius:0.75rem;
+  padding:1.25rem;
+  transition: box-shadow 0.15s;
+}
+.stat-card:hover { box-shadow:0 2px 12px rgba(94,122,90,0.08); }
+
+/* ============================================================
+   SEARCH BAR
+   ============================================================ */
+
+.search-wrap { position:relative; }
+.search-wrap .search-icon {
+  position:absolute; left:0.875rem; top:50%; transform:translateY(-50%);
+  color:#9CA3AF; pointer-events:none;
+}
+.search-input {
+  width:100%; padding:0.625rem 0.875rem 0.625rem 2.5rem;
+  border:1px solid #E2E8DE; border-radius:0.5rem;
+  background:#ffffff; color:#1F2937; font-size:0.875rem;
+  font-family:inherit; transition:border-color 0.15s, box-shadow 0.15s;
+}
+.search-input::placeholder { color:#9CA3AF; }
+.search-input:hover { border-color:#bdd4ba; }
+.search-input:focus { outline:none; border-color:#5E7A5A; box-shadow:0 0 0 3px rgba(94,122,90,0.15); }
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media(prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
 }
