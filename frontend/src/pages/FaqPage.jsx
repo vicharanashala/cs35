@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { faqApi } from "../services/api";
 
 function formatDate(dateStr) {
@@ -14,6 +15,7 @@ function formatDate(dateStr) {
 export default function FaqPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: faq, isLoading, isError } = useQuery({
     queryKey: ["faq", id],
@@ -21,10 +23,15 @@ export default function FaqPage() {
     enabled: !!id,
   });
 
+  useEffect(() => {
+    if (id) {
+      faqApi.incrementView(id).catch(() => {});
+    }
+  }, [id]);
+
   return (
     <div className="min-h-screen bg-white">
       <div className="container-md py-8">
-        {/* Back */}
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-6 transition-colors"
@@ -35,7 +42,6 @@ export default function FaqPage() {
           Back
         </button>
 
-        {/* Loading skeleton */}
         {isLoading && (
           <div className="space-y-4">
             <div className="skeleton h-3 w-24" />
@@ -45,24 +51,20 @@ export default function FaqPage() {
           </div>
         )}
 
-        {/* Error */}
         {isError && (
           <div className="text-center py-16 border border-gray-100 rounded-xl">
             <p className="text-gray-500 text-sm">Failed to load this FAQ.</p>
           </div>
         )}
 
-        {/* Not found */}
         {!isLoading && !isError && !faq && (
           <div className="text-center py-16 border border-gray-100 rounded-xl">
             <p className="text-gray-500 text-sm">FAQ not found.</p>
           </div>
         )}
 
-        {/* Content */}
         {!isLoading && !isError && faq && (
           <article>
-            {/* Meta */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="tag bg-gray-100 text-gray-600 text-xs">
                 {faq.category}
@@ -81,7 +83,6 @@ export default function FaqPage() {
               )}
             </div>
 
-            {/* Question */}
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug mb-2">
               {faq.question}
             </h1>
@@ -92,7 +93,6 @@ export default function FaqPage() {
 
             <div className="divider mb-8" />
 
-            {/* Answer */}
             {faq.answer ? (
               <div>
                 <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
@@ -106,7 +106,6 @@ export default function FaqPage() {
               <p className="text-sm text-gray-400 italic">No answer available yet.</p>
             )}
 
-            {/* Tags */}
             {faq.tags && faq.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-gray-100">
                 {faq.tags.map((tag) => (

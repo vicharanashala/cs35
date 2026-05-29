@@ -11,7 +11,8 @@ export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(true);
 
   const [form, setForm] = useState({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
-  const [forgotForm, setForgotForm] = useState({ username: "", newPassword: "", confirmNewPassword: "" });
+  const [forgotStep, setForgotStep] = useState("request"); // "request" | "reset"
+  const [forgotForm, setForgotForm] = useState({ username: "", otp: "", newPassword: "", confirmNewPassword: "" });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [showForgotNew, setShowForgotNew] = useState(false);
   const [showForgotConfirm, setShowForgotConfirm] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -64,7 +66,7 @@ export default function LoginPage() {
           setIsLoading(false);
           return;
         }
-        login({ email: form.username, name: form.fullName, role: "student", token: res.token });
+        login({ username: form.username, name: form.fullName, role: "student", token: res.token });
         navigate("/");
       } catch (err) {
         console.error("Signup error:", err);
@@ -124,12 +126,38 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
-  const handleForgotPassword = async (e) => {
+  const handleRequestOtp = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!forgotForm.username.trim()) {
+      setError("Please enter your username");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await authApi.requestPasswordReset(forgotForm.username);
+      if (!res.success) {
+        setError(res.message);
+        setIsLoading(false);
+        return;
+      }
+      setOtpSent(true);
+      setForgotStep("reset");
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Request OTP error:", err);
+      setError("Failed to send OTP. Please try again.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!forgotForm.username.trim()) {
-      setError("Please enter your username");
+    if (!forgotForm.otp.trim()) {
+      setError("Please enter the OTP code");
       return;
     }
     if (!forgotForm.newPassword || forgotForm.newPassword.length < 6) {
@@ -143,10 +171,10 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      const res = await authApi.forgotPassword({
+      const res = await authApi.resetPasswordWithOtp({
         username: forgotForm.username,
+        otp: forgotForm.otp,
         newPassword: forgotForm.newPassword,
-        confirmNewPassword: forgotForm.confirmNewPassword,
       });
       if (!res.success) {
         setError(res.message);
@@ -154,22 +182,24 @@ export default function LoginPage() {
         return;
       }
       setForgotSuccess(true);
-      setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" });
+      setForgotForm({ username: "", otp: "", newPassword: "", confirmNewPassword: "" });
       setIsLoading(false);
     } catch (err) {
       console.error("Password reset error:", err);
       setError("Password reset failed. Please try again.");
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
     setError("");
     setForm({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
-    setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" });
+    setForgotForm({ username: "", otp: "", newPassword: "", confirmNewPassword: "" });
     setShowForgotPassword(false);
     setForgotSuccess(false);
+    setForgotStep("request");
+    setOtpSent(false);
     setIsRegister(true);
   };
 
@@ -307,21 +337,47 @@ export default function LoginPage() {
                       </div>
                       <h3 className="text-lg font-bold mb-2" style={{ color: "#1F2937" }}>Password Reset!</h3>
                       <p className="text-sm mb-4" style={{ color: "#6B7280" }}>Your password has been changed successfully.</p>
-                      <button onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" }); setError(""); }}
+                      <button onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setForgotForm({ username: "", otp: "", newPassword: "", confirmNewPassword: "" }); setForgotStep("request"); setOtpSent(false); setError(""); }}
                         className="btn-primary w-full py-2.5 justify-center">
                         Back to Login
                       </button>
                     </div>
-                  ) : (
-                    <form onSubmit={handleForgotPassword} className="space-y-4 animate-fade-in">
+                  ) : forgotStep === "request" ? (
+                    <form onSubmit={handleRequestOtp} className="space-y-4 animate-fade-in">
                       <div className="text-center mb-4">
                         <h3 className="text-base font-bold" style={{ color: "#1F2937" }}>Reset Password</h3>
-                        <p className="text-xs mt-1" style={{ color: "#6B7280" }}>Enter your username and new password</p>
+                        <p className="text-xs mt-1" style={{ color: "#6B7280" }}>Enter your username and we'll send you an OTP</p>
                       </div>
                       <div>
                         <label className="label">Username</label>
                         <input type="text" className="input py-2.5" value={forgotForm.username} onChange={setForgotField("username")}
                           placeholder="your username" autoFocus />
+                      </div>
+                      <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
+                        {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending OTP...</> : "Send OTP"}
+                      </button>
+                      <div className="text-center">
+                        <button type="button" onClick={() => { setShowForgotPassword(false); setForgotStep("request"); setForgotForm({ username: "", otp: "", newPassword: "", confirmNewPassword: "" }); setError(""); }}
+                          className="text-sm hover:underline" style={{ color: "#5E7A5A" }}>
+                          Back to Login
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleResetPassword} className="space-y-4 animate-fade-in">
+                      <div className="text-center mb-4">
+                        <h3 className="text-base font-bold" style={{ color: "#1F2937" }}>Enter OTP</h3>
+                        <p className="text-xs mt-1" style={{ color: "#6B7280" }}>Check your email for the 6-digit code</p>
+                      </div>
+                      <div>
+                        <label className="label">Username</label>
+                        <input type="text" className="input py-2.5" value={forgotForm.username} onChange={setForgotField("username")}
+                          placeholder="your username" />
+                      </div>
+                      <div>
+                        <label className="label">OTP Code</label>
+                        <input type="text" className="input py-2.5 tracking-widest font-mono" value={forgotForm.otp} onChange={(e) => setForgotForm((p) => ({ ...p, otp: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                          placeholder="000000" maxLength={6} autoFocus />
                       </div>
                       <div>
                         <label className="label">New Password</label>
@@ -367,9 +423,9 @@ export default function LoginPage() {
                         {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Resetting...</> : "Reset Password"}
                       </button>
                       <div className="text-center">
-                        <button type="button" onClick={() => { setShowForgotPassword(false); setError(""); }}
+                        <button type="button" onClick={() => { setForgotStep("request"); setForgotForm((p) => ({ ...p, otp: "", newPassword: "", confirmNewPassword: "" })); setError(""); }}
                           className="text-sm hover:underline" style={{ color: "#5E7A5A" }}>
-                          Back to Login
+                          Request new OTP
                         </button>
                       </div>
                     </form>

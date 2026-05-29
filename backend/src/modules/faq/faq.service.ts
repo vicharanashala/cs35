@@ -49,9 +49,7 @@ export class FaqService implements OnModuleInit {
 
       for (const entry of entries) {
         const existing = await this.faqModel
-          .findOne({
-            question: entry.question,
-          })
+          .findOne({ question: entry.question })
           .exec();
         if (!existing) {
           await this.faqModel.create({
@@ -78,7 +76,7 @@ export class FaqService implements OnModuleInit {
 
   // ── FAQ Methods ──────────────────────────────────────────────
 
-  async getAllFAQs(category?: string, search?: string) {
+  async getAllFAQs(category?: string, search?: string, page = 1, limit = 20) {
     if (!this.hasMongoDB) return this.localData.getAllFAQs(category, search);
     try {
       const filter: Record<string, any> = {};
@@ -92,10 +90,23 @@ export class FaqService implements OnModuleInit {
           { tags: regex },
         ];
       }
-      return await this.faqModel
-        .find(filter)
-        .sort({ isPinned: -1, createdAt: -1 })
-        .exec();
+      if (page === 1 && limit === 20) {
+        return await this.faqModel
+          .find(filter)
+          .sort({ isPinned: -1, createdAt: -1 })
+          .exec();
+      }
+      const skip = (page - 1) * limit;
+      const [data, total] = await Promise.all([
+        this.faqModel
+          .find(filter)
+          .sort({ isPinned: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .exec(),
+        this.faqModel.countDocuments(filter).exec(),
+      ]);
+      return { data, total, page, limit };
     } catch {
       return this.localData.getAllFAQs(category, search);
     }
@@ -133,9 +144,7 @@ export class FaqService implements OnModuleInit {
     if (!this.hasMongoDB) return null;
     try {
       return await this.faqModel
-        .findByIdAndUpdate(id, data, {
-          new: true,
-        })
+        .findByIdAndUpdate(id, data, { new: true })
         .exec();
     } catch {
       return null;
@@ -162,6 +171,17 @@ export class FaqService implements OnModuleInit {
     }
   }
 
+  async incrementFaqViews(id: string) {
+    if (!this.hasMongoDB) return null;
+    try {
+      return await this.faqModel
+        .findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true })
+        .exec();
+    } catch {
+      return null;
+    }
+  }
+
   // ── Question Methods ─────────────────────────────────────────
 
   async getAllQuestions(
@@ -169,6 +189,8 @@ export class FaqService implements OnModuleInit {
     category?: string,
     search?: string,
     contributorName?: string,
+    page = 1,
+    limit = 20,
   ) {
     if (!this.hasMongoDB) return [];
     try {
@@ -177,22 +199,49 @@ export class FaqService implements OnModuleInit {
       if (category) filter.category = category;
       if (search) filter.question = { $regex: search, $options: 'i' };
       if (contributorName) filter.contributorName = contributorName;
-      return await this.questionModel
-        .find(filter)
-        .sort({ createdAt: -1 })
-        .exec();
+      if (page === 1 && limit === 20) {
+        return await this.questionModel
+          .find(filter)
+          .sort({ createdAt: -1 })
+          .exec();
+      }
+      const skip = (page - 1) * limit;
+      const [data, total] = await Promise.all([
+        this.questionModel
+          .find(filter)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .exec(),
+        this.questionModel.countDocuments(filter).exec(),
+      ]);
+      return { data, total, page, limit };
     } catch {
       return [];
     }
   }
 
-  async getOpenQuestions() {
+  async getOpenQuestions(page = 1, limit = 20) {
     if (!this.hasMongoDB) return this.localData.getOpenQuestions();
     try {
-      return await this.questionModel
-        .find({ status: { $in: ['open', 'reopened'] } })
-        .sort({ createdAt: 1 })
-        .exec();
+      const filter = { status: { $in: ['open', 'reopened'] } } as any;
+      if (page === 1 && limit === 20) {
+        return await this.questionModel
+          .find(filter)
+          .sort({ createdAt: 1 })
+          .exec();
+      }
+      const skip = (page - 1) * limit;
+      const [data, total] = await Promise.all([
+        this.questionModel
+          .find(filter)
+          .sort({ createdAt: 1 })
+          .skip(skip)
+          .limit(limit)
+          .exec(),
+        this.questionModel.countDocuments(filter).exec(),
+      ]);
+      return { data, total, page, limit };
     } catch {
       return this.localData.getOpenQuestions();
     }
@@ -226,9 +275,7 @@ export class FaqService implements OnModuleInit {
     if (!this.hasMongoDB) return null;
     try {
       return await this.questionModel
-        .findByIdAndUpdate(id, data, {
-          new: true,
-        })
+        .findByIdAndUpdate(id, data, { new: true })
         .exec();
     } catch {
       return null;
@@ -249,11 +296,7 @@ export class FaqService implements OnModuleInit {
     if (!this.hasMongoDB) return null;
     try {
       return await this.questionModel
-        .findByIdAndUpdate(
-          id,
-          { status: 'closed', isClosed: true },
-          { new: true },
-        )
+        .findByIdAndUpdate(id, { status: 'closed', isClosed: true }, { new: true })
         .exec();
     } catch {
       return null;
@@ -264,11 +307,7 @@ export class FaqService implements OnModuleInit {
     if (!this.hasMongoDB) return this.localData.reopenQuestion(id);
     try {
       return await this.questionModel
-        .findByIdAndUpdate(
-          id,
-          { status: 'reopened', isClosed: false },
-          { new: true },
-        )
+        .findByIdAndUpdate(id, { status: 'reopened', isClosed: false }, { new: true })
         .exec();
     } catch {
       return this.localData.reopenQuestion(id);
@@ -287,10 +326,7 @@ export class FaqService implements OnModuleInit {
         answerContent = answer?.content || '';
       } else {
         const verifiedAnswer = await this.answerModel
-          .findOne({
-            questionId,
-            isVerified: true,
-          })
+          .findOne({ questionId, isVerified: true })
           .exec();
         answerContent = verifiedAnswer?.content || '';
       }
@@ -302,14 +338,10 @@ export class FaqService implements OnModuleInit {
         tags: question.tags || [],
         isAnswered: true,
         isPinned: false,
+        views: 0,
       });
 
-      await this.questionModel
-        .findByIdAndUpdate(questionId, {
-          status: 'closed',
-        })
-        .exec();
-
+      await this.questionModel.findByIdAndUpdate(questionId, { status: 'closed' }).exec();
       return faq;
     } catch {
       return null;
@@ -331,15 +363,10 @@ export class FaqService implements OnModuleInit {
         upvotes: 0,
       });
       const hasVerified = await this.answerModel
-        .findOne({
-          questionId,
-          isVerified: true,
-        })
+        .findOne({ questionId, isVerified: true })
         .exec();
       if (hasVerified) {
-        await this.questionModel.findByIdAndUpdate(questionId, {
-          status: 'answered',
-        });
+        await this.questionModel.findByIdAndUpdate(questionId, { status: 'answered' });
       }
       return answer;
     } catch {
@@ -351,9 +378,7 @@ export class FaqService implements OnModuleInit {
     if (!this.hasMongoDB) return null;
     try {
       return await this.answerModel
-        .findByIdAndUpdate(id, data, {
-          new: true,
-        })
+        .findByIdAndUpdate(id, data, { new: true })
         .exec();
     } catch {
       return null;
@@ -378,22 +403,15 @@ export class FaqService implements OnModuleInit {
       await answer.save();
 
       const hasVerified = await this.answerModel
-        .findOne({
-          questionId: answer.questionId,
-          isVerified: true,
-        })
+        .findOne({ questionId: answer.questionId, isVerified: true })
         .exec();
       if (hasVerified) {
         await this.questionModel
-          .findByIdAndUpdate(answer.questionId, {
-            status: 'answered',
-          })
+          .findByIdAndUpdate(answer.questionId, { status: 'answered' })
           .exec();
       } else {
         await this.questionModel
-          .findByIdAndUpdate(answer.questionId, {
-            status: 'open',
-          })
+          .findByIdAndUpdate(answer.questionId, { status: 'open' })
           .exec();
       }
       return answer;
@@ -445,10 +463,7 @@ export class FaqService implements OnModuleInit {
         ])
         .exec()) as { _id: string; questionCount: number }[];
 
-      const statsMap = new Map<
-        string,
-        { faqCount: number; questionCount: number }
-      >();
+      const statsMap = new Map<string, { faqCount: number; questionCount: number }>();
 
       for (const item of faqStats) {
         if (item._id) {
@@ -458,10 +473,7 @@ export class FaqService implements OnModuleInit {
 
       for (const item of questionStats) {
         if (item._id) {
-          const existing = statsMap.get(item._id) || {
-            faqCount: 0,
-            questionCount: 0,
-          };
+          const existing = statsMap.get(item._id) || { faqCount: 0, questionCount: 0 };
           existing.questionCount = item.questionCount;
           statsMap.set(item._id, existing);
         }
@@ -473,10 +485,7 @@ export class FaqService implements OnModuleInit {
         questionCount: stats.questionCount,
       }));
     } catch (err) {
-      console.warn(
-        '[FaqService] Error gathering category stats via aggregation:',
-        err,
-      );
+      console.warn('[FaqService] Error gathering category stats via aggregation:', err);
       return [];
     }
   }
@@ -541,17 +550,11 @@ export class FaqService implements OnModuleInit {
         totalUsers,
       ] = await Promise.all([
         this.questionModel.countDocuments().exec(),
-        this.questionModel
-          .countDocuments({
-            status: { $in: ['open', 'reopened'] },
-          })
-          .exec(),
+        this.questionModel.countDocuments({ status: { $in: ['open', 'reopened'] } }).exec(),
         this.questionModel.countDocuments({ status: 'answered' }).exec(),
         this.answerModel.countDocuments({ isVerified: true }).exec(),
         this.faqModel.countDocuments().exec(),
-        this.faqModel
-          .distinct('category')
-          .then((c) => c.filter(Boolean).length),
+        this.faqModel.distinct('category').then((c) => c.filter(Boolean).length),
         this.userModel.countDocuments({ role: 'student' }).exec(),
       ]);
       return {

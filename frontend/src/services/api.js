@@ -29,12 +29,13 @@ export const faqApi = {
   list: (params = {}) => safeRequest(client.get("/faqs", { params }).then((r) => r.data)),
   getById: (id) => safeRequest(client.get(`/faqs/${id}`).then((r) => r.data)),
   listCategories: () => safeRequest(client.get("/categories").then((r) => r.data)),
+  incrementView: (id) => safeRequest(client.patch(`/faqs/${id}/view`).then((r) => r.data)),
 };
 
 // ── Question API ─────────────────────────────────────────────
 
 export const questionApi = {
-  listOpen: () => safeRequest(client.get("/questions/open").then((r) => r.data)),
+  listOpen: (params = {}) => safeRequest(client.get("/questions/open", { params }).then((r) => r.data)),
   list: (params = {}) => safeRequest(client.get("/questions", { params }).then((r) => r.data)),
   getById: (id) => safeRequest(client.get(`/questions/${id}`).then((r) => r.data)),
   create: (data) => safeRequest(client.post("/questions", data).then((r) => r.data)),
@@ -72,7 +73,7 @@ export const categoryApi = {
   create: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
 };
 
-// ── User API ──────────────────────────────────────────────────
+// ── User API ─────────────────────────────────────────────────
 
 export const userApi = {
   me: () => {
@@ -97,5 +98,6 @@ export const adminApi = {
 export const authApi = {
   signup: (data) => safeRequest(client.post("/auth/signup", data).then((r) => r.data)),
   login: (data) => safeRequest(client.post("/auth/login", data).then((r) => r.data)),
-  forgotPassword: (data) => safeRequest(client.post("/auth/forgot-password", data).then((r) => r.data)),
+  requestPasswordReset: (username) => safeRequest(client.post("/auth/forgot-password/request", { username }).then((r) => r.data)),
+  resetPasswordWithOtp: (data) => safeRequest(client.post("/auth/forgot-password/reset", data).then((r) => r.data)),
 };

@@ -20,8 +20,15 @@ export class FaqController {
   getAllFAQs(
     @Query('category') category?: string,
     @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.faqService.getAllFAQs(category, search);
+    return this.faqService.getAllFAQs(
+      category,
+      search,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+    );
   }
 
   @Get('faqs/:id')
@@ -56,6 +63,11 @@ export class FaqController {
     return this.faqService.updateFaq(id, body);
   }
 
+  @Patch('faqs/:id/view')
+  incrementFaqViews(@Param('id') id: string) {
+    return this.faqService.incrementFaqViews(id);
+  }
+
   @Delete('faqs/:id')
   deleteFaq(@Param('id') id: string) {
     return this.faqService.deleteFaq(id);
@@ -86,8 +98,14 @@ export class FaqController {
   // ── Question Routes ─────────────────────────────────────────
 
   @Get('questions/open')
-  getOpenQuestions() {
-    return this.faqService.getOpenQuestions();
+  getOpenQuestions(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.faqService.getOpenQuestions(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+    );
   }
 
   @Get('questions')
@@ -96,12 +114,16 @@ export class FaqController {
     @Query('category') category?: string,
     @Query('search') search?: string,
     @Query('contributor') contributor?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     return this.faqService.getAllQuestions(
       status,
       category,
       search,
       contributor,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
     );
   }
 
@@ -192,7 +214,7 @@ export class FaqController {
     return this.faqService.verifyAnswer(id, body.verified);
   }
 
-  // ── User Routes ──────────────────────────────────────────────
+  // ── User Routes ─────────────────────────────────────────────
 
   @Get('users')
   getAllUsers() {
@@ -212,7 +234,7 @@ export class FaqController {
     return this.faqService.deleteUser(id);
   }
 
-  // ── Admin Stats ──────────────────────────────────────────────
+  // ── Admin Stats ─────────────────────────────────────────────
 
   @Get('admin/stats')
   getStats() {

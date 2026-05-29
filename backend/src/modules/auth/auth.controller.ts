@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Get, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Get, Headers, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -18,6 +19,8 @@ export class AuthController {
     return this.authService.signup(body);
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ login: { limit: 5, ttl: 60000 } })
   @Post('login')
   login(
     @Body()
@@ -34,15 +37,28 @@ export class AuthController {
     return this.authService.loginStudent(body.username || '', body.password);
   }
 
-  @Post('forgot-password')
-  forgotPassword(
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Post('forgot-password/request')
+  requestPasswordReset(@Body() body: { username: string }) {
+    return this.authService.requestPasswordReset(body.username);
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Post('forgot-password/reset')
+  resetPasswordWithOtp(
     @Body()
     body: {
       username: string;
+      otp: string;
       newPassword: string;
-      confirmNewPassword: string;
     },
   ) {
-    return this.authService.forgotPassword(body);
+    return this.authService.resetPasswordWithOtp(
+      body.username,
+      body.otp,
+      body.newPassword,
+    );
   }
 }

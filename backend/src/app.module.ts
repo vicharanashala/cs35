@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Module, Type, DynamicModule, ForwardReference } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { FaqModule } from './modules/faq/faq.module';
 import { AuthModule } from './modules/auth/auth.module';
 
@@ -37,6 +38,18 @@ if (process.env.MONGODB_URI) {
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 60000,
+        limit: 100,
+      },
+      {
+        name: 'login',
+        ttl: 60000,
+        limit: 5,
+      },
+    ]),
     ...mongooseImports,
     ...featureModules,
   ],

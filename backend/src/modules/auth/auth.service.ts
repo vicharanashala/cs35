@@ -2,10 +2,12 @@
 import * as bcrypt from 'bcrypt';
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import { User } from '../../schemas/user.schema';
 import { Question } from '../../schemas/question.schema';
 import { Answer } from '../../schemas/answer.schema';
+import { OtpService } from './otp.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +23,8 @@ export class AuthService {
     @Optional()
     @InjectModel(Answer.name)
     private answerModel: Model<Answer> | undefined,
+    private jwtService: JwtService,
+    private otpService: OtpService,
   ) {
     if (this.userModel) {
       this.mongoConnected = true;
@@ -29,6 +33,10 @@ export class AuthService {
 
   private get hasMongoDB() {
     return this.mongoConnected;
+  }
+
+  private signToken(payload: { sub: string; email?: string; role: string; name: string }): string {
+    return this.jwtService.sign(payload);
   }
 
   async signup(data: {
@@ -101,9 +109,11 @@ export class AuthService {
         questionsBookmarked: [],
       });
 
-      const token = Buffer.from(`${data.username}:${Date.now()}`).toString(
-        'base64',
-      );
+      const token = this.signToken({
+        sub: data.username,
+        role: 'student',
+        name: data.fullName,
+      });
       return { success: true, message: 'Account created successfully', token };
     } catch (err) {
       return { success: false, message: 'Signup failed. Please try again.' };
@@ -144,7 +154,11 @@ export class AuthService {
         return { success: false, message: 'Incorrect password' };
       }
 
-      const token = Buffer.from(`${username}:${Date.now()}`).toString('base64');
+      const token = this.signToken({
+        sub: username,
+        role: 'student',
+        name: user.name || 'Student',
+      });
       return {
         success: true,
         message: 'Login successful',
@@ -156,56 +170,65 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(data: {
-    username: string;
-    newPassword: string;
-    confirmNewPassword: string;
-  }): Promise<{ success: boolean; message: string }> {
-    if (!this.hasMongoDB) {
-      return {
-        success: false,
-        message: 'Password reset unavailable in demo mode',
-      };
+  async requestPasswordReset(
+    username: string,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!this.hasMongoDB || !this.otpService) {
+      return { success: false, message: 'Password reset unavailable in demo mode' };
     }
 
     try {
-      if (!data.username.trim()) {
+      if (!username.trim()) {
         return { success: false, message: 'Username is required' };
       }
 
-      if (!data.newPassword || data.newPassword.length < 6) {
-        return {
-          success: false,
-          message: 'Password must be at least 6 characters',
-        };
+      const user = await this.userModel
+        .findOne({ username, role: 'student' })
+        .exec();
+      if (!user) {
+        return { success: false, message: 'Account not found. Please sign up.' };
       }
 
-      if (data.newPassword !== data.confirmNewPassword) {
-        return { success: false, message: 'Passwords do not match' };
+      await this.otpService.generateAndSend(user.email || `${username}@asksam.local`, username);
+      return { success: true, message: 'OTP sent to your email address' };
+    } catch (err) {
+      return { success: false, message: 'Failed to send OTP. Please try again.' };
+    }
+  }
+
+  async resetPasswordWithOtp(
+    username: string,
+    otp: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!this.hasMongoDB || !this.otpService) {
+      return { success: false, message: 'Password reset unavailable in demo mode' };
+    }
+
+    try {
+      if (!newPassword || newPassword.length < 6) {
+        return { success: false, message: 'Password must be at least 6 characters' };
       }
 
       const user = await this.userModel
-        .findOne({ username: data.username, role: 'student' })
+        .findOne({ username, role: 'student' })
         .exec();
       if (!user) {
-        return {
-          success: false,
-          message: 'Account not found. Please sign up.',
-        };
+        return { success: false, message: 'Account not found.' };
       }
 
-      user.password = await bcrypt.hash(data.newPassword, 10);
-      await user.save();
+      const valid = await this.otpService.verify(user.email || `${username}@asksam.local`, otp);
+      if (!valid) {
+        return { success: false, message: 'Invalid or expired OTP. Please request a new one.' };
+      }
 
-      return {
-        success: true,
-        message: 'Password reset successfully. You can now login.',
-      };
+      user.password = await bcrypt.hash(newPassword, 10);
+      await user.save();
+      await this.otpService.invalidate(user.email || `${username}@asksam.local`);
+
+      return { success: true, message: 'Password reset successful. You can now login.' };
     } catch (err) {
-      return {
-        success: false,
-        message: 'Password reset failed. Please try again.',
-      };
+      return { success: false, message: 'Password reset failed. Please try again.' };
     }
   }
 
@@ -215,40 +238,45 @@ export class AuthService {
     message?: string;
   }> {
     if (!this.hasMongoDB || !this.questionModel || !this.answerModel) {
-      return {
-        success: true,
-        user: {
-          name: 'Student',
-          username: 'student',
-          role: 'student',
-          createdAt: new Date().toISOString(),
-          questionsCount: 0,
-          answersCount: 0,
-          verifiedCount: 0,
-        },
-      };
+      let payload: { sub: string; role: string; name: string };
+      try {
+        payload = this.jwtService.verify(token) as { sub: string; role: string; name: string };
+        return {
+          success: true,
+          user: {
+            name: payload.name || 'Student',
+            username: payload.sub,
+            role: payload.role || 'student',
+            createdAt: new Date().toISOString(),
+            questionsCount: 0,
+            answersCount: 0,
+            verifiedCount: 0,
+          },
+        };
+      } catch {
+        return { success: false, message: 'Invalid token' };
+      }
     }
 
     try {
-      const decoded = Buffer.from(token, 'base64').toString('utf-8');
-      const username = decoded.split(':')[0];
-      if (!username) return { success: false, message: 'Invalid token' };
+      let payload: { sub: string; role: string; name: string };
+      try {
+        payload = this.jwtService.verify(token) as { sub: string; role: string; name: string };
+      } catch {
+        return { success: false, message: 'Invalid or expired token' };
+      }
 
       const user = await this.userModel
-        .findOne({ username, role: 'student' })
+        .findOne({ username: payload.sub, role: payload.role as 'student' | 'admin' })
         .select('-password')
         .exec();
       if (!user) return { success: false, message: 'User not found' };
 
       const questionsCount = await this.questionModel
-        .countDocuments({
-          contributorName: user.username,
-        })
+        .countDocuments({ contributorName: user.username })
         .exec();
       const answersCount = await this.answerModel
-        .countDocuments({
-          contributorId: user._id.toString(),
-        })
+        .countDocuments({ contributorId: user._id.toString() })
         .exec();
       const verifiedCount = await this.answerModel
         .countDocuments({
@@ -312,7 +340,12 @@ export class AuthService {
         return { success: false, message: 'Incorrect password' };
       }
 
-      const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
+      const token = this.signToken({
+        sub: email,
+        email,
+        role: 'admin',
+        name: user.name || 'Admin',
+      });
       return {
         success: true,
         message: 'Login successful',
