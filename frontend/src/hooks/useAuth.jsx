@@ -34,6 +34,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("authUser");
     queryClient.clear();
     setUser(null);
+    window.location.href = "/login";
   }, [queryClient]);
 
   return (
