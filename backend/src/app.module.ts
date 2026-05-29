@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { FaqModule } from './modules/faq/faq.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 const mongooseImports: any[] = [];
 if (process.env.MONGODB_URI) {
@@ -20,6 +21,6 @@ if (process.env.MONGODB_URI) {
 }
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), ...mongooseImports, FaqModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), ...mongooseImports, FaqModule, AuthModule],
 })
 export class AppModule {}

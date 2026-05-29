@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Suspense, lazy, Component } from "react";
 import MainLayout from "./layouts/MainLayout";
+import { useAuth } from "./hooks/useAuth";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -73,11 +74,11 @@ function NotFound() {
 
 // Protected Route Wrapper
 function ProtectedRoute({ children, requireAdmin = false }) {
-  const role = localStorage.getItem("userRole");
-  if (!role) {
+  const { user } = useAuth();
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
-  if (requireAdmin && role !== "admin") {
+  if (requireAdmin && user.role !== "admin") {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -86,11 +87,18 @@ function ProtectedRoute({ children, requireAdmin = false }) {
 // Layout Wrapper
 function AppLayout({ children }) {
   const location = useLocation();
+  const { user } = useAuth();
   const isAuthPage = location.pathname === "/login";
   const isAdminDashboard = location.pathname.startsWith("/admin");
 
-  // Don't render MainLayout on Login or Admin dashboard
-  if (isAuthPage || isAdminDashboard) {
+  if (isAuthPage) {
+    if (user) {
+      return <Navigate to={user.role === "admin" ? "/admin" : "/"} replace />;
+    }
+    return children;
+  }
+
+  if (isAdminDashboard) {
     return children;
   }
 

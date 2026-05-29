@@ -38,3 +38,10 @@ export const questionApi = {
   vote: (questionId, answerId, direction) =>
     safeRequest(client.patch(`/questions/${questionId}/vote`, { answerId, direction }).then((r) => r.data)),
 };
+
+export const authApi = {
+  sendOtp: (email) => safeRequest(client.post("/auth/send-otp", { email }).then((r) => r.data)),
+  verifyOtp: (email, otp) => safeRequest(client.post("/auth/verify-otp", { email, otp }).then((r) => r.data)),
+  signup: (data) => safeRequest(client.post("/auth/signup", data).then((r) => r.data)),
+  login: (data) => safeRequest(client.post("/auth/login", data).then((r) => r.data)),
+};
