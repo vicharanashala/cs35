@@ -13,6 +13,12 @@ export default function LoginPage() {
   const [form, setForm] = useState({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
   const [forgotForm, setForgotForm] = useState({ username: "", newPassword: "", confirmNewPassword: "" });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showForgotNew, setShowForgotNew] = useState(false);
+  const [showForgotConfirm, setShowForgotConfirm] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -204,8 +210,23 @@ export default function LoginPage() {
             </div>
             <div>
               <label className="label">Password</label>
-              <input type="password" className="input py-2.5" value={form.password} onChange={setField("password")}
-                placeholder="••••••••" />
+              <div className="relative">
+                <input type={showAdminPassword ? "text" : "password"} className="input py-2.5 pr-10" value={form.password} onChange={setField("password")}
+                  placeholder="••••••••" />
+                <button type="button" aria-label="Toggle password" onClick={() => setShowAdminPassword(s => !s)} onMouseDown={(e) => e.preventDefault()}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
+                  {showAdminPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
             <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
               {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Logging in...</> : "Login to Dashboard"}
@@ -228,13 +249,43 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="label">Password</label>
-                  <input type="password" className="input py-2.5" value={form.password} onChange={setField("password")}
-                    placeholder="Min. 6 characters" />
+                  <div className="relative">
+                    <input type={showRegisterPassword ? "text" : "password"} className="input py-2.5 pr-10" value={form.password} onChange={setField("password")}
+                      placeholder="Min. 6 characters" />
+                    <button type="button" aria-label="Toggle password" onClick={() => setShowRegisterPassword(s => !s)} onMouseDown={(e) => e.preventDefault()}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
+                      {showRegisterPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="label">Confirm Password</label>
-                  <input type="password" className="input py-2.5" value={form.confirmPassword} onChange={setField("confirmPassword")}
-                    placeholder="Repeat password" />
+                  <div className="relative">
+                    <input type={showRegisterConfirm ? "text" : "password"} className="input py-2.5 pr-10" value={form.confirmPassword} onChange={setField("confirmPassword")}
+                      placeholder="Repeat password" />
+                    <button type="button" aria-label="Toggle confirm password" onClick={() => setShowRegisterConfirm(s => !s)} onMouseDown={(e) => e.preventDefault()}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
+                      {showRegisterConfirm ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
                   {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creating account...</> : "Create Account"}
@@ -270,13 +321,43 @@ export default function LoginPage() {
                       </div>
                       <div>
                         <label className="label">New Password</label>
-                        <input type="password" className="input py-2.5" value={forgotForm.newPassword} onChange={setForgotField("newPassword")}
-                          placeholder="Min. 6 characters" />
+                        <div className="relative">
+                          <input type={showForgotNew ? "text" : "password"} className="input py-2.5 pr-10" value={forgotForm.newPassword} onChange={setForgotField("newPassword")}
+                            placeholder="Min. 6 characters" />
+                          <button type="button" aria-label="Toggle password" onClick={() => setShowForgotNew(s => !s)} onMouseDown={(e) => e.preventDefault()}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
+                            {showForgotNew ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <label className="label">Confirm New Password</label>
-                        <input type="password" className="input py-2.5" value={forgotForm.confirmNewPassword} onChange={setForgotField("confirmNewPassword")}
-                          placeholder="Repeat new password" />
+                        <div className="relative">
+                          <input type={showForgotConfirm ? "text" : "password"} className="input py-2.5 pr-10" value={forgotForm.confirmNewPassword} onChange={setForgotField("confirmNewPassword")}
+                            placeholder="Repeat new password" />
+                          <button type="button" aria-label="Toggle confirm password" onClick={() => setShowForgotConfirm(s => !s)} onMouseDown={(e) => e.preventDefault()}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
+                            {showForgotConfirm ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
                         {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Resetting...</> : "Reset Password"}
@@ -298,8 +379,23 @@ export default function LoginPage() {
                     </div>
                     <div>
                       <label className="label">Password</label>
-                      <input type="password" className="input py-2.5" value={form.password} onChange={setField("password")}
-                        placeholder="••••••••" />
+                      <div className="relative">
+                        <input type={showLoginPassword ? "text" : "password"} className="input py-2.5 pr-10" value={form.password} onChange={setField("password")}
+                          placeholder="••••••••" />
+                        <button type="button" aria-label="Toggle password" onClick={() => setShowLoginPassword(s => !s)} onMouseDown={(e) => e.preventDefault()}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
+                          {showLoginPassword ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
                       {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Logging in...</> : "Login"}
