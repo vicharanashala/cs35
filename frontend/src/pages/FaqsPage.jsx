@@ -115,20 +115,9 @@ export default function FaqsPage() {
 
       <div className="container-md py-8">
         {/* Controls */}
-        <div className="card p-4 mb-6 flex flex-col sm:flex-row gap-3">
-          <div className="search-wrap flex-1">
-            <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              className="search-input text-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search official answers..."
-            />
-          </div>
+        <div className="card p-4 mb-6">
           <select
-            className="input w-auto text-sm py-2 cursor-pointer"
+            className="input w-full text-sm py-2 cursor-pointer"
             value={activeCategory}
             onChange={(e) => setActiveCategory(e.target.value)}
           >
