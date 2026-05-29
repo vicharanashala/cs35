@@ -35,9 +35,7 @@ export default function Navbar() {
 
 
 
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [location.pathname]);
+
 
   useEffect(() => {
     if (isMenuOpen) {
@@ -179,7 +177,12 @@ export default function Navbar() {
                         My Questions
                       </Link>
                       <button
-                        onClick={() => { setDropdownOpen(false); logout(); }}
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          localStorage.removeItem("authToken");
+                          localStorage.removeItem("authUser");
+                          window.location.href = "/login";
+                        }}
                         className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -340,7 +343,12 @@ export default function Navbar() {
               {isAuthenticated ? (
                 <button
                   type="button"
-                  onClick={() => { logout(); closeMenu(); }}
+                  onClick={() => {
+                    closeMenu();
+                    localStorage.removeItem("authToken");
+                    localStorage.removeItem("authUser");
+                    window.location.href = "/login";
+                  }}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium
                              text-red-600 bg-red-50 rounded-xl hover:bg-red-100
                              border border-red-100 transition-all duration-200"

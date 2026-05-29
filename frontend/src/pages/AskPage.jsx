@@ -110,6 +110,7 @@ export default function AskPage() {
       setSubmitted(title);
       setShowSuccess(true);
     } catch (err) {
+      console.error("Failed to submit question:", err);
       setError("Failed to submit question. Please try again.");
     }
     setIsSubmitting(false);

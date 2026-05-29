@@ -105,15 +105,14 @@ export default function QuestionPage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const { data: question, isLoading, isError, refetch } = useQuery({
+  const { data: question, isLoading, isError } = useQuery({
     queryKey: ["question", id],
     queryFn: () => questionApi.getById(id),
     enabled: !!id,
   });
 
-  const answers = [...(question?.answers || []), ...localAnswers];
-
   const sorted = useMemo(() => {
+    const answers = [...(question?.answers || []), ...localAnswers];
     const list = [...answers];
     if (sortBy === "verified")
       list.sort((a, b) => (b.isVerified ? 1 : 0) - (a.isVerified ? 1 : 0));
@@ -122,7 +121,7 @@ export default function QuestionPage() {
     else
       list.sort((a, b) => ((b.upvotes || 0) + (userVotes[b._id] || 0)) - ((a.upvotes || 0) + (userVotes[a._id] || 0)));
     return list;
-  }, [answers, sortBy, userVotes]);
+  }, [question?.answers, localAnswers, sortBy, userVotes]);
 
   const handleVote = async (answerId, dir) => {
     const cur = userVotes[answerId] || 0;
@@ -137,7 +136,9 @@ export default function QuestionPage() {
     });
     try {
       await questionApi.vote(id, answerId, newDir);
-    } catch (_) {}
+    } catch (err) {
+      console.error("Failed to vote:", err);
+    }
   };
 
   const submitAnswer = async (e) => {
@@ -162,6 +163,7 @@ export default function QuestionPage() {
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 3000);
     } catch (err) {
+      console.error("Failed to post answer:", err);
       setSubmitError("Failed to post answer. Please try again.");
     }
     setIsSubmitting(false);

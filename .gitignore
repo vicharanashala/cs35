@@ -6,7 +6,7 @@ coverage
 
 # Environment files — NEVER commit real credentials
 *.env
-backend.env
+backend/.env
 
 # Debug/test scripts
 backend/scripts/

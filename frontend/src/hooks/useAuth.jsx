@@ -1,26 +1,25 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     const token = localStorage.getItem("authToken");
     const savedUser = localStorage.getItem("authUser");
     if (token && savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
-      } catch (_) {
+        return JSON.parse(savedUser);
+      } catch {
         localStorage.removeItem("authToken");
         localStorage.removeItem("authUser");
       }
     }
-    setLoading(false);
-  }, []);
+    return null;
+  });
 
   const login = useCallback((data) => {
     localStorage.setItem("authToken", data.token);
@@ -34,11 +33,11 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("authUser");
     queryClient.clear();
     setUser(null);
-    window.location.href = "/login";
+    window.location.replace("/login");
   }, [queryClient]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, loading: false, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

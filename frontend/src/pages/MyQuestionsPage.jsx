@@ -146,7 +146,9 @@ export default function MyQuestionsPage() {
     if (!window.confirm("Delete this question? This cannot be undone.")) return;
     try {
       await questionApi.delete(id);
-    } catch (_) {}
+    } catch (err) {
+      console.error("Failed to delete question:", err);
+    }
   };
 
   return (

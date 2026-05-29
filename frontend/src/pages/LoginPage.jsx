@@ -66,7 +66,8 @@ export default function LoginPage() {
         }
         login({ email: form.username, name: form.fullName, role: "student", token: res.token });
         navigate("/");
-      } catch (_) {
+      } catch (err) {
+        console.error("Signup error:", err);
         setError("Signup failed. Please try again.");
       }
       setIsLoading(false);
@@ -90,7 +91,8 @@ export default function LoginPage() {
         }
         login({ username: form.username, name: res.name || "Student", role: "student", token: res.token });
         navigate("/");
-      } catch (_) {
+      } catch (err) {
+        console.error("Login error:", err);
         setError("Login failed. Please check your connection.");
       }
       setIsLoading(false);
@@ -115,7 +117,8 @@ export default function LoginPage() {
       }
       login({ email: form.email, name: res.name || "Admin", role: "admin", token: res.token });
       navigate("/admin");
-    } catch (_) {
+    } catch (err) {
+      console.error("Admin login error:", err);
       setError("Login failed. Please check your connection.");
     }
     setIsLoading(false);
@@ -153,7 +156,8 @@ export default function LoginPage() {
       setForgotSuccess(true);
       setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" });
       setIsLoading(false);
-    } catch (_) {
+    } catch (err) {
+      console.error("Password reset error:", err);
       setError("Password reset failed. Please try again.");
     }
     setIsLoading(false);

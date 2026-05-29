@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Type, DynamicModule, ForwardReference } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Faq, FaqSchema } from '../../schemas/faq.schema';
 import { Question, QuestionSchema } from '../../schemas/question.schema';
@@ -8,7 +8,13 @@ import { FaqService } from './faq.service';
 import { FaqController } from './faq.controller';
 import { LocalDataService } from './local-data.service';
 
-const mongooseImports: any[] = [];
+type NestModuleImport =
+  | Type<any>
+  | DynamicModule
+  | Promise<DynamicModule>
+  | ForwardReference<any>;
+
+const mongooseImports: NestModuleImport[] = [];
 if (process.env.MONGODB_URI) {
   mongooseImports.push(
     MongooseModule.forFeature([

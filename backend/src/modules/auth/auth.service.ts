@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
 import * as bcrypt from 'bcrypt';
-import { Injectable, Inject, Optional } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '../../schemas/user.schema';
@@ -11,9 +12,15 @@ export class AuthService {
   private mongoConnected = false;
 
   constructor(
-    @Optional() @InjectModel(User.name) private userModel: Model<User> | undefined,
-    @Optional() @InjectModel(Question.name) private questionModel: Model<Question> | undefined,
-    @Optional() @InjectModel(Answer.name) private answerModel: Model<Answer> | undefined,
+    @Optional()
+    @InjectModel(User.name)
+    private userModel: Model<User> | undefined,
+    @Optional()
+    @InjectModel(Question.name)
+    private questionModel: Model<Question> | undefined,
+    @Optional()
+    @InjectModel(Answer.name)
+    private answerModel: Model<Answer> | undefined,
   ) {
     if (this.userModel) {
       this.mongoConnected = true;
@@ -24,35 +31,62 @@ export class AuthService {
     return this.mongoConnected;
   }
 
-  async signup(data: { fullName: string; username: string; password: string }): Promise<{ success: boolean; message: string; token?: string }> {
+  async signup(data: {
+    fullName: string;
+    username: string;
+    password: string;
+  }): Promise<{ success: boolean; message: string; token?: string }> {
     if (!this.hasMongoDB) {
-      return { success: true, message: 'Signup successful (demo mode)', token: 'demo-token' };
+      return {
+        success: true,
+        message: 'Signup successful (demo mode)',
+        token: 'demo-token',
+      };
     }
 
     try {
       if (!data.username || data.username.trim().length < 3) {
-        return { success: false, message: 'Username must be at least 3 characters' };
+        return {
+          success: false,
+          message: 'Username must be at least 3 characters',
+        };
       }
 
       if (!/^[a-zA-Z0-9_]+$/.test(data.username)) {
-        return { success: false, message: 'Username can only contain letters, numbers, and underscores' };
+        return {
+          success: false,
+          message:
+            'Username can only contain letters, numbers, and underscores',
+        };
       }
 
       if (data.password.length < 6) {
-        return { success: false, message: 'Password must be at least 6 characters' };
+        return {
+          success: false,
+          message: 'Password must be at least 6 characters',
+        };
       }
 
-      const existingUsername = await this.userModel.findOne({ username: data.username }).exec();
+      const existingUsername = await this.userModel
+        .findOne({ username: data.username })
+        .exec();
       if (existingUsername) {
-        return { success: false, message: 'Username already taken. Please choose another.' };
+        return {
+          success: false,
+          message: 'Username already taken. Please choose another.',
+        };
       }
 
       const hashedPassword = await bcrypt.hash(data.password, 10);
 
-      let studentId: string | undefined;
-      const lastUser = await this.userModel.findOne({ role: 'student', studentId: { $exists: true } }).sort({ studentId: -1 }).exec();
-      const lastNum = lastUser?.studentId ? parseInt(lastUser.studentId.replace('STU-', ''), 10) : 0;
-      studentId = `STU-${String(lastNum + 1).padStart(5, '0')}`;
+      const lastUser = await this.userModel
+        .findOne({ role: 'student', studentId: { $exists: true } })
+        .sort({ studentId: -1 })
+        .exec();
+      const lastNum = lastUser?.studentId
+        ? parseInt(lastUser.studentId.replace('STU-', ''), 10)
+        : 0;
+      const studentId = `STU-${String(lastNum + 1).padStart(5, '0')}`;
 
       await this.userModel.create({
         username: data.username,
@@ -67,22 +101,42 @@ export class AuthService {
         questionsBookmarked: [],
       });
 
-      const token = Buffer.from(`${data.username}:${Date.now()}`).toString('base64');
+      const token = Buffer.from(`${data.username}:${Date.now()}`).toString(
+        'base64',
+      );
       return { success: true, message: 'Account created successfully', token };
     } catch (err) {
       return { success: false, message: 'Signup failed. Please try again.' };
     }
   }
 
-  async loginStudent(username: string, password: string): Promise<{ success: boolean; message: string; token?: string; name?: string }> {
+  async loginStudent(
+    username: string,
+    password: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    token?: string;
+    name?: string;
+  }> {
     if (!this.hasMongoDB) {
-      return { success: true, message: 'Login successful (demo mode)', token: 'demo-token', name: 'Student' };
+      return {
+        success: true,
+        message: 'Login successful (demo mode)',
+        token: 'demo-token',
+        name: 'Student',
+      };
     }
 
     try {
-      const user = await this.userModel.findOne({ username, role: 'student', isActive: true }).exec();
+      const user = await this.userModel
+        .findOne({ username, role: 'student', isActive: true })
+        .exec();
       if (!user) {
-        return { success: false, message: 'Account not found. Please sign up.' };
+        return {
+          success: false,
+          message: 'Account not found. Please sign up.',
+        };
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
@@ -91,15 +145,27 @@ export class AuthService {
       }
 
       const token = Buffer.from(`${username}:${Date.now()}`).toString('base64');
-      return { success: true, message: 'Login successful', token, name: user.name || 'Student' };
+      return {
+        success: true,
+        message: 'Login successful',
+        token,
+        name: user.name || 'Student',
+      };
     } catch (err) {
       return { success: false, message: 'Login failed. Please try again.' };
     }
   }
 
-  async forgotPassword(data: { username: string; newPassword: string; confirmNewPassword: string }): Promise<{ success: boolean; message: string }> {
+  async forgotPassword(data: {
+    username: string;
+    newPassword: string;
+    confirmNewPassword: string;
+  }): Promise<{ success: boolean; message: string }> {
     if (!this.hasMongoDB) {
-      return { success: false, message: 'Password reset unavailable in demo mode' };
+      return {
+        success: false,
+        message: 'Password reset unavailable in demo mode',
+      };
     }
 
     try {
@@ -108,30 +174,59 @@ export class AuthService {
       }
 
       if (!data.newPassword || data.newPassword.length < 6) {
-        return { success: false, message: 'Password must be at least 6 characters' };
+        return {
+          success: false,
+          message: 'Password must be at least 6 characters',
+        };
       }
 
       if (data.newPassword !== data.confirmNewPassword) {
         return { success: false, message: 'Passwords do not match' };
       }
 
-      const user = await this.userModel.findOne({ username: data.username, role: 'student' }).exec();
+      const user = await this.userModel
+        .findOne({ username: data.username, role: 'student' })
+        .exec();
       if (!user) {
-        return { success: false, message: 'Account not found. Please sign up.' };
+        return {
+          success: false,
+          message: 'Account not found. Please sign up.',
+        };
       }
 
       user.password = await bcrypt.hash(data.newPassword, 10);
       await user.save();
 
-      return { success: true, message: 'Password reset successfully. You can now login.' };
+      return {
+        success: true,
+        message: 'Password reset successfully. You can now login.',
+      };
     } catch (err) {
-      return { success: false, message: 'Password reset failed. Please try again.' };
+      return {
+        success: false,
+        message: 'Password reset failed. Please try again.',
+      };
     }
   }
 
-  async getMe(token: string): Promise<{ success: boolean; user?: Record<string, unknown>; message?: string }> {
+  async getMe(token: string): Promise<{
+    success: boolean;
+    user?: Record<string, unknown>;
+    message?: string;
+  }> {
     if (!this.hasMongoDB || !this.questionModel || !this.answerModel) {
-      return { success: true, user: { name: 'Student', username: 'student', role: 'student', createdAt: new Date().toISOString(), questionsCount: 0, answersCount: 0, verifiedCount: 0 } };
+      return {
+        success: true,
+        user: {
+          name: 'Student',
+          username: 'student',
+          role: 'student',
+          createdAt: new Date().toISOString(),
+          questionsCount: 0,
+          answersCount: 0,
+          verifiedCount: 0,
+        },
+      };
     }
 
     try {
@@ -139,12 +234,28 @@ export class AuthService {
       const username = decoded.split(':')[0];
       if (!username) return { success: false, message: 'Invalid token' };
 
-      const user = await this.userModel!.findOne({ username, role: 'student' }).select('-password').exec();
+      const user = await this.userModel
+        .findOne({ username, role: 'student' })
+        .select('-password')
+        .exec();
       if (!user) return { success: false, message: 'User not found' };
 
-      const questionsCount = await this.questionModel!.countDocuments({ contributorName: user.username }).exec();
-      const answersCount = await this.answerModel!.countDocuments({ contributorId: user._id.toString() }).exec();
-      const verifiedCount = await this.answerModel!.countDocuments({ contributorId: user._id.toString(), isVerified: true }).exec();
+      const questionsCount = await this.questionModel
+        .countDocuments({
+          contributorName: user.username,
+        })
+        .exec();
+      const answersCount = await this.answerModel
+        .countDocuments({
+          contributorId: user._id.toString(),
+        })
+        .exec();
+      const verifiedCount = await this.answerModel
+        .countDocuments({
+          contributorId: user._id.toString(),
+          isVerified: true,
+        })
+        .exec();
 
       return {
         success: true,
@@ -165,16 +276,31 @@ export class AuthService {
     }
   }
 
-  async loginAdmin(email: string, password: string): Promise<{ success: boolean; message: string; token?: string; name?: string }> {
+  async loginAdmin(
+    email: string,
+    password: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    token?: string;
+    name?: string;
+  }> {
     if (!this.hasMongoDB) {
       if (email === 'admin@asksam.com' && password === 'admin123') {
-        return { success: true, message: 'Login successful', token: 'admin-demo-token', name: 'Admin' };
+        return {
+          success: true,
+          message: 'Login successful',
+          token: 'admin-demo-token',
+          name: 'Admin',
+        };
       }
       return { success: false, message: 'Invalid admin credentials' };
     }
 
     try {
-      const user = await this.userModel.findOne({ email, role: 'admin', isActive: true }).exec();
+      const user = await this.userModel
+        .findOne({ email, role: 'admin', isActive: true })
+        .exec();
       if (!user) {
         return { success: false, message: 'Invalid admin credentials' };
       }
@@ -185,7 +311,12 @@ export class AuthService {
       }
 
       const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
-      return { success: true, message: 'Login successful', token, name: user.name || 'Admin' };
+      return {
+        success: true,
+        message: 'Login successful',
+        token,
+        name: user.name || 'Admin',
+      };
     } catch (err) {
       return { success: false, message: 'Login failed. Please try again.' };
     }

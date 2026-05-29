@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { faqApi, questionApi } from "../services/api";
 
@@ -63,13 +63,14 @@ function getCategoryIcon(name) {
 }
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [showDropdown, setShowDropdown] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (search.trim()) window.location.href = `/faqs?q=${encodeURIComponent(search.trim())}`;
+    if (search.trim()) navigate(`/faqs?q=${encodeURIComponent(search.trim())}`);
   };
 
   // 1. Verified FAQs (Official Knowledge)

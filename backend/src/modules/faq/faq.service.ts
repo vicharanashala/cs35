@@ -13,9 +13,15 @@ import { LocalDataService } from './local-data.service';
 export class FaqService implements OnModuleInit {
   constructor(
     @Optional() @InjectModel(Faq.name) private faqModel: Model<Faq> | undefined,
-    @Optional() @InjectModel(Question.name) private questionModel: Model<Question> | undefined,
-    @Optional() @InjectModel(Answer.name) private answerModel: Model<Answer> | undefined,
-    @Optional() @InjectModel(User.name) private userModel: Model<User> | undefined,
+    @Optional()
+    @InjectModel(Question.name)
+    private questionModel: Model<Question> | undefined,
+    @Optional()
+    @InjectModel(Answer.name)
+    private answerModel: Model<Answer> | undefined,
+    @Optional()
+    @InjectModel(User.name)
+    private userModel: Model<User> | undefined,
     @Optional() private localData: LocalDataService,
   ) {}
 
@@ -33,14 +39,22 @@ export class FaqService implements OnModuleInit {
     try {
       const dataPath = resolve(process.cwd(), '..', 'faqData.json');
       const raw = readFileSync(dataPath, 'utf-8');
-      const entries = JSON.parse(raw) as { category: string; question: string; answer: string }[];
+      const entries = JSON.parse(raw) as {
+        category: string;
+        question: string;
+        answer: string;
+      }[];
 
       if (!entries || entries.length === 0) return;
 
       for (const entry of entries) {
-        const existing = await this.faqModel!.findOne({ question: entry.question }).exec();
+        const existing = await this.faqModel
+          .findOne({
+            question: entry.question,
+          })
+          .exec();
         if (!existing) {
-          await this.faqModel!.create({
+          await this.faqModel.create({
             question: entry.question,
             answer: entry.answer,
             category: entry.category,
@@ -51,9 +65,14 @@ export class FaqService implements OnModuleInit {
           });
         }
       }
-      console.log(`[FaqService] Seeded ${entries.length} FAQs from faqData.json`);
+      console.log(
+        `[FaqService] Seeded ${entries.length} FAQs from faqData.json`,
+      );
     } catch (err) {
-      console.warn('[FaqService] Could not seed from faqData.json:', err instanceof Error ? err.message : err);
+      console.warn(
+        '[FaqService] Could not seed from faqData.json:',
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 
@@ -65,7 +84,10 @@ export class FaqService implements OnModuleInit {
       const filter: Record<string, unknown> = {};
       if (category) filter.category = category;
       if (search) filter.question = { $regex: search, $options: 'i' };
-      return await this.faqModel!.find(filter).sort({ isPinned: -1, createdAt: -1 }).exec();
+      return await this.faqModel
+        .find(filter)
+        .sort({ isPinned: -1, createdAt: -1 })
+        .exec();
     } catch {
       return this.localData.getAllFAQs(category, search);
     }
@@ -74,7 +96,7 @@ export class FaqService implements OnModuleInit {
   async getCategories() {
     if (!this.hasMongoDB) return this.localData.getCategories();
     try {
-      const cats = await this.faqModel!.distinct('category').exec();
+      const cats = await this.faqModel.distinct('category').exec();
       return cats.filter(Boolean);
     } catch {
       return this.localData.getCategories();
@@ -84,7 +106,7 @@ export class FaqService implements OnModuleInit {
   async getFaqById(id: string) {
     if (!this.hasMongoDB) return this.localData.getFaqById(id);
     try {
-      return await this.faqModel!.findById(id).exec();
+      return await this.faqModel.findById(id).exec();
     } catch {
       return this.localData.getFaqById(id);
     }
@@ -93,7 +115,7 @@ export class FaqService implements OnModuleInit {
   async createFaq(data: Partial<Faq>) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.faqModel!.create({ ...data, isAnswered: true });
+      return await this.faqModel.create({ ...data, isAnswered: true });
     } catch {
       return null;
     }
@@ -102,7 +124,11 @@ export class FaqService implements OnModuleInit {
   async updateFaq(id: string, data: Partial<Faq>) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.faqModel!.findByIdAndUpdate(id, data, { new: true }).exec();
+      return await this.faqModel
+        .findByIdAndUpdate(id, data, {
+          new: true,
+        })
+        .exec();
     } catch {
       return null;
     }
@@ -111,7 +137,7 @@ export class FaqService implements OnModuleInit {
   async deleteFaq(id: string) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.faqModel!.findByIdAndDelete(id).exec();
+      return await this.faqModel.findByIdAndDelete(id).exec();
     } catch {
       return null;
     }
@@ -120,7 +146,9 @@ export class FaqService implements OnModuleInit {
   async pinFaq(id: string, pinned: boolean) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.faqModel!.findByIdAndUpdate(id, { isPinned: pinned }, { new: true }).exec();
+      return await this.faqModel
+        .findByIdAndUpdate(id, { isPinned: pinned }, { new: true })
+        .exec();
     } catch {
       return null;
     }
@@ -128,7 +156,12 @@ export class FaqService implements OnModuleInit {
 
   // ── Question Methods ─────────────────────────────────────────
 
-  async getAllQuestions(status?: string, category?: string, search?: string, contributorName?: string) {
+  async getAllQuestions(
+    status?: string,
+    category?: string,
+    search?: string,
+    contributorName?: string,
+  ) {
     if (!this.hasMongoDB) return [];
     try {
       const filter: Record<string, unknown> = {};
@@ -136,7 +169,10 @@ export class FaqService implements OnModuleInit {
       if (category) filter.category = category;
       if (search) filter.question = { $regex: search, $options: 'i' };
       if (contributorName) filter.contributorName = contributorName;
-      return await this.questionModel!.find(filter).sort({ createdAt: -1 }).exec();
+      return await this.questionModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .exec();
     } catch {
       return [];
     }
@@ -145,7 +181,7 @@ export class FaqService implements OnModuleInit {
   async getOpenQuestions() {
     if (!this.hasMongoDB) return this.localData.getOpenQuestions();
     try {
-      return await this.questionModel!
+      return await this.questionModel
         .find({ status: { $in: ['open', 'reopened'] } })
         .sort({ createdAt: 1 })
         .exec();
@@ -157,9 +193,12 @@ export class FaqService implements OnModuleInit {
   async getQuestionById(id: string) {
     if (!this.hasMongoDB) return this.localData.getQuestionById(id);
     try {
-      const question = await this.questionModel!.findById(id).exec();
+      const question = await this.questionModel.findById(id).exec();
       if (!question) return null;
-      const answers = await this.answerModel!.find({ questionId: id }).sort({ isVerified: -1, createdAt: 1 }).exec();
+      const answers = await this.answerModel
+        .find({ questionId: id })
+        .sort({ isVerified: -1, createdAt: 1 })
+        .exec();
       return { ...question.toObject(), answers };
     } catch {
       return this.localData.getQuestionById(id);
@@ -169,7 +208,7 @@ export class FaqService implements OnModuleInit {
   async createQuestion(data: Partial<Question>) {
     if (!this.hasMongoDB) return this.localData.createQuestion(data);
     try {
-      return await this.questionModel!.create({ ...data, status: 'open' });
+      return await this.questionModel.create({ ...data, status: 'open' });
     } catch {
       return this.localData.createQuestion(data);
     }
@@ -178,7 +217,11 @@ export class FaqService implements OnModuleInit {
   async updateQuestion(id: string, data: Partial<Question>) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.questionModel!.findByIdAndUpdate(id, data, { new: true }).exec();
+      return await this.questionModel
+        .findByIdAndUpdate(id, data, {
+          new: true,
+        })
+        .exec();
     } catch {
       return null;
     }
@@ -187,8 +230,8 @@ export class FaqService implements OnModuleInit {
   async deleteQuestion(id: string) {
     if (!this.hasMongoDB) return null;
     try {
-      await this.answerModel!.deleteMany({ questionId: id }).exec();
-      return await this.questionModel!.findByIdAndDelete(id).exec();
+      await this.answerModel.deleteMany({ questionId: id }).exec();
+      return await this.questionModel.findByIdAndDelete(id).exec();
     } catch {
       return null;
     }
@@ -197,7 +240,13 @@ export class FaqService implements OnModuleInit {
   async closeQuestion(id: string) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.questionModel!.findByIdAndUpdate(id, { status: 'closed', isClosed: true }, { new: true }).exec();
+      return await this.questionModel
+        .findByIdAndUpdate(
+          id,
+          { status: 'closed', isClosed: true },
+          { new: true },
+        )
+        .exec();
     } catch {
       return null;
     }
@@ -206,7 +255,13 @@ export class FaqService implements OnModuleInit {
   async reopenQuestion(id: string) {
     if (!this.hasMongoDB) return this.localData.reopenQuestion(id);
     try {
-      return await this.questionModel!.findByIdAndUpdate(id, { status: 'reopened', isClosed: false }, { new: true }).exec();
+      return await this.questionModel
+        .findByIdAndUpdate(
+          id,
+          { status: 'reopened', isClosed: false },
+          { new: true },
+        )
+        .exec();
     } catch {
       return this.localData.reopenQuestion(id);
     }
@@ -215,19 +270,24 @@ export class FaqService implements OnModuleInit {
   async convertToFaq(questionId: string, answerId?: string) {
     if (!this.hasMongoDB) return null;
     try {
-      const question = await this.questionModel!.findById(questionId).exec();
+      const question = await this.questionModel.findById(questionId).exec();
       if (!question) return null;
 
       let answerContent = '';
       if (answerId) {
-        const answer = await this.answerModel!.findById(answerId).exec();
+        const answer = await this.answerModel.findById(answerId).exec();
         answerContent = answer?.content || '';
       } else {
-        const verifiedAnswer = await this.answerModel!.findOne({ questionId, isVerified: true }).exec();
+        const verifiedAnswer = await this.answerModel
+          .findOne({
+            questionId,
+            isVerified: true,
+          })
+          .exec();
         answerContent = verifiedAnswer?.content || '';
       }
 
-      const faq = await this.faqModel!.create({
+      const faq = await this.faqModel.create({
         question: question.question,
         answer: answerContent,
         category: question.category,
@@ -236,7 +296,11 @@ export class FaqService implements OnModuleInit {
         isPinned: false,
       });
 
-      await this.questionModel!.findByIdAndUpdate(questionId, { status: 'closed' }).exec();
+      await this.questionModel
+        .findByIdAndUpdate(questionId, {
+          status: 'closed',
+        })
+        .exec();
 
       return faq;
     } catch {
@@ -246,18 +310,28 @@ export class FaqService implements OnModuleInit {
 
   // ── Answer Methods ───────────────────────────────────────────
 
-  async addAnswer(questionId: string, data: { content: string; contributorName: string; contributorId?: string }) {
+  async addAnswer(
+    questionId: string,
+    data: { content: string; contributorName: string; contributorId?: string },
+  ) {
     if (!this.hasMongoDB) return this.localData.addAnswer(questionId, data);
     try {
-      const answer = await this.answerModel!.create({
+      const answer = await this.answerModel.create({
         ...data,
         questionId,
         isVerified: false,
         upvotes: 0,
       });
-      const hasVerified = await this.answerModel!.findOne({ questionId, isVerified: true }).exec();
+      const hasVerified = await this.answerModel
+        .findOne({
+          questionId,
+          isVerified: true,
+        })
+        .exec();
       if (hasVerified) {
-        await this.questionModel!.findByIdAndUpdate(questionId, { status: 'answered' });
+        await this.questionModel.findByIdAndUpdate(questionId, {
+          status: 'answered',
+        });
       }
       return answer;
     } catch {
@@ -268,7 +342,11 @@ export class FaqService implements OnModuleInit {
   async updateAnswer(id: string, data: { content: string }) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.answerModel!.findByIdAndUpdate(id, data, { new: true }).exec();
+      return await this.answerModel
+        .findByIdAndUpdate(id, data, {
+          new: true,
+        })
+        .exec();
     } catch {
       return null;
     }
@@ -277,7 +355,7 @@ export class FaqService implements OnModuleInit {
   async deleteAnswer(id: string) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.answerModel!.findByIdAndDelete(id).exec();
+      return await this.answerModel.findByIdAndDelete(id).exec();
     } catch {
       return null;
     }
@@ -286,16 +364,29 @@ export class FaqService implements OnModuleInit {
   async verifyAnswer(id: string, verified: boolean) {
     if (!this.hasMongoDB) return null;
     try {
-      const answer = await this.answerModel!.findById(id).exec();
+      const answer = await this.answerModel.findById(id).exec();
       if (!answer) return null;
       answer.isVerified = verified;
       await answer.save();
 
-      const hasVerified = await this.answerModel!.findOne({ questionId: answer.questionId, isVerified: true }).exec();
+      const hasVerified = await this.answerModel
+        .findOne({
+          questionId: answer.questionId,
+          isVerified: true,
+        })
+        .exec();
       if (hasVerified) {
-        await this.questionModel!.findByIdAndUpdate(answer.questionId, { status: 'answered' }).exec();
+        await this.questionModel
+          .findByIdAndUpdate(answer.questionId, {
+            status: 'answered',
+          })
+          .exec();
       } else {
-        await this.questionModel!.findByIdAndUpdate(answer.questionId, { status: 'open' }).exec();
+        await this.questionModel
+          .findByIdAndUpdate(answer.questionId, {
+            status: 'open',
+          })
+          .exec();
       }
       return answer;
     } catch {
@@ -306,7 +397,7 @@ export class FaqService implements OnModuleInit {
   async voteAnswer(id: string, direction: number) {
     if (!this.hasMongoDB) return null;
     try {
-      const answer = await this.answerModel!.findById(id).exec();
+      const answer = await this.answerModel.findById(id).exec();
       if (!answer) return null;
       answer.upvotes = Math.max(0, (answer.upvotes || 0) + direction);
       await answer.save();
@@ -321,7 +412,7 @@ export class FaqService implements OnModuleInit {
   async createCategory(name: string) {
     if (!this.hasMongoDB) return null;
     try {
-      const existing = await this.faqModel!.findOne({ category: name }).exec();
+      const existing = await this.faqModel.findOne({ category: name }).exec();
       if (existing) return { name, alreadyExists: true };
       return { name, alreadyExists: false };
     } catch {
@@ -332,11 +423,20 @@ export class FaqService implements OnModuleInit {
   async getCategoryStats() {
     if (!this.hasMongoDB) return [];
     try {
-      const categories = await this.faqModel!.distinct('category').exec();
+      const categories = await this.faqModel.distinct('category').exec();
       const stats = await Promise.all(
         categories.filter(Boolean).map(async (cat) => {
-          const faqCount = await this.faqModel!.countDocuments({ category: cat }).exec();
-          const questionCount = await this.questionModel!.countDocuments({ category: cat, status: { $ne: 'closed' } }).exec();
+          const faqCount = await this.faqModel
+            .countDocuments({
+              category: cat,
+            })
+            .exec();
+          const questionCount = await this.questionModel
+            .countDocuments({
+              category: cat,
+              status: { $ne: 'closed' },
+            })
+            .exec();
           return { name: cat, faqCount, questionCount };
         }),
       );
@@ -351,7 +451,10 @@ export class FaqService implements OnModuleInit {
   async getAllUsers() {
     if (!this.hasMongoDB) return [];
     try {
-      return await this.userModel!.find({}, { password: 0 }).sort({ createdAt: -1 }).exec();
+      return await this.userModel
+        .find({}, { password: 0 })
+        .sort({ createdAt: -1 })
+        .exec();
     } catch {
       return [];
     }
@@ -360,7 +463,10 @@ export class FaqService implements OnModuleInit {
   async updateUser(id: string, data: { isActive?: boolean; role?: string }) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.userModel!.findByIdAndUpdate(id, data, { new: true }).select('-password').exec();
+      return await this.userModel
+        .findByIdAndUpdate(id, data, { new: true })
+        .select('-password')
+        .exec();
     } catch {
       return null;
     }
@@ -369,7 +475,7 @@ export class FaqService implements OnModuleInit {
   async deleteUser(id: string) {
     if (!this.hasMongoDB) return null;
     try {
-      return await this.userModel!.findByIdAndDelete(id).exec();
+      return await this.userModel.findByIdAndDelete(id).exec();
     } catch {
       return null;
     }
@@ -380,26 +486,57 @@ export class FaqService implements OnModuleInit {
   async getStats() {
     if (!this.hasMongoDB) {
       return {
-        totalQuestions: 0, openQuestions: 0, answeredQuestions: 0,
-        verifiedQuestions: 0, totalFaqs: 0, totalCategories: 0, totalUsers: 0,
+        totalQuestions: 0,
+        openQuestions: 0,
+        answeredQuestions: 0,
+        verifiedQuestions: 0,
+        totalFaqs: 0,
+        totalCategories: 0,
+        totalUsers: 0,
       };
     }
     try {
-      const [totalQuestions, openQuestions, answeredQuestions, verifiedQuestions,
-             totalFaqs, totalCategories, totalUsers] = await Promise.all([
-        this.questionModel!.countDocuments().exec(),
-        this.questionModel!.countDocuments({ status: { $in: ['open', 'reopened'] } }).exec(),
-        this.questionModel!.countDocuments({ status: 'answered' }).exec(),
-        this.answerModel!.countDocuments({ isVerified: true }).exec(),
-        this.faqModel!.countDocuments().exec(),
-        this.faqModel!.distinct('category').then(c => c.filter(Boolean).length),
-        this.userModel!.countDocuments({ role: 'student' }).exec(),
+      const [
+        totalQuestions,
+        openQuestions,
+        answeredQuestions,
+        verifiedQuestions,
+        totalFaqs,
+        totalCategories,
+        totalUsers,
+      ] = await Promise.all([
+        this.questionModel.countDocuments().exec(),
+        this.questionModel
+          .countDocuments({
+            status: { $in: ['open', 'reopened'] },
+          })
+          .exec(),
+        this.questionModel.countDocuments({ status: 'answered' }).exec(),
+        this.answerModel.countDocuments({ isVerified: true }).exec(),
+        this.faqModel.countDocuments().exec(),
+        this.faqModel
+          .distinct('category')
+          .then((c) => c.filter(Boolean).length),
+        this.userModel.countDocuments({ role: 'student' }).exec(),
       ]);
-      return { totalQuestions, openQuestions, answeredQuestions, verifiedQuestions, totalFaqs, totalCategories, totalUsers };
+      return {
+        totalQuestions,
+        openQuestions,
+        answeredQuestions,
+        verifiedQuestions,
+        totalFaqs,
+        totalCategories,
+        totalUsers,
+      };
     } catch {
       return {
-        totalQuestions: 0, openQuestions: 0, answeredQuestions: 0,
-        verifiedQuestions: 0, totalFaqs: 0, totalCategories: 0, totalUsers: 0,
+        totalQuestions: 0,
+        openQuestions: 0,
+        answeredQuestions: 0,
+        verifiedQuestions: 0,
+        totalFaqs: 0,
+        totalCategories: 0,
+        totalUsers: 0,
       };
     }
   }

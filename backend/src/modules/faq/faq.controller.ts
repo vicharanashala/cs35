@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { FaqService } from './faq.service';
 
 @Controller()
@@ -8,7 +17,10 @@ export class FaqController {
   // ── FAQ Routes ──────────────────────────────────────────────
 
   @Get('faqs')
-  getAllFAQs(@Query('category') category?: string, @Query('search') search?: string) {
+  getAllFAQs(
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+  ) {
     return this.faqService.getAllFAQs(category, search);
   }
 
@@ -18,12 +30,29 @@ export class FaqController {
   }
 
   @Post('faqs')
-  createFaq(@Body() body: { question: string; answer: string; category: string; tags?: string[] }) {
+  createFaq(
+    @Body()
+    body: {
+      question: string;
+      answer: string;
+      category: string;
+      tags?: string[];
+    },
+  ) {
     return this.faqService.createFaq(body);
   }
 
   @Patch('faqs/:id')
-  updateFaq(@Param('id') id: string, @Body() body: { question?: string; answer?: string; category?: string; tags?: string[] }) {
+  updateFaq(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      question?: string;
+      answer?: string;
+      category?: string;
+      tags?: string[];
+    },
+  ) {
     return this.faqService.updateFaq(id, body);
   }
 
@@ -68,7 +97,12 @@ export class FaqController {
     @Query('search') search?: string,
     @Query('contributor') contributor?: string,
   ) {
-    return this.faqService.getAllQuestions(status, category, search, contributor);
+    return this.faqService.getAllQuestions(
+      status,
+      category,
+      search,
+      contributor,
+    );
   }
 
   @Get('questions/:id')
@@ -78,13 +112,29 @@ export class FaqController {
 
   @Post('questions')
   createQuestion(
-    @Body() body: { question: string; category: string; details?: string; tags?: string[]; screenshotUrl?: string; contributorName?: string },
+    @Body()
+    body: {
+      question: string;
+      category: string;
+      details?: string;
+      tags?: string[];
+      screenshotUrl?: string;
+      contributorName?: string;
+    },
   ) {
     return this.faqService.createQuestion(body);
   }
 
   @Patch('questions/:id')
-  updateQuestion(@Param('id') id: string, @Body() body: { question?: string; category?: string; priority?: 'Low' | 'Medium' | 'High' }) {
+  updateQuestion(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      question?: string;
+      category?: string;
+      priority?: 'Low' | 'Medium' | 'High';
+    },
+  ) {
     return this.faqService.updateQuestion(id, body);
   }
 
@@ -109,14 +159,21 @@ export class FaqController {
   }
 
   @Patch('questions/:id/vote')
-  voteQuestion(@Param('id') id: string, @Body() body: { answerId: string; direction: number }) {
+  voteQuestion(
+    @Param('id') id: string,
+    @Body() body: { answerId: string; direction: number },
+  ) {
     return this.faqService.voteAnswer(body.answerId, body.direction);
   }
 
   // ── Answer Routes ────────────────────────────────────────────
 
   @Patch('questions/:id/answer')
-  addAnswer(@Param('id') id: string, @Body() body: { content: string; contributorName: string; contributorId?: string }) {
+  addAnswer(
+    @Param('id') id: string,
+    @Body()
+    body: { content: string; contributorName: string; contributorId?: string },
+  ) {
     return this.faqService.addAnswer(id, body);
   }
 
@@ -143,7 +200,10 @@ export class FaqController {
   }
 
   @Patch('users/:id')
-  updateUser(@Param('id') id: string, @Body() body: { isActive?: boolean; role?: string }) {
+  updateUser(
+    @Param('id') id: string,
+    @Body() body: { isActive?: boolean; role?: string },
+  ) {
     return this.faqService.updateUser(id, body);
   }
 

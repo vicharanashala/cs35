@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,17 +9,14 @@ interface FaqEntry {
   answer: string;
 }
 
-const DATA_PATH = path.resolve(
-  __dirname,
-  '../../../../faqData.json',
-);
+const DATA_PATH = path.resolve(__dirname, '../../../../faqData.json');
 
 @Injectable()
 export class LocalDataService {
   private readData(): FaqEntry[] {
     try {
       const raw = fs.readFileSync(DATA_PATH, 'utf-8');
-      return JSON.parse(raw);
+      return JSON.parse(raw) as FaqEntry[];
     } catch {
       return [];
     }
@@ -81,7 +79,10 @@ export class LocalDataService {
     return null;
   }
 
-  addAnswer(_questionId: string, _data: { content: string; contributorName: string }) {
+  addAnswer(
+    _questionId: string,
+    _data: { content: string; contributorName: string },
+  ) {
     return null;
   }
 
