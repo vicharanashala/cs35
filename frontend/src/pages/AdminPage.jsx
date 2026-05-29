@@ -32,6 +32,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedQ, setSelectedQ] = useState(null);
   const [answerDraft, setAnswerDraft] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
@@ -109,13 +110,37 @@ export default function AdminPage() {
             {SIDEBAR_NAV.find(n => n.id === activeTab)?.label || "Dashboard"}
           </h1>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: "#5E7A5A" }}>
-              A
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 transition-transform hover:scale-105"
+                style={{ background: "#5E7A5A" }}
+              >
+                A
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border py-1 z-50 animate-fade-in" style={{ borderColor: "#E2E8DE" }}>
+                  <div className="px-4 py-2 border-b mb-1" style={{ borderColor: "#F5F7F2" }}>
+                    <p className="text-sm font-semibold truncate" style={{ color: "#1F2937" }}>Admin</p>
+                    <p className="text-xs" style={{ color: "#9CA3AF" }}>Administrator</p>
+                  </div>
+                  <button
+                    onClick={() => { setDropdownOpen(false); handleLogout(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="p-6 flex-1 overflow-y-auto">
+        <div className="p-6 flex-1 overflow-y-auto" onClick={() => setDropdownOpen(false)}>
           {/* Stats Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <StatCard value={stats.total} label="Total Questions" icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
