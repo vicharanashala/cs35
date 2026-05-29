@@ -367,7 +367,11 @@ body {
   color:#9CA3AF; pointer-events:none;
 }
 .search-input {
-  width:100%; padding:0.625rem 0.875rem 0.625rem 2.5rem;
+  width:100%; 
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+  padding-right: 0.875rem;
+  padding-left: 2.75rem !important;
   border:1px solid #E2E8DE; border-radius:0.5rem;
   background:#ffffff; color:#1F2937; font-size:0.875rem;
   font-family:inherit; transition:border-color 0.15s, box-shadow 0.15s;

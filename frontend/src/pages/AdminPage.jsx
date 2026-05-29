@@ -131,11 +131,11 @@ export default function AdminPage() {
             <div className="xl:col-span-5 flex flex-col card overflow-hidden">
               <div className="p-4 border-b" style={{ borderColor: "#E2E8DE" }}>
                 <h2 className="font-semibold" style={{ color: "#1F2937" }}>Open Questions</h2>
-                <div className="mt-3 relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#9CA3AF" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="mt-3 search-wrap">
+                  <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                  <input className="input pl-9 text-sm" placeholder="Search questions..." />
+                  <input className="search-input text-sm" placeholder="Search questions..." />
                 </div>
               </div>
               
