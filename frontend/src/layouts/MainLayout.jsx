@@ -38,10 +38,7 @@ export default function MainLayout({ children }) {
         <div className="container-xl h-14 flex items-center gap-4 relative">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-              style={{ background: "#5E7A5A" }}>
-              AS
-            </div>
+            <img src="/logo.png" alt="AskSam Logo" className="w-8 h-8 object-contain rounded-full shadow-sm" />
             <span className="text-base font-bold" style={{ color: "#1F2937" }}>AskSam</span>
           </Link>
 

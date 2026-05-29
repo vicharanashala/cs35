@@ -51,9 +51,7 @@ export default function LoginPage() {
       <div className="card w-full max-w-md p-8 shadow-2xl relative z-10 border-t-4" style={{ borderTopColor: "#5E7A5A" }}>
         
         <div className="text-center mb-6">
-          <div className="w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center text-white text-2xl font-bold" style={{ background: "#5E7A5A" }}>
-            AS
-          </div>
+          <img src="/logo.png" alt="AskSam Logo" className="w-20 h-20 mx-auto mb-4 object-contain rounded-full shadow-sm" />
           <h1 className="text-2xl font-bold" style={{ color: "#1F2937" }}>Welcome to AskSam</h1>
           <p className="text-sm mt-1.5" style={{ color: "#6B7280" }}>Your Samagama knowledge hub.</p>
         </div>

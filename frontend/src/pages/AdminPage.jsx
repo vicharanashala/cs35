@@ -62,9 +62,7 @@ export default function AdminPage() {
       <aside className="w-64 bg-white border-r flex flex-col hidden md:flex" style={{ borderColor: "#E2E8DE" }}>
         <div className="h-16 flex items-center px-6 border-b" style={{ borderColor: "#E2E8DE" }}>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded flex items-center justify-center text-white text-xs font-bold" style={{ background: "#5E7A5A" }}>
-              AS
-            </div>
+            <img src="/logo.png" alt="AskSam Logo" className="w-8 h-8 object-contain rounded-full shadow-sm" />
             <span className="font-bold text-lg" style={{ color: "#1F2937" }}>AskSam Admin</span>
           </div>
         </div>
