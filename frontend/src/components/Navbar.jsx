@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 const NAV_LINKS = [
@@ -11,7 +11,6 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -122,7 +121,7 @@ export default function Navbar() {
                       <p className="text-xs capitalize" style={{ color: "#9CA3AF" }}>{user?.role}</p>
                     </div>
                     <button
-                      onClick={() => { logout(); navigate("/"); setDropdownOpen(false); }}
+                      onClick={() => { setDropdownOpen(false); logout(); }}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,7 +281,7 @@ export default function Navbar() {
               {isAuthenticated ? (
                 <button
                   type="button"
-                  onClick={() => { logout(); navigate("/"); closeMenu(); }}
+                  onClick={() => { logout(); closeMenu(); }}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium
                              text-red-600 bg-red-50 rounded-xl hover:bg-red-100
                              border border-red-100 transition-all duration-200"

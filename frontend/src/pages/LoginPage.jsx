@@ -58,7 +58,7 @@ export default function LoginPage() {
           setIsLoading(false);
           return;
         }
-        login({ username: form.username, name: form.fullName, role: "student", token: res.token });
+        login({ email: form.username, name: form.fullName, role: "student", token: res.token });
         navigate("/");
       } catch (_) {
         setError("Signup failed. Please try again.");
