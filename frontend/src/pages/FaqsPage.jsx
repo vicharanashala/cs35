@@ -66,10 +66,8 @@ function SkeletonCard() {
 
 export default function FaqsPage() {
   const [searchParams] = useSearchParams();
-  const initialSearch = searchParams.get("q") || "";
   const initialCategory = searchParams.get("category") || "All Categories";
 
-  const [search, setSearch] = useState(initialSearch);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
 
   const { data: faqs = [], isLoading, isError } = useQuery({
@@ -85,16 +83,11 @@ export default function FaqsPage() {
   });
 
   const filtered = useMemo(() => {
-    let r = [...faqs];
     if (activeCategory !== "All Categories") {
-      r = r.filter((f) => f.category === activeCategory);
+      return faqs.filter((f) => f.category === activeCategory);
     }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      r = r.filter((f) => f.question?.toLowerCase().includes(q) || f.answer?.toLowerCase().includes(q));
-    }
-    return r;
-  }, [faqs, search, activeCategory]);
+    return faqs;
+  }, [faqs, activeCategory]);
 
   return (
     <div style={{ background: "#F5F7F2", minHeight: "100vh" }}>
