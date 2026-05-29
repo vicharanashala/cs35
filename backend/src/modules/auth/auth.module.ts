@@ -6,18 +6,13 @@ import { EmailService } from './email.service';
 import { User, UserSchema } from '../../schemas/user.schema';
 import { Otp, OtpSchema } from '../../schemas/otp.schema';
 
-const mongooseImports: any[] = [];
-if (process.env.MONGODB_URI) {
-  mongooseImports.push(
+@Module({
+  imports: [
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Otp.name, schema: OtpSchema },
     ]),
-  );
-}
-
-@Module({
-  imports: mongooseImports,
+  ],
   controllers: [AuthController],
   providers: [AuthService, EmailService],
 })

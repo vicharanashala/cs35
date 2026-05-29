@@ -1,21 +1,27 @@
+import * as bcrypt from 'bcrypt';
+import { EmailService } from './email.service';
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '../../schemas/user.schema';
 import { Otp } from '../../schemas/otp.schema';
-import * as bcrypt from 'bcrypt';
-import { EmailService } from './email.service';
 
 @Injectable()
 export class AuthService {
+  private mongoConnected = false;
+
   constructor(
     @Optional() @InjectModel(User.name) private userModel: Model<User> | undefined,
     @Optional() @InjectModel(Otp.name) private otpModel: Model<Otp> | undefined,
     @Optional() private emailService: EmailService,
-  ) {}
+  ) {
+    if (this.userModel && this.otpModel) {
+      this.mongoConnected = true;
+    }
+  }
 
   private get hasMongoDB() {
-    return !!this.userModel && !!this.otpModel;
+    return this.mongoConnected;
   }
 
   private generateOtp(): string {
@@ -111,12 +117,24 @@ export class AuthService {
       }
 
       const hashedPassword = await bcrypt.hash(data.password, 10);
+
+      let studentId: string | undefined;
+      if (this.userModel) {
+        const lastUser = await this.userModel.findOne({ role: 'student', studentId: { $exists: true } }).sort({ studentId: -1 }).exec();
+        const lastNum = lastUser?.studentId ? parseInt(lastUser.studentId.replace('STU-', ''), 10) : 0;
+        studentId = `STU-${String(lastNum + 1).padStart(5, '0')}`;
+      }
+
       await this.userModel.create({
         email: data.email,
         password: hashedPassword,
         name: data.name,
         role: 'student',
         isActive: true,
+        studentId,
+        questionsAsked: [],
+        questionsAnswered: [],
+        questionsBookmarked: [],
       });
 
       await this.otpModel.deleteMany({ email: data.email }).exec();

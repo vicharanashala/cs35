@@ -12,8 +12,8 @@ if (process.env.MONGODB_URI) {
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.get<string>('MONGODB_URI')!,
-        serverSelectionTimeoutMS: 3000,
-        connectTimeoutMS: 3000,
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
         bufferCommands: false,
       }),
     }),
