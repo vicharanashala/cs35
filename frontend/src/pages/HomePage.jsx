@@ -65,11 +65,18 @@ function getCategoryIcon(name) {
 export default function HomePage() {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("q") || "");
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) window.location.href = `/faqs?q=${encodeURIComponent(search.trim())}`;
   };
+
+  const searchResults = useMemo(() => {
+    if (!search.trim() || search.trim().length < 2) return [];
+    const q = search.toLowerCase();
+    return faqs.filter((f) => f.question?.toLowerCase().includes(q)).slice(0, 6);
+  }, [search, faqs]);
 
   // 1. Verified FAQs (Official Knowledge)
   const { data: faqs = [], isLoading: loadingFaqs } = useQuery({
@@ -117,7 +124,7 @@ export default function HomePage() {
               </p>
 
               {/* Hero search */}
-              <form onSubmit={handleSearch} className="flex gap-2">
+              <form onSubmit={handleSearch} className="flex gap-2 relative">
                 <div className="search-wrap flex-1">
                   <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -126,10 +133,46 @@ export default function HomePage() {
                     className="search-input py-3"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    onFocus={() => setShowDropdown(true)}
                     placeholder="Search verified FAQs..."
                   />
                 </div>
                 <button type="submit" className="btn-primary">Search</button>
+
+                {/* Search dropdown */}
+                {showDropdown && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border shadow-lg z-50 overflow-hidden animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
+                    <div className="p-2">
+                      <p className="text-xs font-semibold px-3 py-1.5" style={{ color: "#9CA3AF" }}>RELATED QUESTIONS</p>
+                      {searchResults.map((faq) => (
+                        <Link
+                          key={faq._id}
+                          to={`/faq/${faq._id}`}
+                          onClick={() => setShowDropdown(false)}
+                          className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>{faq.question}</p>
+                            <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{faq.category}</p>
+                          </div>
+                        </Link>
+                      ))}
+                      <div className="border-t mt-2 pt-2 px-3" style={{ borderColor: "#E2E8DE" }}>
+                        <Link
+                          to={`/faqs?q=${encodeURIComponent(search)}`}
+                          onClick={() => setShowDropdown(false)}
+                          className="text-xs font-medium hover:underline"
+                          style={{ color: "#5E7A5A" }}
+                        >
+                          See all results for "{search}" →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </form>
             </div>
 
@@ -146,7 +189,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="container-xl py-10 space-y-12">
+        <div className="container-xl py-10 space-y-12" onClick={() => setShowDropdown(false)}>
         {/* ── 1. Verified FAQs ── */}
         <section>
           <div className="flex items-end justify-between mb-5">
