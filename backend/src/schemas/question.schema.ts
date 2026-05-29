@@ -8,7 +8,11 @@ export class Question extends Document {
   @Prop() details: string;
   @Prop({ type: [String], default: [] }) tags: string[];
   @Prop() screenshotUrl: string;
-  @Prop({ enum: ['open', 'answered', 'reopened', 'closed'], default: 'open', index: true })
+  @Prop({
+    enum: ['open', 'answered', 'reopened', 'closed'],
+    default: 'open',
+    index: true,
+  })
   status: 'open' | 'answered' | 'reopened' | 'closed';
   @Prop({ enum: ['Low', 'Medium', 'High'], default: 'Medium' }) priority:
     | 'Low'

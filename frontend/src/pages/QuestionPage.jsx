@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { questionApi } from "../services/api";
+import { questionApi, faqApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
 function getContributorId() {
@@ -48,11 +48,7 @@ function VoteBtn({ count, active, onClick, direction }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-        active
-          ? "bg-brand text-white shadow-sm"
-          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-      }`}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all`}
       style={active ? { background: "#5E7A5A", color: "#fff" } : { background: "#F5F7F2", color: "#6B7280" }}
     >
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,18 +65,7 @@ function AnswerCard({ answer, onVote, userVotes }) {
   const votes = (answer.upvotes || 0) + vote;
 
   return (
-    <article className={`card p-5 ${answer.isVerified ? "verified-banner" : ""}`}>
-      {answer.isVerified && (
-        <div className="flex items-center gap-1.5 mb-4">
-          <span className="badge badge-green">
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            Verified Official Answer
-          </span>
-        </div>
-      )}
-
+    <article className="card p-5">
       <AnswerContent content={answer.content} />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 pt-4 border-t" style={{ borderColor: "#E2E8DE" }}>
@@ -92,11 +77,21 @@ function AnswerCard({ answer, onVote, userVotes }) {
           <span className="font-medium" style={{ color: "#1F2937" }}>
             {answer.contributorName || "Student"}
           </span>
+          {answer.isVerified && (
+            <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: "#ECFDF5", color: "#059669" }}>
+              ✓ Verified
+            </span>
+          )}
           <span style={{ color: "#D1D5DB" }}>·</span>
           <time className="text-xs" style={{ color: "#9CA3AF" }}>{timeAgo(answer.createdAt)}</time>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
+          {votes > 0 && (
+            <span className="text-xs px-2 py-1 rounded" style={{ background: "#F0FDF4", color: "#15803D" }}>
+              {votes} found helpful
+            </span>
+          )}
           <VoteBtn count={votes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
           <VoteBtn count={0} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
         </div>
@@ -105,10 +100,103 @@ function AnswerCard({ answer, onVote, userVotes }) {
   );
 }
 
+function VerifiedHero({ answer, onVote, userVotes }) {
+  const vote = userVotes[answer._id] || 0;
+  const votes = (answer.upvotes || 0) + vote;
+
+  return (
+    <div className="rounded-xl border-2 p-6 mb-6 animate-fade-in" style={{ background: "#F0FDF4", borderColor: "#6EE7B7" }}>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "#059669" }}>
+          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-base font-bold" style={{ color: "#065F46" }}>Official Verified Answer</h3>
+          <p className="text-xs" style={{ color: "#6EE7B7" }}>Curated and approved by the admin team</p>
+        </div>
+      </div>
+
+      <AnswerContent content={answer.content} />
+
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 pt-4 border-t" style={{ borderColor: "#A7F3D0" }}>
+        <div className="flex items-center gap-2 text-sm">
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+            style={{ background: "#059669" }}>
+            {answer.contributorName?.charAt(0) || "?"}
+          </div>
+          <span className="font-semibold" style={{ color: "#065F46" }}>
+            {answer.contributorName || "Admin"}
+          </span>
+          <span style={{ color: "#A7F3D0" }}>·</span>
+          <time className="text-xs" style={{ color: "#6EE7B7" }}>{timeAgo(answer.createdAt)}</time>
+          {votes > 0 && (
+            <>
+              <span style={{ color: "#A7F3D0" }}>·</span>
+              <span className="text-xs font-medium" style={{ color: "#6EE7B7" }}>{votes} found this helpful</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <VoteBtn count={votes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
+          <VoteBtn count={0} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FormatToolbar({ textareaRef, value, onChange }) {
+  const insertFormat = (prefix, suffix = "") => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = value.slice(start, end);
+    const newText = value.slice(0, start) + prefix + selected + suffix + value.slice(end);
+    onChange(newText);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 0);
+  };
+
+  return (
+    <div className="flex items-center gap-1 mb-2">
+      <button type="button" onClick={() => insertFormat("**", "**")} title="Bold"
+        className="w-8 h-8 rounded flex items-center justify-center text-sm font-bold hover:bg-gray-100 transition-colors"
+        style={{ color: "#374151" }}>
+        B
+      </button>
+      <button type="button" onClick={() => insertFormat("- ")} title="Bullet list"
+        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-100 transition-colors"
+        style={{ color: "#374151" }}>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <button type="button" onClick={() => insertFormat("1. ")} title="Numbered list"
+        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-100 transition-colors"
+        style={{ color: "#374151" }}>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M3 8h4m10 0l-4 4m4-4H3" />
+        </svg>
+      </button>
+      <button type="button" onClick={() => insertFormat("`", "`")} title="Code"
+        className="w-8 h-8 rounded flex items-center justify-center font-mono text-sm hover:bg-gray-100 transition-colors"
+        style={{ color: "#374151" }}>
+        {'</>'}
+      </button>
+    </div>
+  );
+}
+
 export default function QuestionPage() {
   const { id } = useParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const textareaRef = useRef(null);
   const [localAnswers, setLocalAnswers] = useState([]);
   const [userVotes, setUserVotes]       = useState({});
   const [sortBy, setSortBy]             = useState("verified");
@@ -126,17 +214,37 @@ export default function QuestionPage() {
     refetchInterval: 15000,
   });
 
+  const { data: relatedQuestions = [] } = useQuery({
+    queryKey: ["faqs-related", question?.category],
+    queryFn: () => faqApi.list({ category: question?.category }),
+    enabled: !!question?.category,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const verifiedAnswer = useMemo(() => {
+    if (!question?.answers) return null;
+    return question.answers.find((a) => a.isVerified) || null;
+  }, [question?.answers]);
+
+  const communityAnswers = useMemo(() => {
+    const all = [...(question?.answers || []), ...localAnswers];
+    if (verifiedAnswer) {
+      return all.filter((a) => a._id !== verifiedAnswer._id);
+    }
+    return all;
+  }, [question?.answers, localAnswers, verifiedAnswer]);
+
   const sorted = useMemo(() => {
-    const answers = [...(question?.answers || []), ...localAnswers];
-    const list = [...answers];
-    if (sortBy === "verified")
+    const list = [...communityAnswers];
+    if (sortBy === "verified") {
       list.sort((a, b) => (b.isVerified ? 1 : 0) - (a.isVerified ? 1 : 0));
-    else if (sortBy === "newest")
+    } else if (sortBy === "newest") {
       list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    else
+    } else {
       list.sort((a, b) => ((b.upvotes || 0) + (userVotes[b._id] || 0)) - ((a.upvotes || 0) + (userVotes[a._id] || 0)));
+    }
     return list;
-  }, [question?.answers, localAnswers, sortBy, userVotes]);
+  }, [communityAnswers, sortBy, userVotes]);
 
   const handleVote = async (answerId, dir) => {
     const cur = userVotes[answerId] || 0;
@@ -189,6 +297,10 @@ export default function QuestionPage() {
     setIsSubmitting(false);
   };
 
+  const relatedFiltered = useMemo(() => {
+    return relatedQuestions.filter((fq) => fq.question !== question?.question).slice(0, 4);
+  }, [relatedQuestions, question?.question]);
+
   return (
     <div style={{ background: "#F5F7F2", minHeight: "100vh" }}>
       <div className="container-md py-8">
@@ -217,10 +329,10 @@ export default function QuestionPage() {
 
         {!isLoading && !isError && question && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+
             {/* Main Thread */}
             <div className="lg:col-span-2 space-y-8">
-              
+
               {/* Question */}
               <article>
                 <h1 className="text-2xl font-bold leading-snug mb-3" style={{ color: "#1F2937" }}>
@@ -231,8 +343,16 @@ export default function QuestionPage() {
                     {question.details}
                   </p>
                 )}
+                {question.screenshotUrl && (
+                  <img
+                    src={question.screenshotUrl}
+                    alt="Question screenshot"
+                    className="rounded-lg max-h-64 object-contain mb-4 border"
+                    style={{ borderColor: "#E2E8DE" }}
+                  />
+                )}
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 text-sm" style={{ color: "#6B7280" }}>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 text-sm" style={{ color: "#6B7280" }}>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#5E7A5A" }}>
                       {question.contributor?.charAt(0) || "S"}
@@ -245,6 +365,16 @@ export default function QuestionPage() {
                   <span>{question.views || 0} views</span>
                   <span className="tag tag-neutral">{question.category}</span>
                 </div>
+
+                {question.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {question.tags.map((tag) => (
+                      <span key={tag} className="text-xs px-2 py-1 rounded-md" style={{ background: "#F3F4F6", color: "#6B7280" }}>
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </article>
 
               <div className="divider" />
@@ -254,45 +384,70 @@ export default function QuestionPage() {
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-base font-semibold" style={{ color: "#1F2937" }}>
                     {sorted.length} Answer{sorted.length !== 1 ? "s" : ""}
+                    {verifiedAnswer && <span className="ml-2 text-sm font-normal" style={{ color: "#6B7280" }}>+ 1 verified</span>}
                   </h2>
                   {sorted.length > 1 && (
-                    <select
-                      className="input w-auto text-xs py-1.5 px-2"
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                    >
-                      <option value="verified">Verified First</option>
-                      <option value="newest">Newest First</option>
-                      <option value="helpful">Most Helpful</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="sort-answers" className="text-xs" style={{ color: "#6B7280" }}>Sort:</label>
+                      <select
+                        id="sort-answers"
+                        className="input w-auto text-xs py-1.5 px-2"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                      >
+                        <option value="verified">Verified First</option>
+                        <option value="newest">Newest First</option>
+                        <option value="helpful">Most Helpful</option>
+                      </select>
+                    </div>
                   )}
                 </div>
 
                 {voteError && (
-                  <div className="mb-3 p-2 rounded-md text-xs animate-fade-in" style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}>
+                  <div className="mb-3 p-2 rounded-md text-xs animate-fade-in" style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FDE68A" }}>
                     {voteError}
                   </div>
                 )}
 
+                {/* Verified Hero Answer */}
+                {verifiedAnswer && (
+                  <VerifiedHero answer={verifiedAnswer} onVote={handleVote} userVotes={userVotes} />
+                )}
+
+                {/* Community Answers */}
                 <div className="space-y-4 mb-10">
                   {sorted.map((a) => <AnswerCard key={a._id} answer={a} onVote={handleVote} userVotes={userVotes} />)}
-                  {sorted.length === 0 && (
-                    <div className="card p-8 text-center text-sm" style={{ color: "#9CA3AF" }}>
-                      No answers yet. Be the first to help!
+
+                  {sorted.length === 0 && !verifiedAnswer && (
+                    <div className="card p-10 text-center">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#F5F7F2" }}>
+                        <svg className="w-7 h-7" style={{ color: "#9CA3AF" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-base font-semibold mb-2" style={{ color: "#1F2937" }}>No answers yet</h3>
+                      <p className="text-sm mb-5" style={{ color: "#9CA3AF" }}>Be the first to help your fellow student!</p>
+                      <a href="#answer-form" className="btn-primary">Write an Answer →</a>
+                    </div>
+                  )}
+
+                  {sorted.length === 0 && verifiedAnswer && (
+                    <div className="card p-8 text-center">
+                      <p className="text-sm" style={{ color: "#9CA3AF" }}>Community answers appear here — be the first to contribute!</p>
                     </div>
                   )}
                 </div>
 
                 {/* Reply Form */}
-                <div className="card p-5">
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Add an Answer</h3>
+                <div id="answer-form" className="card p-5">
+                  <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Add your Answer</h3>
                   {submitError && (
-                    <div className="mb-4 p-3 rounded-md text-sm" style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                    <div className="mb-4 p-3 rounded-md text-sm" style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>
                       {submitError}
                     </div>
                   )}
                   {submitSuccess && (
-                    <div className="mb-4 p-3 rounded-md text-sm animate-fade-in" style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
+                    <div className="mb-4 p-3 rounded-md text-sm animate-fade-in" style={{ background: "#F0FDF4", color: "#16A34A", border: "1px solid #BBF7D0" }}>
                       Your answer has been posted!
                     </div>
                   )}
@@ -306,15 +461,26 @@ export default function QuestionPage() {
                       />
                     </div>
                     <div>
+                      <FormatToolbar textareaRef={textareaRef} value={answerContent} onChange={setAnswerContent} />
                       <textarea
+                        ref={textareaRef}
                         className="input resize-none"
-                        rows={4}
-                        placeholder="Write your answer..."
+                        rows={5}
+                        placeholder="Write your answer... (tip: use **bold**, - for lists, 1. for numbered steps)"
                         value={answerContent}
                         onChange={(e) => setAnswerContent(e.target.value)}
                       />
+                      <div className="flex justify-end mt-1">
+                        <span className="text-xs" style={{ color: answerContent.length > 1800 ? "#DC2626" : "#9CA3AF" }}>
+                          {answerContent.length}/2000
+                        </span>
+                      </div>
                     </div>
-                    <button type="submit" disabled={isSubmitting || !answerName.trim() || !answerContent.trim()} className="btn-primary w-full sm:w-auto">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !answerName.trim() || !answerContent.trim() || answerContent.length > 2000}
+                      className="btn-primary w-full sm:w-auto"
+                    >
                       {isSubmitting ? "Posting..." : "Post Answer"}
                     </button>
                   </form>
@@ -324,7 +490,8 @@ export default function QuestionPage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              <div className="card p-5">
+              {/* Question Info — ordered first on mobile via order */}
+              <div className="card p-5 order-1 lg:order-2">
                 <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Question Info</h3>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
@@ -343,13 +510,49 @@ export default function QuestionPage() {
                     <span style={{ color: "#6B7280" }}>Asked</span>
                     <span className="font-medium" style={{ color: "#1F2937" }}>{timeAgo(question.createdAt)}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: "#6B7280" }}>Answers</span>
+                    <span className="font-medium" style={{ color: "#1F2937" }}>{(question.answers?.length || 0) + localAnswers.length}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* Related Questions */}
+              {relatedFiltered.length > 0 && (
+                <div className="card p-5 order-2 lg:order-1">
+                  <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Related FAQs</h3>
+                  <div className="space-y-3">
+                    {relatedFiltered.map((fq) => (
+                      <Link key={fq._id} to={`/faq/${fq._id}`} className="block group">
+                        <p className="text-sm font-medium line-clamp-2 group-hover:underline" style={{ color: "#1F2937" }}>
+                          {fq.question}
+                        </p>
+                        <span className="text-xs" style={{ color: "#9CA3AF" }}>{fq.category}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            
+
           </div>
         )}
       </div>
+
+      {/* Floating Answer Button — desktop only */}
+      {!isLoading && !isError && question && (
+        <div className="hidden lg:block fixed bottom-6 right-6 z-40">
+          <a href="#answer-form"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold text-white shadow-lg transition-all hover:scale-105"
+            style={{ background: "#5E7A5A" }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Answer this Question
+          </a>
+        </div>
+      )}
     </div>
   );
 }

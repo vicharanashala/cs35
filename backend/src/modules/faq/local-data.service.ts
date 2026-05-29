@@ -31,7 +31,7 @@ export class LocalDataService {
       question: entry.question,
       answer: entry.answer,
       category: entry.category,
-      tags: [],
+      tags: [] as string[],
       views: 0,
       isAnswered: true,
       createdAt: new Date().toISOString(),
@@ -40,7 +40,13 @@ export class LocalDataService {
     if (category) result = result.filter((f) => f.category === category);
     if (search) {
       const q = search.toLowerCase();
-      result = result.filter((f) => f.question.toLowerCase().includes(q));
+      result = result.filter(
+        (f) =>
+          f.question.toLowerCase().includes(q) ||
+          f.answer.toLowerCase().includes(q) ||
+          f.category.toLowerCase().includes(q) ||
+          f.tags.some((t) => t.toLowerCase().includes(q)),
+      );
     }
     return result;
   }

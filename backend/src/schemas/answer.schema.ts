@@ -7,7 +7,8 @@ export class Answer extends Document {
   questionId: Types.ObjectId;
   @Prop({ required: true }) content: string;
   @Prop({ required: true }) contributorName: string;
-  @Prop({ type: Types.ObjectId, ref: 'User', index: true }) contributorId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', index: true })
+  contributorId: Types.ObjectId;
   @Prop({ default: false }) isVerified: boolean;
   @Prop({ default: 0 }) upvotes: number;
   createdAt: Date;

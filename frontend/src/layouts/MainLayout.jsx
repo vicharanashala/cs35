@@ -24,7 +24,7 @@ export default function MainLayout({ children }) {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (search.trim()) window.location.href = `/faqs?q=${encodeURIComponent(search.trim())}`;
+    if (search.trim()) navigate(`/faqs?q=${encodeURIComponent(search.trim())}`);
   };
 
   const handleLogout = () => {

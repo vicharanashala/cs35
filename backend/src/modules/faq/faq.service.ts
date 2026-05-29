@@ -81,9 +81,17 @@ export class FaqService implements OnModuleInit {
   async getAllFAQs(category?: string, search?: string) {
     if (!this.hasMongoDB) return this.localData.getAllFAQs(category, search);
     try {
-      const filter: Record<string, unknown> = {};
+      const filter: Record<string, any> = {};
       if (category) filter.category = category;
-      if (search) filter.question = { $regex: search, $options: 'i' };
+      if (search) {
+        const regex = { $regex: search, $options: 'i' };
+        filter.$or = [
+          { question: regex },
+          { answer: regex },
+          { category: regex },
+          { tags: regex },
+        ];
+      }
       return await this.faqModel
         .find(filter)
         .sort({ isPinned: -1, createdAt: -1 })
@@ -421,27 +429,54 @@ export class FaqService implements OnModuleInit {
   }
 
   async getCategoryStats() {
-    if (!this.hasMongoDB) return [];
+    if (!this.hasMongoDB || !this.faqModel || !this.questionModel) return [];
     try {
-      const categories = await this.faqModel.distinct('category').exec();
-      const stats = await Promise.all(
-        categories.filter(Boolean).map(async (cat) => {
-          const faqCount = await this.faqModel
-            .countDocuments({
-              category: cat,
-            })
-            .exec();
-          const questionCount = await this.questionModel
-            .countDocuments({
-              category: cat,
-              status: { $ne: 'closed' },
-            })
-            .exec();
-          return { name: cat, faqCount, questionCount };
-        }),
+      const faqStats = (await this.faqModel
+        .aggregate([
+          { $match: { category: { $ne: null } } },
+          { $group: { _id: '$category', faqCount: { $sum: 1 } } },
+        ])
+        .exec()) as { _id: string; faqCount: number }[];
+
+      const questionStats = (await this.questionModel
+        .aggregate([
+          { $match: { category: { $ne: null }, status: { $ne: 'closed' } } },
+          { $group: { _id: '$category', questionCount: { $sum: 1 } } },
+        ])
+        .exec()) as { _id: string; questionCount: number }[];
+
+      const statsMap = new Map<
+        string,
+        { faqCount: number; questionCount: number }
+      >();
+
+      for (const item of faqStats) {
+        if (item._id) {
+          statsMap.set(item._id, { faqCount: item.faqCount, questionCount: 0 });
+        }
+      }
+
+      for (const item of questionStats) {
+        if (item._id) {
+          const existing = statsMap.get(item._id) || {
+            faqCount: 0,
+            questionCount: 0,
+          };
+          existing.questionCount = item.questionCount;
+          statsMap.set(item._id, existing);
+        }
+      }
+
+      return Array.from(statsMap.entries()).map(([name, stats]) => ({
+        name,
+        faqCount: stats.faqCount,
+        questionCount: stats.questionCount,
+      }));
+    } catch (err) {
+      console.warn(
+        '[FaqService] Error gathering category stats via aggregation:',
+        err,
       );
-      return stats;
-    } catch {
       return [];
     }
   }

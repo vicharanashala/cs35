@@ -87,7 +87,12 @@ export default function HomePage() {
   const searchResults = useMemo(() => {
     if (!search.trim() || search.trim().length < 2) return [];
     const q = search.toLowerCase();
-    return faqs.filter((f) => f.question?.toLowerCase().includes(q)).slice(0, 6);
+    return faqs.filter((f) => 
+      f.question?.toLowerCase().includes(q) ||
+      f.answer?.toLowerCase().includes(q) ||
+      f.category?.toLowerCase().includes(q) ||
+      f.tags?.some((t) => t.toLowerCase().includes(q))
+    ).slice(0, 6);
   }, [search, faqs]);
 
   // 2. Categories

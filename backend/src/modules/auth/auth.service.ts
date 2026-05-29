@@ -287,7 +287,7 @@ export class AuthService {
   }> {
     if (!this.hasMongoDB) {
       const demoEmail = process.env.DEMO_ADMIN_EMAIL || 'admin@asksam.com';
-      const demoPass  = process.env.DEMO_ADMIN_PASSWORD || 'admin123';
+      const demoPass = process.env.DEMO_ADMIN_PASSWORD || 'admin123';
       if (email === demoEmail && password === demoPass) {
         return {
           success: true,

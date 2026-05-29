@@ -65,10 +65,12 @@ function SkeletonCard() {
 }
 
 export default function FaqsPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get("category") || "All Categories";
+  const initialSearch = searchParams.get("q") || "";
 
   const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [search, setSearch] = useState(initialSearch);
 
   const { data: faqs = [], isLoading, isError } = useQuery({
     queryKey: ["faqs"],
@@ -83,11 +85,21 @@ export default function FaqsPage() {
   });
 
   const filtered = useMemo(() => {
+    let r = [...faqs];
     if (activeCategory !== "All Categories") {
-      return faqs.filter((f) => f.category === activeCategory);
+      r = r.filter((f) => f.category === activeCategory);
     }
-    return faqs;
-  }, [faqs, activeCategory]);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      r = r.filter((f) => 
+        (f.question || "").toLowerCase().includes(q) ||
+        (f.answer || "").toLowerCase().includes(q) ||
+        (f.category || "").toLowerCase().includes(q) ||
+        (f.tags || []).some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return r;
+  }, [faqs, activeCategory, search]);
 
   return (
     <div style={{ background: "#F5F7F2", minHeight: "100vh" }}>
@@ -108,11 +120,44 @@ export default function FaqsPage() {
 
       <div className="container-md py-8">
         {/* Controls */}
-        <div className="card p-4 mb-6">
+        <div className="card p-4 mb-6 flex flex-col sm:flex-row gap-3">
+          <div className="search-wrap flex-1">
+            <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              className="search-input text-sm py-2"
+              value={search}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearch(val);
+                setSearchParams((prev) => {
+                  if (val.trim()) {
+                    prev.set("q", val.trim());
+                  } else {
+                    prev.delete("q");
+                  }
+                  return prev;
+                });
+              }}
+              placeholder="Search FAQs by question, answer, category, or tags..."
+            />
+          </div>
           <select
-            className="input w-full text-sm py-2 cursor-pointer"
+            className="input w-full sm:w-64 text-sm py-2 cursor-pointer shrink-0"
             value={activeCategory}
-            onChange={(e) => setActiveCategory(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setActiveCategory(val);
+              setSearchParams((prev) => {
+                if (val !== "All Categories") {
+                  prev.set("category", val);
+                } else {
+                  prev.delete("category");
+                }
+                return prev;
+              });
+            }}
           >
             <option>All Categories</option>
             {categories.map((c) => <option key={c}>{c}</option>)}
