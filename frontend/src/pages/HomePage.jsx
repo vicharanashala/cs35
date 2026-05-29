@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../hooks/useAuth";
+import { useDebounce } from "../hooks/useDebounce";
 import { faqApi, questionApi } from "../services/api";
 
 function timeAgo(d) {
@@ -67,6 +69,18 @@ export default function HomePage() {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -84,16 +98,15 @@ export default function HomePage() {
     [...faqs].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
   [faqs]);
 
-  const searchResults = useMemo(() => {
-    if (!search.trim() || search.trim().length < 2) return [];
-    const q = search.toLowerCase();
-    return faqs.filter((f) => 
-      f.question?.toLowerCase().includes(q) ||
-      f.answer?.toLowerCase().includes(q) ||
-      f.category?.toLowerCase().includes(q) ||
-      f.tags?.some((t) => t.toLowerCase().includes(q))
-    ).slice(0, 6);
-  }, [search, faqs]);
+  const debouncedSearch = useDebounce(search, 300);
+
+  const { data: searchResultsData = [] } = useQuery({
+    queryKey: ['faq-search-home', debouncedSearch],
+    queryFn: () => faqApi.list({ search: debouncedSearch }),
+    enabled: debouncedSearch.trim().length > 1,
+    staleTime: 60000,
+  });
+  const searchResults = Array.isArray(searchResultsData) ? searchResultsData.slice(0, 6) : (searchResultsData?.data || []).slice(0, 6);
 
   // 2. Categories
   const { data: categories = [], isLoading: loadingCats } = useQuery({
@@ -130,7 +143,7 @@ export default function HomePage() {
               </p>
 
               {/* Hero search */}
-              <form onSubmit={handleSearch} className="flex gap-2 relative">
+              <form onSubmit={handleSearch} className="flex gap-2 relative" ref={searchRef}>
                 <div className="search-wrap flex-1">
                   <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -138,9 +151,9 @@ export default function HomePage() {
                   <input
                     className="search-input py-3"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
                     onFocus={() => setShowDropdown(true)}
-                    placeholder="Search verified FAQs..."
+                    placeholder="Search FAQs — e.g. NOC, offer letter, stipend…"
                   />
                 </div>
                 <button type="submit" className="btn-primary">Search</button>

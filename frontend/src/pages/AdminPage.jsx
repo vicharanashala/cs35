@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, questionApi, faqApi, answerApi, faqAdminApi, categoryApi, userApi } from "../services/api";
+import { useDebounce } from "../hooks/useDebounce";
 import { useAuth } from "../hooks/useAuth";
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -97,9 +98,11 @@ function QuestionsTab() {
   const [toast, setToast] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
-  const { data: questions = [], isLoading } = useQuery({
-    queryKey: ["admin-questions", filter],
-    queryFn: () => questionApi.list({ status: filter.status || undefined, category: filter.category || undefined, search: filter.search || undefined }),
+  const debouncedFilterSearch = useDebounce(filter.search, 300);
+
+  const { data: questions = [], isLoading: qLoad } = useQuery({
+    queryKey: ["admin-questions", { ...filter, search: debouncedFilterSearch }],
+    queryFn: () => adminApi.listQuestions({ status: filter.status || undefined, category: filter.category || undefined, search: debouncedFilterSearch || undefined }),
   });
 
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: faqApi.listCategories });
@@ -154,7 +157,7 @@ function QuestionsTab() {
             <h2 className="font-semibold text-sm" style={{ color: "#1F2937" }}>Questions ({questions.length})</h2>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
+            {qLoad ? (
               <div className="p-4 space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-16 w-full" />)}</div>
             ) : questions.length === 0 ? (
               <div className="p-8 text-center text-sm" style={{ color: "#9CA3AF" }}>No questions found.</div>
@@ -270,9 +273,11 @@ function FaqsTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
+  const debouncedFilterSearch = useDebounce(filter.search, 300);
+
   const { data: faqs = [], isLoading } = useQuery({
-    queryKey: ["admin-faqs", filter],
-    queryFn: () => faqApi.list({ category: filter.category || undefined, search: filter.search || undefined }),
+    queryKey: ["admin-faqs", { ...filter, search: debouncedFilterSearch }],
+    queryFn: () => faqApi.list({ category: filter.category || undefined, search: debouncedFilterSearch || undefined }),
   });
 
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: faqApi.listCategories });
@@ -407,24 +412,26 @@ function CategoriesTab() {
         <div className="text-center py-12 text-sm" style={{ color: "#9CA3AF" }}>No categories found.</div>
       ) : (
         <div className="flex-1 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: "#E2E8DE" }}>
-                <th className="text-left p-3 font-semibold" style={{ color: "#6B7280" }}>Category</th>
-                <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>FAQs</th>
-                <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Questions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cats.map(cat => (
-                <tr key={cat.name} className="border-b" style={{ borderColor: "#F5F7F2" }}>
-                  <td className="p-3 font-medium" style={{ color: "#1F2937" }}>{cat.name}</td>
-                  <td className="p-3 text-center" style={{ color: "#6B7280" }}>{cat.faqCount}</td>
-                  <td className="p-3 text-center" style={{ color: "#6B7280" }}>{cat.questionCount}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[400px]">
+              <thead>
+                <tr className="border-b" style={{ borderColor: "#E2E8DE" }}>
+                  <th className="text-left p-3 font-semibold" style={{ color: "#6B7280" }}>Category</th>
+                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>FAQs</th>
+                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Questions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {cats.map(cat => (
+                  <tr key={cat.name} className="border-b" style={{ borderColor: "#F5F7F2" }}>
+                    <td className="p-3 font-medium" style={{ color: "#1F2937" }}>{cat.name}</td>
+                    <td className="p-3 text-center" style={{ color: "#6B7280" }}>{cat.faqCount}</td>
+                    <td className="p-3 text-center" style={{ color: "#6B7280" }}>{cat.questionCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -438,7 +445,9 @@ function UsersTab() {
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState("");
 
-  const { data: users = [], isLoading } = useQuery({ queryKey: ["admin-users"], queryFn: userApi.list });
+  const debouncedSearch = useDebounce(search, 300);
+
+  const { data: users = [], isLoading } = useQuery({ queryKey: ["admin-users", debouncedSearch], queryFn: () => userApi.list(debouncedSearch || undefined) });
 
   const updateMut = useMutation({ mutationFn: ({ id, data }) => userApi.update(id, data), onSuccess: () => { qc.invalidateQueries(["admin-users"]); qc.invalidateQueries(["admin-stats"]); setToast("User updated!"); } });
   const deleteMut = useMutation({ mutationFn: (id) => userApi.delete(id), onSuccess: () => { qc.invalidateQueries(["admin-users"]); qc.invalidateQueries(["admin-stats"]); setToast("User deleted."); } });
@@ -468,49 +477,51 @@ function UsersTab() {
         <div className="text-center py-12 text-sm" style={{ color: "#9CA3AF" }}>No users found.</div>
       ) : (
         <div className="flex-1 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-white">
-              <tr className="border-b" style={{ borderColor: "#E2E8DE" }}>
-                <th className="text-left p-3 font-semibold" style={{ color: "#6B7280" }}>Name</th>
-                <th className="text-left p-3 font-semibold" style={{ color: "#6B7280" }}>Username</th>
-                <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Role</th>
-                <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Status</th>
-                <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Joined</th>
-                <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Questions</th>
-                <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(u => (
-                <tr key={u._id} className="border-b" style={{ borderColor: "#F5F7F2" }}>
-                  <td className="p-3 font-medium" style={{ color: "#1F2937" }}>{u.name || "—"}</td>
-                  <td className="p-3" style={{ color: "#374151" }}>{u.username || "—"}</td>
-                  <td className="p-3 text-center">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: u.role === "admin" ? "#fef3c7" : "#dbeafe", color: u.role === "admin" ? "#92400e" : "#1e40af" }}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: u.isActive ? "#d1fae5" : "#fee2e2", color: u.isActive ? "#065f46" : "#dc2626" }}>
-                      {u.isActive ? "Active" : "Suspended"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-center" style={{ color: "#6B7280" }}>{timeAgo(u.createdAt)}</td>
-                  <td className="p-3 text-center" style={{ color: "#6B7280" }}>{u.questionsAsked?.length || 0}</td>
-                  <td className="p-3 text-center">
-                    <div className="flex gap-1 justify-center">
-                      {u.role !== "admin" && (
-                        u.isActive
-                          ? <button onClick={() => updateMut.mutate({ id: u._id, data: { isActive: false } })} className="text-xs px-2 py-1 rounded" style={{ background: "#fef3c7", color: "#92400e" }}>Suspend</button>
-                          : <button onClick={() => updateMut.mutate({ id: u._id, data: { isActive: true } })} className="text-xs px-2 py-1 rounded" style={{ background: "#d1fae5", color: "#065f46" }}>Activate</button>
-                      )}
-                      {u.role !== "admin" && <button onClick={() => deleteMut.mutate(u._id)} className="text-xs px-2 py-1 rounded" style={{ background: "#fef2f2", color: "#dc2626" }}>Delete</button>}
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead className="sticky top-0 bg-white shadow-sm z-10">
+                <tr className="border-b" style={{ borderColor: "#E2E8DE" }}>
+                  <th className="text-left p-3 font-semibold" style={{ color: "#6B7280" }}>Name</th>
+                  <th className="text-left p-3 font-semibold" style={{ color: "#6B7280" }}>Username</th>
+                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Role</th>
+                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Status</th>
+                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Joined</th>
+                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Questions</th>
+                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map(u => (
+                  <tr key={u._id} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: "#F5F7F2" }}>
+                    <td className="p-3 font-medium" style={{ color: "#1F2937" }}>{u.name || "—"}</td>
+                    <td className="p-3" style={{ color: "#374151" }}>{u.username || "—"}</td>
+                    <td className="p-3 text-center">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: u.role === "admin" ? "#fef3c7" : "#dbeafe", color: u.role === "admin" ? "#92400e" : "#1e40af" }}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: u.isActive ? "#d1fae5" : "#fee2e2", color: u.isActive ? "#065f46" : "#dc2626" }}>
+                        {u.isActive ? "Active" : "Suspended"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center" style={{ color: "#6B7280" }}>{timeAgo(u.createdAt)}</td>
+                    <td className="p-3 text-center" style={{ color: "#6B7280" }}>{u.questionsAsked?.length || 0}</td>
+                    <td className="p-3 text-center">
+                      <div className="flex gap-1 justify-center">
+                        {u.role !== "admin" && (
+                          u.isActive
+                            ? <button onClick={() => updateMut.mutate({ id: u._id, data: { isActive: false } })} className="text-xs px-2 py-1 rounded" style={{ background: "#fef3c7", color: "#92400e" }}>Suspend</button>
+                            : <button onClick={() => updateMut.mutate({ id: u._id, data: { isActive: true } })} className="text-xs px-2 py-1 rounded" style={{ background: "#d1fae5", color: "#065f46" }}>Activate</button>
+                        )}
+                        {u.role !== "admin" && <button onClick={() => deleteMut.mutate(u._id)} className="text-xs px-2 py-1 rounded" style={{ background: "#fef2f2", color: "#dc2626" }}>Delete</button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

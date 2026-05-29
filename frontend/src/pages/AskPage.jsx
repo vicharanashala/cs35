@@ -49,18 +49,78 @@ export default function AskPage() {
 
   const [title, setTitle]               = useState("");
   const [category, setCategory]         = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [details, setDetails]           = useState("");
-  const [tags, setTags]                 = useState([]);
-  const [tagInput, setTagInput]         = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess]   = useState(false);
   const [submitted, setSubmitted]       = useState("");
   const [touched, setTouched]           = useState({});
   const [error, setError]               = useState("");
 
+  const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [isListening, setIsListening] = useState(false);
+
+  const toggleListen = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setDetails((prev) => prev + (prev ? " " : "") + transcript);
+    };
+    recognition.onerror = (e) => {
+      console.error("Speech error:", e);
+      setIsListening(false);
+    };
+    recognition.onend = () => setIsListening(false);
+    
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target.result;
+      const imageMarkdown = `\n![Image](${base64})\n`;
+      setDetails((prev) => prev + imageMarkdown);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const insertFormat = (prefix, suffix = "") => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = details.slice(start, end);
+    const newText = details.slice(0, start) + prefix + selected + suffix + details.slice(end);
+    setDetails(newText);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 0);
+  };
+
+  const finalCategory = category === "new_category" ? customCategory.trim() : category;
   const titleError    = touched.title    && title.trim().length < 4;
-  const categoryError = touched.category && !category;
-  const isValid       = title.trim().length >= 4 && !!category;
+  const categoryError = touched.category && !finalCategory;
+  const isValid       = title.trim().length >= 4 && !!finalCategory;
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
@@ -89,16 +149,7 @@ export default function AskPage() {
     return faqs.filter((f) => f.question?.toLowerCase().includes(q) || f.category?.toLowerCase().includes(q)).slice(0, 4);
   }, [title, faqs]);
 
-  const addTag = () => {
-    const t = tagInput.trim().replace(/^#/, "");
-    if (t && !tags.includes(t) && tags.length < 5) setTags((p) => [...p, t]);
-    setTagInput("");
-  };
 
-  const handleTagKey = (e) => {
-    if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(); }
-    if (e.key === "Backspace" && tagInput === "" && tags.length > 0) setTags((p) => p.slice(0, -1));
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -107,7 +158,7 @@ export default function AskPage() {
     setIsSubmitting(true);
     try {
       const contributorName = user?.name || "Student";
-      await questionApi.create({ question: title.trim(), category, details: details.trim(), tags, contributorName });
+      await questionApi.create({ question: title.trim(), category: finalCategory, details: details.trim(), tags: [], contributorName });
       setSubmitted(title);
       setShowSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
@@ -120,7 +171,7 @@ export default function AskPage() {
   };
 
   const handleClose = () => {
-    setShowSuccess(false); setTitle(""); setCategory(""); setDetails(""); setTags([]); setTouched({});
+    setShowSuccess(false); setTitle(""); setCategory(""); setCustomCategory(""); setDetails(""); setTouched({});
   };
 
   return (
@@ -159,24 +210,39 @@ export default function AskPage() {
                     value={title}
                     onChange={(e) => { setTitle(e.target.value); setError(""); }}
                     onBlur={() => setTouched((t) => ({ ...t, title: true }))}
-                    placeholder="What is your question about?"
+                    placeholder="e.g. How do I apply for an NOC for my internship?"
                     className={`input ${titleError ? "input-error" : ""}`}
                   />
                   {titleError && <p className="input-hint" style={{ color: "#dc2626" }}>Please enter at least 4 characters</p>}
                 </div>
 
                 {/* Category */}
-                <div>
-                  <label className="label">Category <span style={{ color: "#dc2626" }}>*</span></label>
-                  <select
-                    value={category}
-                    onChange={(e) => { setCategory(e.target.value); setTouched((t) => ({ ...t, category: true })); }}
-                    className={`input ${categoryError ? "input-error" : ""}`}
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((c) => <option key={c}>{c}</option>)}
-                  </select>
-                  {categoryError && <p className="input-hint" style={{ color: "#dc2626" }}>Please select a category</p>}
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">Category <span style={{ color: "#dc2626" }}>*</span></label>
+                    <select
+                      value={category}
+                      onChange={(e) => { setCategory(e.target.value); setTouched((t) => ({ ...t, category: true })); }}
+                      className={`input ${categoryError ? "input-error" : ""}`}
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map((c) => <option key={c}>{c}</option>)}
+                      <option value="new_category">+ Add New Category</option>
+                    </select>
+                  </div>
+                  {category === "new_category" && (
+                    <div className="animate-fade-in">
+                      <input
+                        type="text"
+                        value={customCategory}
+                        onChange={(e) => { setCustomCategory(e.target.value); setError(""); }}
+                        onBlur={() => setTouched((t) => ({ ...t, category: true }))}
+                        placeholder="Type new category name..."
+                        className={`input ${categoryError ? "input-error" : ""}`}
+                      />
+                    </div>
+                  )}
+                  {categoryError && <p className="input-hint" style={{ color: "#dc2626" }}>Please provide a category</p>}
                 </div>
 
                 {/* Details */}
@@ -185,28 +251,76 @@ export default function AskPage() {
                   <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8DE" }}>
                     {/* Toolbar */}
                     <div className="flex items-center gap-1 px-3 py-2 border-b" style={{ borderColor: "#E2E8DE", background: "#F5F7F2" }}>
-                      {["B", "I", "U"].map((f) => (
-                        <button key={f} type="button"
-                          className="w-7 h-7 text-xs font-bold rounded hover:bg-white transition-colors flex items-center justify-center"
-                          style={{ color: "#6B7280" }}>
-                          {f}
-                        </button>
-                      ))}
-                      <div className="w-px h-4 mx-1" style={{ background: "#E2E8DE" }} />
-                      {[
-                        "M4 6h16M4 12h16M4 18h8",
-                        "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2",
-                        "M3 10h18M3 14h18",
-                        "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.1-1.1",
-                      ].map((d, i) => (
-                        <button key={i} type="button"
-                          className="w-7 h-7 rounded hover:bg-white transition-colors flex items-center justify-center"
-                          style={{ color: "#6B7280" }}>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={d} />
-                          </svg>
-                        </button>
-                      ))}
+                      <button type="button" onClick={() => insertFormat("**", "**")} title="Bold"
+                        className="w-8 h-8 rounded flex items-center justify-center text-base font-extrabold hover:bg-gray-200 transition-colors"
+                        style={{ color: "#374151" }}>
+                        B
+                      </button>
+                      <button type="button" onClick={() => insertFormat("*", "*")} title="Italic"
+                        className="w-8 h-8 rounded flex items-center justify-center text-base font-serif italic font-bold hover:bg-gray-200 transition-colors"
+                        style={{ color: "#374151" }}>
+                        I
+                      </button>
+                      <div className="w-px h-4 mx-1" style={{ background: "#D1D5DB" }} />
+                      <button type="button" onClick={() => insertFormat("- ")} title="Bullet list"
+                        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
+                        style={{ color: "#374151" }}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
+                          <line x1="8" y1="6" x2="21" y2="6"></line>
+                          <line x1="8" y1="12" x2="21" y2="12"></line>
+                          <line x1="8" y1="18" x2="21" y2="18"></line>
+                          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                      </button>
+                      <button type="button" onClick={() => insertFormat("1. ")} title="Numbered list"
+                        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
+                        style={{ color: "#374151" }}>
+                        <span className="text-sm font-bold">1.</span>
+                      </button>
+                      <button type="button" onClick={() => insertFormat("`", "`")} title="Code"
+                        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
+                        style={{ color: "#374151" }}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                      </button>
+                      <button type="button" onClick={() => insertFormat("[", "](url)")} title="Link"
+                        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
+                        style={{ color: "#374151" }}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                        </svg>
+                      </button>
+                      
+                      <div className="w-px h-4 mx-1" style={{ background: "#D1D5DB" }} />
+                      
+                      {/* Speech to Text */}
+                      <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
+                        className="w-8 h-8 rounded transition-colors flex items-center justify-center relative"
+                        style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent" }}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                        </svg>
+                        {isListening && (
+                          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Image Upload */}
+                      <button type="button" onClick={() => fileInputRef.current?.click()} title="Upload Image"
+                        className="w-8 h-8 rounded hover:bg-gray-200 transition-colors flex items-center justify-center"
+                        style={{ color: "#374151" }}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
+                      </button>
+                      <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
+                      
                     </div>
                     <textarea
                       ref={textareaRef}
@@ -214,45 +328,13 @@ export default function AskPage() {
                       onChange={(e) => setDetails(e.target.value)}
                       placeholder="Write the details of your question…"
                       rows={6}
-                      className="w-full px-4 py-3 text-sm resize-none focus:outline-none"
+                      className="w-full px-4 py-3 text-sm resize-none focus:outline-none placeholder-gray-500"
                       style={{ color: "#1F2937", background: "#fff", minHeight: "140px", fontFamily: "inherit" }}
                     />
                   </div>
                 </div>
 
-                {/* Tags */}
-                <div>
-                  <label className="label">Tags (optional)</label>
-                  <div
-                    className="input flex flex-wrap gap-1.5 min-h-[44px] cursor-text"
-                    style={{ paddingTop: tags.length > 0 ? "0.5rem" : undefined }}
-                    onClick={() => document.getElementById("tag-input").focus()}
-                  >
-                    {tags.map((tag) => (
-                      <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full"
-                        style={{ background: "#f8f0e0", color: "#8B6914" }}>
-                        #{tag}
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setTags(tags.filter((t) => t !== tag)); }}>
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </span>
-                    ))}
-                    <input
-                      id="tag-input"
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={handleTagKey}
-                      onBlur={addTag}
-                      placeholder={tags.length === 0 ? "Add tags (e.g. noc, offer letter, vibe)" : ""}
-                      className="flex-1 min-w-[160px] bg-transparent text-sm focus:outline-none"
-                      style={{ color: "#1F2937" }}
-                    />
-                  </div>
-                  <p className="input-hint">Press Enter or comma to add. Max 5 tags.</p>
-                </div>
+
 
                 <button type="submit" disabled={isSubmitting} className="btn-primary w-full justify-center">
                   {isSubmitting ? (

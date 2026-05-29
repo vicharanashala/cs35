@@ -205,11 +205,17 @@ body {
   line-height:1.5;
   font-family: inherit;
 }
-.input::placeholder { color:#9CA3AF; }
+.input::placeholder { color:#6B7280; }
 .input:hover { border-color:#bdd4ba; }
-.input:focus { outline:none; border-color:#5E7A5A; box-shadow:0 0 0 3px rgba(94,122,90,0.15); }
+.input:focus, .input:focus-within { outline:none; border-color:#5E7A5A; box-shadow:0 0 0 3px rgba(94,122,90,0.15); }
+.input:focus-visible { outline:none; }
+
+select.input {
+  padding-right: 2.25rem;
+}
+
 .input-error { border-color:#ef4444; background:#fef2f2; }
-.input-error:focus { border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,0.15); }
+.input-error:focus, .input-error:focus-within { border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,0.15); }
 
 /* ============================================================
    TAG / CATEGORY CHIPS
@@ -379,6 +385,7 @@ body {
 .search-input::placeholder { color:#9CA3AF; }
 .search-input:hover { border-color:#bdd4ba; }
 .search-input:focus { outline:none; border-color:#5E7A5A; box-shadow:0 0 0 3px rgba(94,122,90,0.15); }
+.search-input:focus-visible { outline:none; }
 
 /* ============================================================
    REDUCED MOTION

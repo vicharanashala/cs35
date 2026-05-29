@@ -7,44 +7,47 @@ function FAQCard({ faq }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={`card-hover overflow-hidden ${open ? "ring-2" : ""}`} style={open ? { ringColor: "#5E7A5A", borderColor: "#bdd4ba" } : {}}>
+    <div className={`card overflow-hidden transition-shadow duration-300 ${open ? "shadow-md ring-1" : "shadow-sm hover:shadow-md"}`} style={open ? { ringColor: "#5E7A5A", borderColor: "#bdd4ba" } : { borderColor: "#E2E8DE" }}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full text-left p-5 flex items-start gap-4"
+        className="w-full text-left px-6 py-5 flex items-start justify-between gap-4 bg-white hover:bg-gray-50 transition-colors"
         aria-expanded={open}
       >
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pr-4">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="tag tag-brand">{faq.category}</span>
-            <span className="badge badge-green flex items-center gap-1">
+            <span className="badge badge-green flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1 rounded-md text-xs font-semibold">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Verified
+              Verified Answer
             </span>
           </div>
-          <h3 className="text-base font-semibold leading-snug" style={{ color: "#1F2937" }}>
+          <h3 className="text-[1.05rem] font-bold leading-snug" style={{ color: "#1F2937" }}>
             {faq.question}
           </h3>
         </div>
-        <svg
-          className="w-5 h-5 shrink-0 mt-1 transition-transform duration-200"
-          style={{ color: "#9CA3AF", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 group-hover:bg-green-50 group-hover:text-green-600 transition-colors">
+          <svg
+            className="w-5 h-5 transition-transform duration-300"
+            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </button>
 
       {open && (
-        <div className="px-5 pb-5 animate-fade-in" style={{ borderTop: "1px solid #F5F7F2" }}>
-          <div className="pt-4 flex flex-col gap-3">
-            <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "#6B7280" }}>
+        <div className="px-6 pb-6 pt-2 bg-white animate-fade-in">
+          <div className="w-full h-px bg-gray-100 mb-4"></div>
+          <div className="flex flex-col gap-4">
+            <p className="text-[0.95rem] leading-relaxed whitespace-pre-line text-gray-600">
               {faq.answer}
             </p>
             <div className="flex justify-end pt-2">
-              <Link to={`/faq/${faq._id}`} className="text-xs font-medium hover:underline" style={{ color: "#5E7A5A" }}>
-                View full details →
+              <Link to={`/faq/${faq._id}`} className="text-sm font-semibold hover:underline flex items-center gap-1" style={{ color: "#5E7A5A" }}>
+                Read full documentation
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </Link>
             </div>
           </div>
@@ -56,9 +59,9 @@ function FAQCard({ faq }) {
 
 function SkeletonCard() {
   return (
-    <div className="card p-5">
-      <div className="skeleton h-4 w-24 mb-3" />
-      <div className="skeleton h-5 w-3/4 mb-2" />
+    <div className="card p-6 border border-gray-100">
+      <div className="skeleton h-4 w-32 mb-4" />
+      <div className="skeleton h-6 w-3/4 mb-3" />
       <div className="skeleton h-4 w-1/2" />
     </div>
   );
@@ -68,7 +71,7 @@ export default function FaqsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get("category") || "All Categories";
   const initialSearch = searchParams.get("q") || "";
-
+  
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [search, setSearch] = useState(initialSearch);
 
@@ -101,102 +104,161 @@ export default function FaqsPage() {
     return r;
   }, [faqs, activeCategory, search]);
 
+  const groupedFaqs = useMemo(() => {
+    const groups = {};
+    for (const faq of filtered) {
+      const cat = faq.category || "Other";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(faq);
+    }
+    return Object.keys(groups).sort().map(cat => ({
+      category: cat,
+      faqs: groups[cat]
+    }));
+  }, [filtered]);
+
+  // Smooth scroll helper for the quick links
+  const scrollToCategory = (cat) => {
+    const el = document.getElementById(`category-${cat}`);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 32;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div style={{ background: "#F5F7F2", minHeight: "100vh" }}>
-      {/* Header */}
-      <div className="bg-white border-b py-8" style={{ borderColor: "#E2E8DE" }}>
-        <div className="container-md text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4" style={{ background: "#f0fdf4" }}>
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div className="min-h-screen bg-[#F9FAFB]">
+      
+      {/* ── Premium Hero Section ── */}
+      <div className="bg-white border-b border-gray-200 py-8 lg:py-10 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(#E2E8DE 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+        <div className="container-md text-center relative z-10 px-4">
+          <div className="inline-flex items-center justify-center p-2 rounded-xl mb-4 shadow-sm bg-green-50 text-green-600">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold mb-3" style={{ color: "#1F2937" }}>Verified FAQs</h1>
-          <p className="text-base mx-auto max-w-lg" style={{ color: "#6B7280" }}>
-            Official knowledge base curated by the admin team. Search here before asking a new question.
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight text-gray-900">
+            How can we help?
+          </h1>
+          <p className="text-base md:text-lg mx-auto max-w-2xl mb-6 text-gray-500">
+            Search our knowledge base to find verified answers quickly.
           </p>
+
+          {/* Search and Filter */}
+          <div className="max-w-3xl mx-auto flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1 shadow-sm rounded-xl bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-green-50 focus-within:border-green-500 transition-all">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                className="w-full bg-transparent border-none py-3 pl-12 pr-4 text-base font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 rounded-xl"
+                value={search}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearch(val);
+                  setSearchParams((prev) => {
+                    if (val.trim()) prev.set("q", val.trim());
+                    else prev.delete("q");
+                    return prev;
+                  });
+                }}
+                placeholder="Search by keyword, topic, or question..."
+              />
+            </div>
+            
+            <div className="md:w-56 shrink-0 shadow-sm rounded-xl bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-green-50 focus-within:border-green-500 transition-all">
+              <select
+                className="w-full h-full bg-transparent border-none py-3 px-4 text-base font-medium text-gray-900 focus:outline-none focus:ring-0 rounded-xl cursor-pointer"
+                value={activeCategory}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setActiveCategory(val);
+                  setSearchParams((prev) => {
+                    if (val !== "All Categories") prev.set("category", val);
+                    else prev.delete("category");
+                    return prev;
+                  });
+                }}
+              >
+                <option>All Categories</option>
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="container-md py-8">
-        {/* Controls */}
-        <div className="card p-4 mb-6 flex flex-col sm:flex-row gap-3">
-          <div className="search-wrap flex-1">
-            <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              className="search-input text-sm py-2"
-              value={search}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSearch(val);
-                setSearchParams((prev) => {
-                  if (val.trim()) {
-                    prev.set("q", val.trim());
-                  } else {
-                    prev.delete("q");
-                  }
-                  return prev;
-                });
-              }}
-              placeholder="Search FAQs by question, answer, category, or tags..."
-            />
+      <div className="container-md py-12 px-4 max-w-4xl mx-auto">
+        
+        {/* Results Header */}
+        {!isLoading && !isError && filtered.length > 0 && (search.trim() || activeCategory !== "All Categories") && (
+          <div className="flex flex-wrap justify-between items-center gap-4 p-4 mb-8 bg-green-50 rounded-xl border border-green-100">
+            <span className="text-sm font-medium text-green-800">
+              Found {filtered.length} {filtered.length === 1 ? "result" : "results"}
+              {activeCategory !== "All Categories" && <> in <strong>{activeCategory}</strong></>}
+              {search.trim() && <> matching &ldquo;<strong>{search.trim()}</strong>&rdquo;</>}
+            </span>
+            <button
+              onClick={() => { setSearch(""); setActiveCategory("All Categories"); setSearchParams({}); }}
+              className="text-xs font-bold uppercase tracking-wider hover:bg-green-100 px-3 py-1.5 rounded-lg text-green-700 transition-colors"
+            >
+              Clear Filters
+            </button>
           </div>
-          <select
-            className="input w-full sm:w-64 text-sm py-2 cursor-pointer shrink-0"
-            value={activeCategory}
-            onChange={(e) => {
-              const val = e.target.value;
-              setActiveCategory(val);
-              setSearchParams((prev) => {
-                if (val !== "All Categories") {
-                  prev.set("category", val);
-                } else {
-                  prev.delete("category");
-                }
-                return prev;
-              });
-            }}
-          >
-            <option>All Categories</option>
-            {categories.map((c) => <option key={c}>{c}</option>)}
-          </select>
-        </div>
+        )}
 
-        {/* List */}
+        {/* List Content */}
         <div className="space-y-4">
           {isLoading && [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
 
           {isError && (
-             <div className="card p-8 text-center">
-               <p className="font-medium" style={{ color: "#1F2937" }}>Failed to load FAQs</p>
-               <p className="text-sm mt-1" style={{ color: "#9CA3AF" }}>The backend might be down.</p>
-             </div>
-          )}
-
-          {!isLoading && !isError && filtered.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex justify-between items-end mb-2 px-1">
-                <span className="text-sm font-semibold" style={{ color: "#6B7280" }}>{filtered.length} FAQs</span>
-              </div>
-              {filtered.map((faq) => <FAQCard key={faq._id} faq={faq} />)}
+            <div className="card p-10 text-center bg-white shadow-sm border border-red-100 rounded-2xl">
+              <p className="font-bold text-lg text-red-600 mb-2">Failed to load FAQs</p>
+              <p className="text-sm text-gray-500">Please check your connection or try again later.</p>
             </div>
           )}
 
+          {!isLoading && !isError && filtered.length > 0 && (
+            <div className="space-y-16">
+              {groupedFaqs.map((group) => (
+                <div key={group.category} id={`category-${group.category}`} className="scroll-mt-12">
+                  
+                  {/* Category Header */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+                      {group.category}
+                    </h2>
+                    <div className="h-px bg-gray-200 flex-1 mt-2"></div>
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-gray-500 mt-1 shadow-sm border border-gray-200">
+                      {group.faqs.length} {group.faqs.length === 1 ? 'FAQ' : 'FAQs'}
+                    </span>
+                  </div>
+                  
+                  {/* Category Accordions */}
+                  <div className="space-y-4">
+                    {group.faqs.map((faq) => <FAQCard key={faq._id} faq={faq} />)}
+                  </div>
+                  
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty State */}
           {!isLoading && !isError && filtered.length === 0 && (
-            <div className="card p-12 text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-xl flex items-center justify-center" style={{ background: "#f8f0e0" }}>
-                <svg className="w-6 h-6" style={{ color: "#8B6914" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <div className="card p-12 text-center bg-white shadow-sm border border-gray-200 rounded-2xl">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-gray-50 border border-gray-100">
+                <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <p className="font-semibold text-lg mb-1" style={{ color: "#1F2937" }}>No FAQs Found</p>
-              <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
-                We couldn't find any official answers matching your search.
+              <p className="font-bold text-2xl mb-3 text-gray-900">No matches found</p>
+              <p className="text-lg mb-8 text-gray-500 max-w-md mx-auto">
+                We couldn't find any official answers matching "{search.trim()}".
               </p>
-              <Link to="/ask" className="btn-primary">
-                Ask the Community
+              <Link to="/ask" className="btn-primary shadow-md hover:shadow-lg transition-all text-lg px-8 py-3">
+                Ask the Community Instead
               </Link>
             </div>
           )}

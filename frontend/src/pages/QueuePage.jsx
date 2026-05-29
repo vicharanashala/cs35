@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { questionApi, faqApi } from "../services/api";
@@ -37,20 +37,20 @@ function QuestionRow({ question }) {
       >
         <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-white"
           style={{ background: "#5E7A5A" }}>
-          {initials(question.contributor)}
+          {initials(question.contributorName)}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className="tag tag-brand">{question.category}</span>
-            {question.isReopened && <span className="badge badge-orange">Reopened</span>}
+            {question.status === "reopened" && <span className="badge badge-orange">Reopened</span>}
             <PriorityBadge priority={question.priority} />
           </div>
           <p className="text-sm font-medium leading-snug" style={{ color: "#1F2937" }}>
             {question.question}
           </p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-xs" style={{ color: "#9CA3AF" }}>
-            <span>Asked by <span style={{ color: "#6B7280", fontWeight: 500 }}>{question.contributor || "Student"}</span></span>
+            <span>Asked by <span style={{ color: "#6B7280", fontWeight: 500 }}>{question.contributorName || "Student"}</span></span>
             <span>·</span>
             <span>{timeAgo(question.createdAt)}</span>
           </div>
@@ -75,7 +75,7 @@ function QuestionRow({ question }) {
 
       {expanded && (
         <div className="px-4 pb-4 animate-fade-in" style={{ borderTop: "1px solid #F5F7F2" }}>
-          {question.isReopened && question.reopenReason && (
+          {question.status === "reopened" && question.reopenReason && (
             <div className="mt-3 mb-3 px-3 py-2 rounded-lg text-xs" style={{ background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa" }}>
               <strong>Reopened reason:</strong> {question.reopenReason}
             </div>
@@ -109,8 +109,25 @@ export default function QueuePage() {
   const [activeCategory, setActiveCategory] = useState("All Categories");
   const [priority, setPriority]           = useState("All");
   const [status, setStatus]               = useState("All");
+  
+  const [pendingCategory, setPendingCategory] = useState("All Categories");
+  const [pendingPriority, setPendingPriority] = useState("All");
+  const [pendingStatus, setPendingStatus]     = useState("All");
+
   const [sortBy, setSortBy]               = useState("newest");
   const [filterOpen, setFilterOpen]       = useState(false);
+  const filterRef = useRef(null);
+
+  // Close filter panel on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const activeFilterCount = [
     activeCategory !== "All Categories",
@@ -153,7 +170,9 @@ export default function QueuePage() {
   const open     = filtered.filter((q) => q.status !== "reopened");
 
   const handleClear = () => {
-    setSearch(""); setActiveCategory("All Categories"); setPriority("All"); setStatus("All");
+    setSearch(""); 
+    setPendingCategory("All Categories"); setPendingPriority("All"); setPendingStatus("All");
+    setActiveCategory("All Categories"); setPriority("All"); setStatus("All");
   };
 
   return (
@@ -173,41 +192,53 @@ export default function QueuePage() {
         </div>
 
         <div className="space-y-4">
-          <div className="card p-4 flex flex-col sm:flex-row gap-3 items-center relative" onClick={() => setFilterOpen(false)}>
-            <div className="search-wrap flex-1 w-full" onClick={(e) => e.stopPropagation()}>
-              <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                className="search-input text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search questions…"
-              />
-            </div>
-
-            <div className="relative shrink-0">
-              <button
-                onClick={(e) => { e.stopPropagation(); setFilterOpen(!filterOpen); }}
-                className="btn-secondary gap-2 flex items-center"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          <div className="card p-4">
+            <div className="flex flex-col sm:flex-row gap-3 items-center">
+              <div className="search-wrap flex-1 w-full">
+                <svg className="search-icon w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                Filters
-                {activeFilterCount > 0 && (
-                  <span className="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white" style={{ background: "#5E7A5A" }}>
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
+                <input
+                  className="search-input w-full text-sm"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by question title, keyword…"
+                />
+              </div>
 
-              {filterOpen && (
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 bg-white rounded-xl border shadow-xl z-50 p-4 animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
+              <div className="relative shrink-0" ref={filterRef}>
+                <button
+                  onClick={() => {
+                    if (!filterOpen) {
+                      setPendingCategory(activeCategory);
+                      setPendingPriority(priority);
+                      setPendingStatus(status);
+                    }
+                    setFilterOpen(!filterOpen);
+                  }}
+                  className="btn-secondary gap-2 flex items-center min-h-[44px]"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white" style={{ background: "#5E7A5A" }}>
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+
+                {filterOpen && (
+                  <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 w-72 bg-white rounded-xl border shadow-xl z-50 p-4 animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold" style={{ color: "#1F2937" }}>Filters</h3>
                     {activeFilterCount > 0 && (
-                      <button onClick={handleClear} className="text-xs font-medium hover:underline" style={{ color: "#5E7A5A" }}>
+                      <button onClick={() => {
+                        setPendingCategory("All Categories");
+                        setPendingPriority("All");
+                        setPendingStatus("All");
+                      }} className="text-xs font-medium hover:underline" style={{ color: "#5E7A5A" }}>
                         Reset all
                       </button>
                     )}
@@ -219,9 +250,9 @@ export default function QueuePage() {
                       <div className="space-y-1 max-h-40 overflow-y-auto">
                         {["All Categories", ...categories].map((cat) => (
                           <button key={cat}
-                            onClick={() => setActiveCategory(cat)}
+                            onClick={() => setPendingCategory(cat)}
                             className="w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors"
-                            style={activeCategory === cat
+                            style={pendingCategory === cat
                               ? { background: "#dde8db", color: "#3a4f38", fontWeight: 600 }
                               : { color: "#6B7280" }}>
                             {cat}
@@ -237,9 +268,9 @@ export default function QueuePage() {
                       <div className="flex flex-wrap gap-1.5">
                         {PRIORITIES.map((p) => (
                           <button key={p}
-                            onClick={() => setPriority(p)}
-                            className="px-3 py-1 text-xs rounded-full transition-colors"
-                            style={priority === p
+                            onClick={() => setPendingPriority(p)}
+                            className="px-3 py-1.5 text-xs rounded-full transition-colors min-h-[32px]"
+                            style={pendingPriority === p
                               ? { background: "#5E7A5A", color: "#fff" }
                               : { background: "#F5F7F2", color: "#6B7280" }}>
                             {p}
@@ -255,9 +286,9 @@ export default function QueuePage() {
                       <div className="flex flex-wrap gap-1.5">
                         {STATUSES.map((s) => (
                           <button key={s}
-                            onClick={() => setStatus(s)}
-                            className="px-3 py-1 text-xs rounded-full transition-colors"
-                            style={status === s
+                            onClick={() => setPendingStatus(s)}
+                            className="px-3 py-1.5 text-xs rounded-full transition-colors min-h-[32px]"
+                            style={pendingStatus === s
                               ? { background: "#5E7A5A", color: "#fff" }
                               : { background: "#F5F7F2", color: "#6B7280" }}>
                             {s}
@@ -267,7 +298,12 @@ export default function QueuePage() {
                     </div>
                   </div>
 
-                  <button onClick={() => setFilterOpen(false)} className="btn-primary w-full mt-4 text-sm justify-center">
+                  <button onClick={() => {
+                    setActiveCategory(pendingCategory);
+                    setPriority(pendingPriority);
+                    setStatus(pendingStatus);
+                    setFilterOpen(false);
+                  }} className="btn-primary w-full mt-4 text-sm justify-center">
                     Apply Filters
                   </button>
                 </div>
@@ -279,6 +315,7 @@ export default function QueuePage() {
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
             </select>
+            </div>
           </div>
 
           {isLoading && <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} />)}</div>}

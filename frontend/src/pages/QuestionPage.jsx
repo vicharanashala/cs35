@@ -147,7 +147,8 @@ function VerifiedHero({ answer, onVote, userVotes }) {
   );
 }
 
-function FormatToolbar({ textareaRef, value, onChange }) {
+function FormatToolbar({ textareaRef, value, onChange, isListening, onToggleListen, onImageUpload }) {
+  const fileInputRef = useRef(null);
   const insertFormat = (prefix, suffix = "") => {
     const el = textareaRef.current;
     if (!el) return;
@@ -165,29 +166,75 @@ function FormatToolbar({ textareaRef, value, onChange }) {
   return (
     <div className="flex items-center gap-1 mb-2">
       <button type="button" onClick={() => insertFormat("**", "**")} title="Bold"
-        className="w-8 h-8 rounded flex items-center justify-center text-sm font-bold hover:bg-gray-100 transition-colors"
+        className="w-8 h-8 rounded flex items-center justify-center text-base font-extrabold hover:bg-gray-200 transition-colors"
         style={{ color: "#374151" }}>
         B
       </button>
-      <button type="button" onClick={() => insertFormat("- ")} title="Bullet list"
-        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-100 transition-colors"
+      <button type="button" onClick={() => insertFormat("*", "*")} title="Italic"
+        className="w-8 h-8 rounded flex items-center justify-center text-base font-serif italic font-bold hover:bg-gray-200 transition-colors"
         style={{ color: "#374151" }}>
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        I
+      </button>
+      <div className="w-px h-4 mx-1" style={{ background: "#D1D5DB" }} />
+      <button type="button" onClick={() => insertFormat("- ")} title="Bullet list"
+        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
+        style={{ color: "#374151" }}>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
         </svg>
       </button>
       <button type="button" onClick={() => insertFormat("1. ")} title="Numbered list"
-        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-100 transition-colors"
+        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
         style={{ color: "#374151" }}>
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M3 8h4m10 0l-4 4m4-4H3" />
-        </svg>
+        <span className="text-sm font-bold">1.</span>
       </button>
       <button type="button" onClick={() => insertFormat("`", "`")} title="Code"
-        className="w-8 h-8 rounded flex items-center justify-center font-mono text-sm hover:bg-gray-100 transition-colors"
+        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
         style={{ color: "#374151" }}>
-        {'</>'}
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
       </button>
+      <button type="button" onClick={() => insertFormat("[", "](url)")} title="Link"
+        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
+        style={{ color: "#374151" }}>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+        </svg>
+      </button>
+
+      <div className="w-px h-4 mx-1" style={{ background: "#D1D5DB" }} />
+      
+      {/* Speech to Text */}
+      <button type="button" onClick={onToggleListen} title="Dictate (Speech to Text)"
+        className="w-8 h-8 rounded transition-colors flex items-center justify-center relative"
+        style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent" }}>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+        </svg>
+        {isListening && (
+          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+          </span>
+        )}
+      </button>
+
+      {/* Image Upload */}
+      <button type="button" onClick={() => fileInputRef.current?.click()} title="Upload Image"
+        className="w-8 h-8 rounded hover:bg-gray-200 transition-colors flex items-center justify-center"
+        style={{ color: "#374151" }}>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+        </svg>
+      </button>
+      <input type="file" accept="image/*" ref={fileInputRef} onChange={onImageUpload} className="hidden" />
+
     </div>
   );
 }
@@ -197,6 +244,9 @@ export default function QuestionPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const textareaRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const [isListening, setIsListening] = useState(false);
+
   const [localAnswers, setLocalAnswers] = useState([]);
   const [userVotes, setUserVotes]       = useState({});
   const [sortBy, setSortBy]             = useState("verified");
@@ -206,6 +256,48 @@ export default function QuestionPage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [voteError, setVoteError] = useState("");
+
+  const toggleListen = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setAnswerContent((prev) => prev + (prev ? " " : "") + transcript);
+    };
+    recognition.onerror = (e) => {
+      console.error("Speech error:", e);
+      setIsListening(false);
+    };
+    recognition.onend = () => setIsListening(false);
+    
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target.result;
+      const imageMarkdown = `\n![Image](${base64})\n`;
+      setAnswerContent((prev) => prev + imageMarkdown);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   const { data: question, isLoading, isError } = useQuery({
     queryKey: ["question", id],
@@ -461,7 +553,14 @@ export default function QuestionPage() {
                       />
                     </div>
                     <div>
-                      <FormatToolbar textareaRef={textareaRef} value={answerContent} onChange={setAnswerContent} />
+                      <FormatToolbar 
+                        textareaRef={textareaRef} 
+                        value={answerContent} 
+                        onChange={setAnswerContent} 
+                        isListening={isListening}
+                        onToggleListen={toggleListen}
+                        onImageUpload={handleImageUpload}
+                      />
                       <textarea
                         ref={textareaRef}
                         className="input resize-none"
