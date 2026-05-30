@@ -246,7 +246,14 @@ export class FaqService implements OnModuleInit {
       const filter: Record<string, unknown> = {};
       if (status) filter.status = status;
       if (category) filter.category = category;
-      if (search) filter.question = { $regex: search, $options: 'i' };
+      if (search) {
+        filter.$or = [
+          { question: { $regex: search, $options: 'i' } },
+          { details: { $regex: search, $options: 'i' } },
+          { category: { $regex: search, $options: 'i' } },
+          { tags: { $elemMatch: { $regex: search, $options: 'i' } } },
+        ];
+      }
       if (contributorName) filter.contributorName = contributorName;
       if (contributorId) filter.contributorId = contributorId;
       if (page === 1 && limit === 20) {
@@ -302,7 +309,7 @@ export class FaqService implements OnModuleInit {
       if (!question) return null;
       const answers = await this.answerModel
         .find({ questionId: id })
-        .sort({ isVerified: -1, createdAt: 1 })
+        .sort({ isAccepted: -1, isVerified: -1, createdAt: 1 })
         .exec();
       return { ...question.toObject(), answers };
     } catch {
@@ -538,6 +545,200 @@ export class FaqService implements OnModuleInit {
       return answer;
     } catch {
       return null;
+    }
+  }
+
+  async acceptAnswer(id: string, accepted: boolean, questionId: string) {
+    try {
+      // If accepting, unaccept all other answers for this question first
+      if (accepted) {
+        await this.answerModel.updateMany(
+          { questionId: new Types.ObjectId(questionId) },
+          { $set: { isAccepted: false } }
+        ).exec();
+      }
+      const answer = await this.answerModel.findByIdAndUpdate(
+        id,
+        { $set: { isAccepted: accepted } },
+        { new: true }
+      ).exec();
+      if (answer) {
+        this.eventsGateway.emitAnswerAccepted(id, questionId, accepted);
+      }
+      return answer;
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Bookmark Methods ─────────────────────────────────────────
+
+  async toggleBookmark(userId: string, questionId: string) {
+    try {
+      const user = await this.userModel.findById(userId).exec();
+      if (!user) return null;
+      const bookmarked = user.questionsBookmarked || [];
+      const idx = bookmarked.findIndex(
+        (b: any) => b.toString() === questionId
+      );
+      let bookmarkedUpdated: Types.ObjectId[];
+      if (idx >= 0) {
+        bookmarkedUpdated = bookmarked.filter(
+          (_: any, i: number) => i !== idx
+        );
+      } else {
+        bookmarkedUpdated = [...bookmarked, new Types.ObjectId(questionId)];
+      }
+      await this.userModel.findByIdAndUpdate(userId, {
+        questionsBookmarked: bookmarkedUpdated,
+      }).exec();
+      return { bookmarked: idx < 0, questionId };
+    } catch {
+      return null;
+    }
+  }
+
+  async getBookmarkedQuestions(userId: string) {
+    try {
+      const user = await this.userModel.findById(userId).exec();
+      if (!user) return [];
+      const ids = user.questionsBookmarked || [];
+      if (ids.length === 0) return [];
+      return this.questionModel
+        .find({ _id: { $in: ids } })
+        .sort({ createdAt: -1 })
+        .exec();
+    } catch {
+      return [];
+    }
+  }
+
+  async followUser(followerId: string, followingId: string) {
+    try {
+      const follower = await this.userModel.findById(followerId).exec();
+      if (!follower) return null;
+      const following = follower.following || [];
+      const idx = following.findIndex(
+        (f: any) => f.toString() === followingId
+      );
+      let followingUpdated: Types.ObjectId[];
+      let isFollowing: boolean;
+      if (idx >= 0) {
+        followingUpdated = following.filter(
+          (_: any, i: number) => i !== idx
+        );
+        isFollowing = false;
+      } else {
+        followingUpdated = [...following, new Types.ObjectId(followingId)];
+        isFollowing = true;
+      }
+      await this.userModel.findByIdAndUpdate(followerId, {
+        following: followingUpdated,
+      }).exec();
+
+      // Update followers of the followed user
+      const followed = await this.userModel.findById(followingId).exec();
+      if (followed) {
+        const followers = followed.followers || [];
+        let followersUpdated: Types.ObjectId[];
+        if (isFollowing) {
+          followersUpdated = [...followers, new Types.ObjectId(followerId)];
+        } else {
+          followersUpdated = followers.filter(
+            (f: any) => f.toString() !== followerId
+          );
+        }
+        await this.userModel.findByIdAndUpdate(followingId, {
+          followers: followersUpdated,
+        }).exec();
+      }
+
+      return { following: isFollowing };
+    } catch {
+      return null;
+    }
+  }
+
+  async getFollowing(userId: string) {
+    try {
+      const user = await this.userModel.findById(userId).exec();
+      if (!user) return [];
+      const ids = user.following || [];
+      if (ids.length === 0) return [];
+      return this.userModel
+        .find({ _id: { $in: ids } })
+        .select('-password')
+        .exec();
+    } catch {
+      return [];
+    }
+  }
+
+  async getActivityHeatmap(userId: string) {
+    try {
+      const [questions, answers, verifiedAnswers] = await Promise.all([
+        this.questionModel
+          .find({ contributorId: new Types.ObjectId(userId) })
+          .select('createdAt')
+          .lean()
+          .exec(),
+        this.answerModel
+          .find({ contributorId: new Types.ObjectId(userId) })
+          .select('createdAt isVerified')
+          .lean()
+          .exec(),
+      ]);
+
+      const dateMap = new Map<string, { questions: number; answers: number; verified: number }>();
+      const now = new Date();
+      // Initialize last 365 days
+      for (let i = 364; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        dateMap.set(key, { questions: 0, answers: 0, verified: 0 });
+      }
+      for (const q of questions) {
+        const key = new Date(q.createdAt).toISOString().split('T')[0];
+        if (dateMap.has(key)) {
+          const entry = dateMap.get(key)!;
+          entry.questions++;
+        }
+      }
+      for (const a of answers) {
+        const key = new Date(a.createdAt).toISOString().split('T')[0];
+        if (dateMap.has(key)) {
+          const entry = dateMap.get(key)!;
+          entry.answers++;
+          if (a.isVerified) entry.verified++;
+        }
+      }
+      return Array.from(dateMap.entries()).map(([date, stats]) => ({
+        date,
+        ...stats,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getUserStats(userId: string) {
+    try {
+      const [questionCount, answerCount, verifiedCount, totalReputation] =
+        await Promise.all([
+          this.questionModel.countDocuments({ contributorId: new Types.ObjectId(userId) }).exec(),
+          this.answerModel.countDocuments({ contributorId: new Types.ObjectId(userId) }).exec(),
+          this.answerModel.countDocuments({ contributorId: new Types.ObjectId(userId), isVerified: true }).exec(),
+          this.userModel.findById(userId).select('reputation').lean().exec(),
+        ]);
+      return {
+        questionCount,
+        answerCount,
+        verifiedCount,
+        reputation: totalReputation?.reputation || 0,
+      };
+    } catch {
+      return { questionCount: 0, answerCount: 0, verifiedCount: 0, reputation: 0 };
     }
   }
 

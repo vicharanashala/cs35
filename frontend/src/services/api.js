@@ -60,6 +60,37 @@ export const answerApi = {
   update: (id, data) => safeRequest(client.patch(`/answers/${id}`, data).then((r) => r.data)),
   delete: (id) => safeRequest(client.delete(`/answers/${id}`).then((r) => r.data)),
   verify: (id, verified) => safeRequest(client.patch(`/answers/${id}/verify`, { verified }).then((r) => r.data)),
+  accept: (id, accepted, questionId) =>
+    safeRequest(client.patch(`/answers/${id}/accept`, { accepted, questionId }).then((r) => r.data)),
+};
+
+// ── Bookmark API ──────────────────────────────────────────────
+
+export const bookmarkApi = {
+  toggle: (userId, questionId) =>
+    safeRequest(client.patch(`/users/${userId}/bookmark/${questionId}`).then((r) => r.data)),
+  list: (userId) => safeRequest(client.get(`/users/${userId}/bookmarks`).then((r) => r.data)),
+};
+
+// ── Follow API ────────────────────────────────────────────────
+
+export const followApi = {
+  toggle: (followerId, followingId) =>
+    safeRequest(client.patch(`/users/${followerId}/follow/${followingId}`).then((r) => r.data)),
+  getFollowing: (userId) => safeRequest(client.get(`/users/${userId}/following`).then((r) => r.data)),
+};
+
+// ── User Stats / Activity API ─────────────────────────────────
+
+export const userStatsApi = {
+  activity: (userId) => safeRequest(client.get(`/users/${userId}/activity`).then((r) => r.data)),
+  stats: (userId) => safeRequest(client.get(`/users/${userId}/stats`).then((r) => r.data)),
+};
+
+// ── Full-Text Search API ──────────────────────────────────────
+
+export const searchApi = {
+  fullText: (q) => safeRequest(client.get("/search/full", { params: { q } }).then((r) => r.data)),
 };
 
 // ── FAQ Management API ────────────────────────────────────────

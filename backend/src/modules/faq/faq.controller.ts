@@ -109,6 +109,13 @@ export class FaqController {
     return this.faqService.getCategoryStats();
   }
 
+  @Get('search/full')
+  fullTextSearch(@Query('q') q: string) {
+    return this.faqService.getAllQuestions(
+      undefined, undefined, q
+    );
+  }
+
   @Post('categories')
   createCategory(@Body() body: { name: string }) {
     return this.faqService.createCategory(body.name);
@@ -234,6 +241,56 @@ export class FaqController {
   @Patch('answers/:id/verify')
   verifyAnswer(@Param('id') id: string, @Body() body: { verified: boolean }) {
     return this.faqService.verifyAnswer(id, body.verified);
+  }
+
+  @Patch('answers/:id/accept')
+  acceptAnswer(
+    @Param('id') id: string,
+    @Body() body: { accepted: boolean; questionId: string },
+  ) {
+    return this.faqService.acceptAnswer(id, body.accepted, body.questionId);
+  }
+
+  // ── Bookmark Routes ─────────────────────────────────────────
+
+  @Patch('users/:userId/bookmark/:questionId')
+  toggleBookmark(
+    @Param('userId') userId: string,
+    @Param('questionId') questionId: string,
+  ) {
+    return this.faqService.toggleBookmark(userId, questionId);
+  }
+
+  @Get('users/:userId/bookmarks')
+  getBookmarkedQuestions(@Param('userId') userId: string) {
+    return this.faqService.getBookmarkedQuestions(userId);
+  }
+
+  // ── Follow Routes ───────────────────────────────────────────
+
+  @Patch('users/:followerId/follow/:followingId')
+  followUser(
+    @Param('followerId') followerId: string,
+    @Param('followingId') followingId: string,
+  ) {
+    return this.faqService.followUser(followerId, followingId);
+  }
+
+  @Get('users/:userId/following')
+  getFollowing(@Param('userId') userId: string) {
+    return this.faqService.getFollowing(userId);
+  }
+
+  // ── User Stats / Activity ───────────────────────────────────
+
+  @Get('users/:userId/activity')
+  getActivityHeatmap(@Param('userId') userId: string) {
+    return this.faqService.getActivityHeatmap(userId);
+  }
+
+  @Get('users/:userId/stats')
+  getUserStats(@Param('userId') userId: string) {
+    return this.faqService.getUserStats(userId);
   }
 
   // ── User Routes ─────────────────────────────────────────────

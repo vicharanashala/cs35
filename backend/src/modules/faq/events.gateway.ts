@@ -46,4 +46,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   emitUserUpdated(userId: string) {
     this.server.emit('userUpdated', { userId });
   }
+
+  emitAnswerAccepted(answerId: string, questionId: string, accepted: boolean) {
+    this.server.emit('answerAccepted', { answerId, questionId, accepted });
+  }
 }

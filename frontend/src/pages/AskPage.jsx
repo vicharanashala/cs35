@@ -138,11 +138,12 @@ export default function AskPage() {
     setIsSubmitting(true);
     try {
       const contributorName = user?.name || "Student";
-      await questionApi.create({ question: title.trim(), category: finalCategory, details: details.trim(), tags: [], contributorName });
+      await questionApi.create({ question: title.trim(), category: finalCategory, details: details.trim(), tags: [], contributorName, contributorId: user?._id });
       setSubmitted(title);
       setShowSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
       queryClient.invalidateQueries({ queryKey: ["my-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
     } catch (err) {
       console.error("Failed to submit question:", err);
       setError("Failed to submit question. Please try again.");

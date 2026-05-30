@@ -10,6 +10,7 @@ export class Answer extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', index: true })
   contributorId: Types.ObjectId;
   @Prop({ default: false }) isVerified: boolean;
+  @Prop({ default: false }) isAccepted: boolean;
   @Prop({ default: 0 }) upvotes: number;
   createdAt: Date;
 }
