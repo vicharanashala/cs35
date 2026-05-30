@@ -6,15 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 
-function getContributorId() {
-  try {
-    const token = localStorage.getItem("authToken") || "";
-    const decoded = atob(token);
-    return decoded.split(":")[0] || undefined;
-  } catch {
-    return undefined;
-  }
-}
+// Removed broken getContributorId
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -288,7 +280,7 @@ export default function QuestionPage() {
     };
 
     try {
-      await questionApi.addAnswer(id, { contributorName: answerName, content: answerContent, contributorId: getContributorId() });
+      await questionApi.addAnswer(id, { contributorName: answerName, content: answerContent, contributorId: user?._id });
       setLocalAnswers((prev) => [newAnswer, ...prev]);
       setAnswerContent("");
       setSubmitSuccess(true);

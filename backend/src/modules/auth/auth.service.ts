@@ -288,6 +288,7 @@ export class AuthService {
       return {
         success: true,
         user: {
+          _id: user._id.toString(),
           name: user.name,
           username: user.username,
           email: user.email,
