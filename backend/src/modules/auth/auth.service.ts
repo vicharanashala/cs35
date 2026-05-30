@@ -7,7 +7,6 @@ import { Model } from 'mongoose';
 import { User } from '../../schemas/user.schema';
 import { Question } from '../../schemas/question.schema';
 import { Answer } from '../../schemas/answer.schema';
-import { OtpService } from './otp.service';
 
 @Injectable()
 export class AuthService {
@@ -24,7 +23,6 @@ export class AuthService {
     @InjectModel(Answer.name)
     private answerModel: Model<Answer> | undefined,
     private jwtService: JwtService,
-    private otpService: OtpService,
   ) {
     if (this.userModel) {
       this.mongoConnected = true;
@@ -35,7 +33,12 @@ export class AuthService {
     return this.mongoConnected;
   }
 
-  private signToken(payload: { sub: string; email?: string; role: string; name: string }): string {
+  private signToken(payload: {
+    sub: string;
+    email?: string;
+    role: string;
+    name: string;
+  }): string {
     return this.jwtService.sign(payload);
   }
 
@@ -98,7 +101,6 @@ export class AuthService {
 
       await this.userModel.create({
         username: data.username,
-        email: '',
         password: hashedPassword,
         name: data.fullName,
         role: 'student',
@@ -116,6 +118,7 @@ export class AuthService {
       });
       return { success: true, message: 'Account created successfully', token };
     } catch (err) {
+      console.error('Signup error:', err);
       return { success: false, message: 'Signup failed. Please try again.' };
     }
   }
@@ -170,68 +173,6 @@ export class AuthService {
     }
   }
 
-  async requestPasswordReset(
-    username: string,
-  ): Promise<{ success: boolean; message: string }> {
-    if (!this.hasMongoDB || !this.otpService) {
-      return { success: false, message: 'Password reset unavailable in demo mode' };
-    }
-
-    try {
-      if (!username.trim()) {
-        return { success: false, message: 'Username is required' };
-      }
-
-      const user = await this.userModel
-        .findOne({ username, role: 'student' })
-        .exec();
-      if (!user) {
-        return { success: false, message: 'Account not found. Please sign up.' };
-      }
-
-      await this.otpService.generateAndSend(user.email || `${username}@asksam.local`, username);
-      return { success: true, message: 'OTP sent to your email address' };
-    } catch (err) {
-      return { success: false, message: 'Failed to send OTP. Please try again.' };
-    }
-  }
-
-  async resetPasswordWithOtp(
-    username: string,
-    otp: string,
-    newPassword: string,
-  ): Promise<{ success: boolean; message: string }> {
-    if (!this.hasMongoDB || !this.otpService) {
-      return { success: false, message: 'Password reset unavailable in demo mode' };
-    }
-
-    try {
-      if (!newPassword || newPassword.length < 6) {
-        return { success: false, message: 'Password must be at least 6 characters' };
-      }
-
-      const user = await this.userModel
-        .findOne({ username, role: 'student' })
-        .exec();
-      if (!user) {
-        return { success: false, message: 'Account not found.' };
-      }
-
-      const valid = await this.otpService.verify(user.email || `${username}@asksam.local`, otp);
-      if (!valid) {
-        return { success: false, message: 'Invalid or expired OTP. Please request a new one.' };
-      }
-
-      user.password = await bcrypt.hash(newPassword, 10);
-      await user.save();
-      await this.otpService.invalidate(user.email || `${username}@asksam.local`);
-
-      return { success: true, message: 'Password reset successful. You can now login.' };
-    } catch (err) {
-      return { success: false, message: 'Password reset failed. Please try again.' };
-    }
-  }
-
   async getMe(token: string): Promise<{
     success: boolean;
     user?: Record<string, unknown>;
@@ -240,7 +181,7 @@ export class AuthService {
     if (!this.hasMongoDB || !this.questionModel || !this.answerModel) {
       let payload: { sub: string; role: string; name: string };
       try {
-        payload = this.jwtService.verify(token) as { sub: string; role: string; name: string };
+        payload = this.jwtService.verify(token);
         return {
           success: true,
           user: {
@@ -261,26 +202,29 @@ export class AuthService {
     try {
       let payload: { sub: string; role: string; name: string };
       try {
-        payload = this.jwtService.verify(token) as { sub: string; role: string; name: string };
+        payload = this.jwtService.verify(token);
       } catch {
         return { success: false, message: 'Invalid or expired token' };
       }
 
       const user = await this.userModel
-        .findOne({ username: payload.sub, role: payload.role as 'student' | 'admin' })
+        .findOne({
+          username: payload.sub,
+          role: payload.role as 'student' | 'admin',
+        })
         .select('-password')
         .exec();
       if (!user) return { success: false, message: 'User not found' };
 
       const questionsCount = await this.questionModel
-        .countDocuments({ contributorName: user.username })
+        .countDocuments({ contributorId: user._id })
         .exec();
       const answersCount = await this.answerModel
-        .countDocuments({ contributorId: user._id.toString() })
+        .countDocuments({ contributorId: user._id })
         .exec();
       const verifiedCount = await this.answerModel
         .countDocuments({
-          contributorId: user._id.toString(),
+          contributorId: user._id,
           isVerified: true,
         })
         .exec();
@@ -356,6 +300,59 @@ export class AuthService {
       };
     } catch (err) {
       return { success: false, message: 'Login failed. Please try again.' };
+    }
+  }
+
+  async forgotPassword(data: {
+    username: string;
+    newPassword: string;
+    confirmNewPassword: string;
+  }): Promise<{ success: boolean; message: string }> {
+    if (!this.hasMongoDB) {
+      return {
+        success: false,
+        message: 'Password reset unavailable in demo mode',
+      };
+    }
+
+    try {
+      if (!data.username.trim()) {
+        return { success: false, message: 'Username is required' };
+      }
+
+      if (!data.newPassword || data.newPassword.length < 6) {
+        return {
+          success: false,
+          message: 'Password must be at least 6 characters',
+        };
+      }
+
+      if (data.newPassword !== data.confirmNewPassword) {
+        return { success: false, message: 'Passwords do not match' };
+      }
+
+      const user = await this.userModel
+        .findOne({ username: data.username, role: 'student' })
+        .exec();
+      if (!user) {
+        return {
+          success: false,
+          message: 'Account not found. Please sign up.',
+        };
+      }
+
+      user.password = await bcrypt.hash(data.newPassword, 10);
+      await user.save();
+
+      return {
+        success: true,
+        message: 'Password reset successful. You can now login.',
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: 'Password reset failed. Please try again.',
+      };
     }
   }
 }

@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { FaqModule } from './modules/faq/faq.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AiModule } from './modules/ai/ai.module';
 
 type NestModuleImport =
   | Type<any>
@@ -30,7 +31,7 @@ if (process.env.MONGODB_URI) {
 
 const featureModules: NestModuleImport[] = [];
 if (process.env.MONGODB_URI) {
-  featureModules.push(FaqModule, AuthModule);
+  featureModules.push(FaqModule, AuthModule, AiModule);
 } else {
   featureModules.push(FaqModule);
 }

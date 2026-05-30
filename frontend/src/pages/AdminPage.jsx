@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { adminApi, questionApi, faqApi, answerApi, faqAdminApi, categoryApi, userApi } from "../services/api";
-import { useDebounce } from "../hooks/useDebounce";
 import { useAuth } from "../hooks/useAuth";
+import { adminApi, questionApi, faqApi, answerApi, faqAdminApi, categoryApi, userApi, socket } from "../services/api";
+import { useDebounce } from "../hooks/useDebounce";
+
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { getUserTitle } from "../utils/gamification";
@@ -86,30 +87,57 @@ function AdjustPointsModal({ user, onConfirm, onCancel }) {
 
 function DashboardTab() {
   const { data: stats } = useQuery({ queryKey: ["admin-stats"], queryFn: adminApi.getStats, refetchInterval: 30000 });
+  const { data: failedSearches = [] } = useQuery({ queryKey: ["failed-searches"], queryFn: faqApi.failedSearches, staleTime: 1000 * 60 });
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {[
-        { label: "Total Questions", value: stats?.totalQuestions ?? "—", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
-        { label: "Open Questions", value: stats?.openQuestions ?? "—", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" },
-        { label: "Answered", value: stats?.answeredQuestions ?? "—", icon: "M5 13l4 4L19 7" },
-        { label: "Verified Answers", value: stats?.verifiedQuestions ?? "—", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-        { label: "Total FAQs", value: stats?.totalFaqs ?? "—", icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.007 2.917-.546.086-.99.622-1.16 1.21a2.85 2.85 0 01-2.917 0A2.85 2.85 0 008.228 9z" },
-        { label: "Categories", value: stats?.totalCategories ?? "—", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
-        { label: "Total Users", value: stats?.totalUsers ?? "—", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
-      ].map(({ label, value, icon }) => (
-        <div key={label} className="card p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#f0f4ef", color: "#5E7A5A" }}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
-            </svg>
+    <div className="space-y-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Total Questions", value: stats?.totalQuestions ?? "—", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
+          { label: "Open Questions", value: stats?.openQuestions ?? "—", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" },
+          { label: "Answered", value: stats?.answeredQuestions ?? "—", icon: "M5 13l4 4L19 7" },
+          { label: "Verified Answers", value: stats?.verifiedQuestions ?? "—", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+          { label: "Total FAQs", value: stats?.totalFaqs ?? "—", icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.007 2.917-.546.086-.99.622-1.16 1.21a2.85 2.85 0 01-2.917 0A2.85 2.85 0 008.228 9z" },
+          { label: "Categories", value: stats?.totalCategories ?? "—", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
+          { label: "Total Users", value: stats?.totalUsers ?? "—", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
+        ].map(({ label, value, icon }) => (
+          <div key={label} className="card p-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#f0f4ef", color: "#5E7A5A" }}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold" style={{ color: "#1F2937" }}>{value}</p>
+              <p className="text-sm font-medium" style={{ color: "#6B7280" }}>{label}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-2xl font-bold" style={{ color: "#1F2937" }}>{value}</p>
-            <p className="text-sm font-medium" style={{ color: "#6B7280" }}>{label}</p>
-          </div>
+        ))}
+      </div>
+
+      {/* ── Failed Searches Panel ── */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-lg">&#x26A0;&#xFE0F;</span>
+          <h2 className="font-bold text-base" style={{ color: "#1F2937" }}>Knowledge Gaps &mdash; Failed Searches</h2>
+          <span className="ml-auto text-xs text-gray-400">Students searched for these but found no results. Create FAQs for the top queries!</span>
         </div>
-      ))}
+        {failedSearches.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">✨ No failed searches yet &mdash; your knowledge base is solid!</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {failedSearches.map((item, i) => (
+              <div key={item.query} className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: i < 3 ? "#fee2e2" : "#f3f4f6", color: i < 3 ? "#dc2626" : "#6b7280" }}>{i + 1}</span>
+                  <span className="text-sm font-medium text-gray-700">{item.query}</span>
+                </div>
+                <span className="text-xs font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full">{item.count}x searched</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -128,8 +156,24 @@ function QuestionsTab() {
 
   const { data: questions = [], isLoading: qLoad } = useQuery({
     queryKey: ["admin-questions", { ...filter, search: debouncedFilterSearch }],
-    queryFn: () => adminApi.listQuestions({ status: filter.status || undefined, category: filter.category || undefined, search: debouncedFilterSearch || undefined }),
+    queryFn: () => questionApi.list({ status: filter.status || undefined, category: filter.category || undefined, search: debouncedFilterSearch || undefined }),
   });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      qc.invalidateQueries({ queryKey: ["admin-questions"] });
+      qc.invalidateQueries({ queryKey: ["question-detail"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+    };
+    socket.on("questionAdded", handleUpdate);
+    socket.on("statusUpdated", handleUpdate);
+    socket.on("answerAdded", handleUpdate);
+    return () => {
+      socket.off("questionAdded", handleUpdate);
+      socket.off("statusUpdated", handleUpdate);
+      socket.off("answerAdded", handleUpdate);
+    };
+  }, [qc]);
 
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: faqApi.listCategories });
 
@@ -140,7 +184,7 @@ function QuestionsTab() {
   });
 
   const answerMut = useMutation({ mutationFn: ({ id, data }) => questionApi.addAnswer(id, data), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Answer submitted!"); } });
-  const verifyMut = useMutation({ mutationFn: ({ id, verified }) => answerApi.verify(id, verified), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); } });
+  const verifyMut = useMutation({ mutationFn: ({ id, verified }) => answerApi.verify(id, verified), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); qc.invalidateQueries({ queryKey: ["user-profile"] }); qc.invalidateQueries({ queryKey: ["users-leaderboard"] }); } });
   const closeMut = useMutation({ mutationFn: (id) => questionApi.close(id), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Question closed."); } });
   const reopenMut = useMutation({ mutationFn: (id) => questionApi.reopen(id), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Question reopened."); } });
   const deleteMut = useMutation({ mutationFn: (id) => questionApi.delete(id), onSuccess: () => { setSelected(null); qc.invalidateQueries(["admin-questions"]); setToast("Question deleted."); } });

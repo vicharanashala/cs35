@@ -24,14 +24,16 @@ export default function ProfilePage() {
     staleTime: 30000,
   });
 
+  // API returns { success: true, user: {...} } — unwrap one level
+  const profile = profileData?.user || profileData || null;
+
   const { data: questionsData, isLoading: questionsLoading } = useQuery({
     queryKey: ['user-profile-questions'],
-    queryFn: () => questionApi.list({ contributor: profileData?.user?.username }),
-    enabled: !!profileData?.user?.username,
+    queryFn: () => questionApi.list({ contributorId: profile?._id }),
+    enabled: !!profile?._id,
   });
 
   const questions = questionsData || [];
-  const profile = profileData?.user;
   const userRank = getUserTitle(profile?.reputation || 0);
 
   const stats = [
@@ -98,14 +100,14 @@ export default function ProfilePage() {
                   {user?.name || "Student"}
                 </h1>
                 <p className="text-sm mt-1" style={{ color: "#9CA3AF" }}>
-                  @{profile?.username || user?.email}
+                  @{profile?.username || ""}
                 </p>
                 <div className="mt-3 flex flex-col items-center gap-2">
                   <span
-                    className="inline-block text-xs font-semibold px-3 py-1 rounded-full"
+                    className="inline-block text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide"
                     style={{ background: "#EEF2FF", color: "#5E7A5A" }}
                   >
-                    {user?.role}
+                    {profile?.role || user?.role}
                   </span>
                   <span
                     className="inline-block text-xs font-semibold px-3 py-1 rounded-full"

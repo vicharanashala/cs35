@@ -1,5 +1,4 @@
 import axios from "axios";
-import { io } from "socket.io-client";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
@@ -7,10 +6,6 @@ const client = axios.create({
   baseURL: API_URL,
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
-});
-
-export const socket = io(API_URL.replace("/api", ""), {
-  autoConnect: true,
 });
 
 client.interceptors.response.use(
@@ -37,6 +32,9 @@ export const faqApi = {
   getById: (id) => safeRequest(client.get(`/faqs/${id}`).then((r) => r.data)),
   listCategories: () => safeRequest(client.get("/categories").then((r) => r.data)),
   incrementView: (id) => safeRequest(client.patch(`/faqs/${id}/view`).then((r) => r.data)),
+  feedback: (id, helpful) => safeRequest(client.patch(`/faqs/${id}/feedback`, { helpful }).then((r) => r.data)),
+  trending: () => safeRequest(client.get("/search/trending").then((r) => r.data)),
+  failedSearches: () => safeRequest(client.get("/admin/search/failed").then((r) => r.data)),
 };
 
 // ── Question API ─────────────────────────────────────────────

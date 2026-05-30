@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
@@ -103,12 +103,13 @@ const TABS = [
 
 export default function MyQuestionsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("open");
   const [search, setSearch] = useState("");
 
   const { data: allQuestions = [], isLoading } = useQuery({
     queryKey: ["my-questions", user?.name],
-    queryFn: () => questionApi.list({ contributor: user?.name }),
+    queryFn: () => questionApi.list({ contributorId: user?._id }),
     enabled: !!user?.name,
     staleTime: 1000 * 30,
   });
@@ -146,6 +147,7 @@ export default function MyQuestionsPage() {
     if (!window.confirm("Delete this question? This cannot be undone.")) return;
     try {
       await questionApi.delete(id);
+      queryClient.invalidateQueries({ queryKey: ["my-questions"] });
     } catch (err) {
       console.error("Failed to delete question:", err);
     }

@@ -425,6 +425,10 @@ select.input {
 /* ============================================================
    ReactQuill Output Formatting
    ============================================================ */
+.quill-content {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
 .quill-content ul {
   list-style-type: disc;
   padding-left: 1.5rem;

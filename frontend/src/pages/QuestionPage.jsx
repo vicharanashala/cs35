@@ -1,7 +1,8 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { questionApi, faqApi, socket } from "../services/api";
+import { questionApi, faqApi } from "../services/api";
+import { socket } from "../services/socket";
 import { useAuth } from "../hooks/useAuth";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
@@ -138,19 +139,23 @@ export default function QuestionPage() {
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
 
+  const handleUpdate = useCallback((data) => {
+    if (data?.questionId === id || data?.id === id || data?.questionId === undefined) {
+      queryClient.invalidateQueries({ queryKey: ["question", id] });
+    }
+  }, [id, queryClient]);
+
   useEffect(() => {
-    const handleUpdate = (data) => {
-      if (data?.questionId === id || data?.id === id || data?.questionId === undefined) {
-        queryClient.invalidateQueries({ queryKey: ["question", id] });
-      }
-    };
+    if (!socket?.connected) return;
     socket.on("answerAdded", handleUpdate);
     socket.on("statusUpdated", handleUpdate);
+    socket.on("voteUpdated", handleUpdate);
     return () => {
       socket.off("answerAdded", handleUpdate);
       socket.off("statusUpdated", handleUpdate);
+      socket.off("voteUpdated", handleUpdate);
     };
-  }, [id, queryClient]);
+  }, [handleUpdate]);
 
   const [localAnswers, setLocalAnswers] = useState([]);
   const [userVotes, setUserVotes]       = useState({});
@@ -287,6 +292,8 @@ export default function QuestionPage() {
       setTimeout(() => setSubmitSuccess(false), 3000);
       queryClient.invalidateQueries({ queryKey: ["question", id] });
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["users-leaderboard"] });
     } catch (err) {
       console.error("Failed to post answer:", err);
       setSubmitError("Failed to post answer. Please try again.");
@@ -328,7 +335,7 @@ export default function QuestionPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {/* Main Thread */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="lg:col-span-2 space-y-8 min-w-0">
 
               {/* Question */}
               <article>

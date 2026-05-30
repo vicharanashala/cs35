@@ -1,14 +1,15 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
 import { faqApi, questionApi, userApi } from "../services/api";
 import { getUserTitle } from "../utils/gamification";
 
 function timeAgo(d) {
   if (!d) return "";
-  const mins = Math.floor((Date.now() - new Date(d)) / 60000);
+  const date = new Date(d);
+  if (date.getTime() === 0 || isNaN(date.getTime())) return "";
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
@@ -107,14 +108,19 @@ export default function HomePage() {
     enabled: debouncedSearch.trim().length > 1,
     staleTime: 60000,
   });
-  const searchResults = Array.isArray(searchResultsData) ? searchResultsData.slice(0, 6) : (searchResultsData?.data || []).slice(0, 6);
+  const searchResults = Array.isArray(searchResultsData)
+    ? searchResultsData.slice(0, 6)
+    : Array.isArray(searchResultsData?.data)
+      ? searchResultsData.data.slice(0, 6)
+      : [];
 
   // 2. Categories
-  const { data: categories = [], isLoading: loadingCats } = useQuery({
+  const { data: categoriesData = [], isLoading: loadingCats } = useQuery({
     queryKey: ["categories"],
     queryFn: () => faqApi.listCategories(),
     staleTime: 1000 * 60 * 5,
   });
+  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
 
   // 3. Recent Discussions (Community)
   const { data: questions = [], isLoading: loadingQuestions } = useQuery({
@@ -127,15 +133,21 @@ export default function HomePage() {
     [...questions].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 3),
   [questions]);
 
-  // 4. Top Contributors
+  // 4. Top Contributors — gracefully handles /users 404
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ["users-leaderboard"],
-    queryFn: () => userApi.list(),
+    queryFn: async () => {
+      try {
+        return await userApi.list();
+      } catch {
+        return [];
+      }
+    },
     staleTime: 1000 * 60 * 5,
   });
 
   const topContributors = useMemo(() => {
-    const list = Array.isArray(users) ? users : users.data || [];
+    const list = Array.isArray(users) ? users : Array.isArray(users?.data) ? users.data : [];
     return [...list]
       .filter((u) => u.reputation > 0)
       .sort((a, b) => (b.reputation || 0) - (a.reputation || 0))
@@ -175,39 +187,59 @@ export default function HomePage() {
                 <button type="submit" className="btn-primary">Search</button>
 
                 {/* Search dropdown */}
-                {showDropdown && searchResults.length > 0 && (
+                {showDropdown && debouncedSearch.trim().length > 1 && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border shadow-lg z-50 overflow-hidden animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
-                    <div className="p-2">
-                      <p className="text-xs font-semibold px-3 py-1.5" style={{ color: "#9CA3AF" }}>RELATED QUESTIONS</p>
-                      {searchResults.map((faq) => (
+                    {searchResults.length > 0 ? (
+                      <div className="p-2">
+                        <p className="text-xs font-semibold px-3 py-1.5" style={{ color: "#9CA3AF" }}>RELATED QUESTIONS</p>
+                        {searchResults.map((faq) => (
+                          <Link
+                            key={faq._id}
+                            to={`/faq/${faq._id}`}
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>{faq.question}</p>
+                              <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{faq.category}</p>
+                            </div>
+                          </Link>
+                        ))}
+                        <div className="border-t mt-2 pt-2 px-3" style={{ borderColor: "#E2E8DE" }}>
+                          <Link
+                            to={`/faqs?q=${encodeURIComponent(search)}`}
+                            onClick={() => setShowDropdown(false)}
+                            className="text-xs font-medium hover:underline"
+                            style={{ color: "#5E7A5A" }}
+                          >
+                            See all results for "{search}" →
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-6 text-center">
+                        <svg className="w-8 h-8 mx-auto mb-2" style={{ color: "#D1D5DB" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-sm font-medium mb-1" style={{ color: "#374151" }}>No FAQs found</p>
+                        <p className="text-xs" style={{ color: "#9CA3AF" }}>Try a different search term or</p>
                         <Link
-                          key={faq._id}
-                          to={`/faq/${faq._id}`}
+                          to={`/ask?question=${encodeURIComponent(search)}`}
                           onClick={() => setShowDropdown(false)}
-                          className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>{faq.question}</p>
-                            <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{faq.category}</p>
-                          </div>
-                        </Link>
-                      ))}
-                      <div className="border-t mt-2 pt-2 px-3" style={{ borderColor: "#E2E8DE" }}>
-                        <Link
-                          to={`/faqs?q=${encodeURIComponent(search)}`}
-                          onClick={() => setShowDropdown(false)}
-                          className="text-xs font-medium hover:underline"
+                          className="text-xs font-medium hover:underline mt-1 inline-block"
                           style={{ color: "#5E7A5A" }}
                         >
-                          See all results for "{search}" →
+                          ask this as a question →
                         </Link>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
+
+
               </form>
             </div>
 
@@ -384,7 +416,7 @@ export default function HomePage() {
                           #{idx + 1}
                         </div>
                         <div className="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xs" style={{ background: "#dde8db", color: "#3a4f38" }}>
-                          {user.name ? user.name.charAt(0).toUpperCase() : "?"}
+                          {(user.name || user.username)?.charAt(0)?.toUpperCase() || "?"}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate flex items-center gap-2" style={{ color: "#1F2937" }}>

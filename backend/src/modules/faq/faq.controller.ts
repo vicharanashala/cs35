@@ -9,10 +9,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { FaqService } from './faq.service';
+import { AiService } from '../ai/ai.service';
 
 @Controller()
 export class FaqController {
-  constructor(private readonly faqService: FaqService) {}
+  constructor(
+    private readonly faqService: FaqService,
+    private readonly aiService: AiService,
+  ) {}
 
   // ── FAQ Routes ──────────────────────────────────────────────
 
@@ -78,6 +82,21 @@ export class FaqController {
     return this.faqService.pinFaq(id, body.pinned);
   }
 
+  @Patch('faqs/:id/feedback')
+  submitFaqFeedback(@Param('id') id: string, @Body() body: { helpful: boolean }) {
+    return this.faqService.submitFaqFeedback(id, body.helpful);
+  }
+
+  @Get('search/trending')
+  getTrendingSearches() {
+    return this.faqService.getTrendingSearches();
+  }
+
+  @Get('admin/search/failed')
+  getFailedSearches() {
+    return this.faqService.getFailedSearches();
+  }
+
   // ── Category Routes ─────────────────────────────────────────
 
   @Get('categories')
@@ -114,6 +133,7 @@ export class FaqController {
     @Query('category') category?: string,
     @Query('search') search?: string,
     @Query('contributor') contributor?: string,
+    @Query('contributorId') contributorId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -122,6 +142,7 @@ export class FaqController {
       category,
       search,
       contributor,
+      contributorId,
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 20,
     );
@@ -142,6 +163,7 @@ export class FaqController {
       tags?: string[];
       screenshotUrl?: string;
       contributorName?: string;
+      contributorId?: string;
     },
   ) {
     return this.faqService.createQuestion(body);
@@ -244,7 +266,10 @@ export class FaqController {
   // ── Notification Routes ──────────────────────────────────────
 
   @Get('notifications/:userId')
-  getNotifications(@Param('userId') userId: string, @Query('isAdmin') isAdmin?: string) {
+  getNotifications(
+    @Param('userId') userId: string,
+    @Query('isAdmin') isAdmin?: string,
+  ) {
     return this.faqService.getNotifications(userId, isAdmin === 'true');
   }
 

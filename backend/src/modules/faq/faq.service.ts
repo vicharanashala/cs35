@@ -1,6 +1,6 @@
 import { Injectable, Optional, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { Faq } from '../../schemas/faq.schema';
@@ -8,9 +8,15 @@ import { Question } from '../../schemas/question.schema';
 import { Answer } from '../../schemas/answer.schema';
 import { User } from '../../schemas/user.schema';
 import { Notification } from '../../schemas/notification.schema';
+import { SearchAnalytics } from '../../schemas/search-analytics.schema';
 import { EventsGateway } from './events.gateway';
+import { AiService } from '../ai/ai.service';
 @Injectable()
 export class FaqService implements OnModuleInit {
+  private get hasMongoDB() {
+    return !!this.faqModel;
+  }
+
   constructor(
     @Optional() @InjectModel(Faq.name) private faqModel: Model<Faq> | undefined,
     @Optional()
@@ -25,7 +31,11 @@ export class FaqService implements OnModuleInit {
     @Optional()
     @InjectModel(Notification.name)
     private notificationModel: Model<Notification> | undefined,
+    @Optional()
+    @InjectModel(SearchAnalytics.name)
+    private searchAnalyticsModel: Model<SearchAnalytics> | undefined,
     private eventsGateway: EventsGateway,
+    private aiService: AiService,
     ) {}
 
   async onModuleInit() {
@@ -77,35 +87,85 @@ export class FaqService implements OnModuleInit {
     try {
       const filter: Record<string, any> = {};
       if (category) filter.category = category;
+      
+      let allFaqs: any[] = await this.faqModel.find(filter).lean().exec();
+
       if (search) {
-        const regex = { $regex: search, $options: 'i' };
-        filter.$or = [
-          { question: regex },
-          { answer: regex },
-          { category: regex },
-          { tags: regex },
-        ];
+        const queryEmbedding = await this.aiService.generateEmbedding(search);
+        
+        if (queryEmbedding.length > 0) {
+          // Semantic Search
+          allFaqs = allFaqs.map(faq => {
+            const similarity = faq.embedding ? this.aiService.cosineSimilarity(queryEmbedding, faq.embedding) : 0;
+            return { ...faq, similarity };
+          }).sort((a: any, b: any) => b.similarity - a.similarity);
+        } else {
+          // Fallback to text search
+          allFaqs = allFaqs.filter(faq => {
+            const q = search.toLowerCase();
+            return (faq.question || '').toLowerCase().includes(q) ||
+              (faq.answer || '').toLowerCase().includes(q) ||
+              (faq.category || '').toLowerCase().includes(q);
+          });
+        }
+
+        // Log search analytics (fire-and-forget)
+        void this.logSearch(search, allFaqs.length === 0);
+      } else {
+        // Default sort
+        allFaqs.sort((a: any, b: any) => {
+          if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
       }
-      if (page === 1 && limit === 20) {
-        return await this.faqModel
-          .find(filter)
-          .sort({ isPinned: -1, createdAt: -1 })
-          .exec();
-      }
+
       const skip = (page - 1) * limit;
-      const [data, total] = await Promise.all([
-        this.faqModel
-          .find(filter)
-          .sort({ isPinned: -1, createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .exec(),
-        this.faqModel.countDocuments(filter).exec(),
-      ]);
+      const data = allFaqs.slice(skip, skip + limit);
+      const total = allFaqs.length;
+      
       return { data, total, page, limit };
-    } catch {
+    } catch (err) {
+      console.error(err);
       return { data: [], total: 0, page: 1, limit: 20 };
     }
+  }
+
+  private async logSearch(query: string, failed: boolean) {
+    if (!this.searchAnalyticsModel) return;
+    const normalized = query.trim().toLowerCase();
+    await this.searchAnalyticsModel.findOneAndUpdate(
+      { query: normalized },
+      { $inc: { count: 1 }, $set: { failed, lastSearchedAt: new Date() } },
+      { upsert: true, new: true },
+    ).exec();
+  }
+
+  async getTrendingSearches(limit = 8) {
+    if (!this.searchAnalyticsModel) return [];
+    return this.searchAnalyticsModel
+      .find({ failed: false })
+      .sort({ count: -1 })
+      .limit(limit)
+      .select('query count')
+      .lean()
+      .exec();
+  }
+
+  async getFailedSearches(limit = 20) {
+    if (!this.searchAnalyticsModel) return [];
+    return this.searchAnalyticsModel
+      .find({ failed: true })
+      .sort({ count: -1 })
+      .limit(limit)
+      .select('query count lastSearchedAt')
+      .lean()
+      .exec();
+  }
+
+  async submitFaqFeedback(id: string, isHelpful: boolean) {
+    if (!this.faqModel) return null;
+    const inc = isHelpful ? { helpfulCount: 1 } : { unhelpfulCount: 1 };
+    return this.faqModel.findByIdAndUpdate(id, { $inc: inc }, { new: true }).exec();
   }
 
   async getCategories() {
@@ -178,6 +238,7 @@ export class FaqService implements OnModuleInit {
     category?: string,
     search?: string,
     contributorName?: string,
+    contributorId?: string,
     page = 1,
     limit = 20,
   ) {
@@ -187,6 +248,7 @@ export class FaqService implements OnModuleInit {
       if (category) filter.category = category;
       if (search) filter.question = { $regex: search, $options: 'i' };
       if (contributorName) filter.contributorName = contributorName;
+      if (contributorId) filter.contributorId = contributorId;
       if (page === 1 && limit === 20) {
         return await this.questionModel
           .find(filter)
@@ -248,9 +310,25 @@ export class FaqService implements OnModuleInit {
     }
   }
 
-  async createQuestion(data: Partial<Question>) {
+  async createQuestion(data: any) {
     try {
-      const q = await this.questionModel.create({ ...data, status: 'open' });
+      // 1. Yaksha Pre-Moderation
+      const moderation = await this.aiService.yakshaPreModerate(data.question || '', data.details || '');
+      
+      // 2. Generate Semantic Embedding
+      const embedding = await this.aiService.generateEmbedding(`${data.question} ${data.details}`);
+
+      // 3. Apply Moderation & Embedding
+      const newQuestionData = {
+        ...data,
+        question: moderation.improvedQuestion || data.question,
+        category: moderation.suggestedCategory || data.category,
+        embedding: embedding,
+        status: (moderation.isApproved ? 'open' : 'closed') as 'open' | 'closed',
+        contributorId: data.contributorId ? new Types.ObjectId(data.contributorId.toString()) : undefined,
+      };
+
+      const q = await this.questionModel.create(newQuestionData);
       this.eventsGateway.emitQuestionAdded(q);
       
       if (this.notificationModel) {
@@ -259,7 +337,7 @@ export class FaqService implements OnModuleInit {
           type: 'new_question',
           title: 'New Question',
           message: `${data.contributorName || 'A student'} asked: ${data.question}`,
-          link: `/question/${q._id}`,
+          link: `/question/${q?._id || ''}`,
         });
       }
       
@@ -360,13 +438,10 @@ export class FaqService implements OnModuleInit {
         isVerified: false,
         upvotes: 0,
       });
-      const hasVerified = await this.answerModel
-        .findOne({ questionId, isVerified: true })
-        .exec();
-      if (hasVerified) {
-        await this.questionModel.findByIdAndUpdate(questionId, { status: 'answered' });
-        this.eventsGateway.emitStatusUpdated(questionId, 'answered');
-      }
+      
+      // Update question status to 'answered' whenever an answer is added
+      await this.questionModel.findByIdAndUpdate(questionId, { status: 'answered' });
+      this.eventsGateway.emitStatusUpdated(questionId, 'answered');
       
       if (data.contributorId) {
         await this.userModel.findByIdAndUpdate(data.contributorId, { $inc: { reputation: 5 } }).exec();
@@ -387,7 +462,8 @@ export class FaqService implements OnModuleInit {
       
       this.eventsGateway.emitAnswerAdded(answer);
       return answer;
-    } catch {
+    } catch (err) {
+      console.error('[FaqService] Error adding answer:', err instanceof Error ? err.message : err);
       return null;
     }
   }
@@ -424,12 +500,12 @@ export class FaqService implements OnModuleInit {
         await this.questionModel
           .findByIdAndUpdate(answer.questionId, { status: 'answered' })
           .exec();
-        this.eventsGateway.emitStatusUpdated(answer.questionId, 'answered');
+        this.eventsGateway.emitStatusUpdated(answer.questionId.toString(), 'answered');
       } else {
         await this.questionModel
           .findByIdAndUpdate(answer.questionId, { status: 'open' })
           .exec();
-        this.eventsGateway.emitStatusUpdated(answer.questionId, 'open');
+        this.eventsGateway.emitStatusUpdated(answer.questionId.toString(), 'open');
       }
       
       if (verified && answer.contributorId) {
@@ -443,6 +519,7 @@ export class FaqService implements OnModuleInit {
             link: `/question/${answer.questionId}`,
           });
         }
+        this.eventsGateway.emitUserUpdated(answer.contributorId.toString());
       }
       
       return answer;
@@ -457,6 +534,7 @@ export class FaqService implements OnModuleInit {
       if (!answer) return null;
       answer.upvotes = Math.max(0, (answer.upvotes || 0) + direction);
       await answer.save();
+      this.eventsGateway.emitVoteUpdated(id, answer.upvotes);
       return answer;
     } catch {
       return null;
@@ -604,6 +682,8 @@ export class FaqService implements OnModuleInit {
         totalUsers: 0,
       };
     }
+  }
+  
   // ── Notifications ───────────────────────────────────────────
 
   async getNotifications(userId: string, isAdmin = false) {

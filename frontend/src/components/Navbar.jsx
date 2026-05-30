@@ -3,6 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userApi, notificationApi } from "../services/api";
+import { socket } from "../services/socket";
+import { getUserTitle } from "../utils/gamification";
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -57,10 +59,43 @@ export default function Navbar() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Real-time synchronization
+  useEffect(() => {
+    if (!socket || typeof socket.on !== "function") return;
+
+    const handleUpdate = () => {
+      if (isAuthenticated) {
+        qc.invalidateQueries(["notifications", user?._id]);
+        qc.invalidateQueries(["user-profile"]);
+      }
+    };
+
+    socket.on("questionAdded", handleUpdate);
+    socket.on("answerAdded", handleUpdate);
+    socket.on("statusUpdated", handleUpdate);
+
+    const handleUserUpdate = (data) => {
+      if (isAuthenticated && data?.userId === user?._id) {
+        qc.invalidateQueries(["user-profile"]);
+        qc.invalidateQueries(["notifications", user?._id]);
+      }
+    };
+    socket.on("userUpdated", handleUserUpdate);
+
+    return () => {
+      socket.off("questionAdded", handleUpdate);
+      socket.off("answerAdded", handleUpdate);
+      socket.off("statusUpdated", handleUpdate);
+      socket.off("userUpdated", handleUserUpdate);
+    };
+  }, [qc, isAuthenticated, user?._id]);
 
   useEffect(() => {
     if (isMenuOpen) document.body.style.overflow = "hidden";
@@ -85,22 +120,35 @@ export default function Navbar() {
   const closeMenu = () => setIsMenuOpen(false);
   const handleKeyDown = (e) => { if (e.key === "Escape" && isMenuOpen) closeMenu(); };
 
+  // API returns { success: true, user: {...} } — unwrap one level
+  const profile = profileData?.user || profileData || null;
+
   const avatarInitials = user?.name?.charAt(0)?.toUpperCase() || "U";
   const fullName = user?.name || "User";
-  const username = profileData?.user?.username || user?.email || "";
-  const role = user?.role || "student";
+  const username = profile?.username || "";
+  const role = profile?.role || user?.role || "student";
   const isAdmin = role === "admin";
-  const joinDate = profileData?.user?.createdAt
-    ? new Date(profileData.user.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+  const joinDate = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
     : null;
-  const stats = profileData?.user
+  const stats = profile
     ? {
-        questions: profileData.user.questionsCount ?? 0,
-        answers: profileData.user.answersCount ?? 0,
-        verified: profileData.user.verifiedCount ?? 0,
+        reputation: profile.reputation ?? 0,
+        questions: profile.questionsCount ?? 0,
+        answers: profile.answersCount ?? 0,
+        verified: profile.verifiedCount ?? 0,
       }
     : null;
-  const hasActivity = stats && (stats.questions > 0 || stats.answers > 0 || stats.verified > 0);
+  const hasActivity = !!stats;
+
+  const reputation = stats?.reputation || 0;
+  const userRank = getUserTitle(reputation);
+  let nextThreshold = 50;
+  let prevThreshold = 0;
+  if (reputation >= 50 && reputation < 200) { prevThreshold = 50; nextThreshold = 200; }
+  else if (reputation >= 200) { prevThreshold = 200; nextThreshold = 1000; }
+  
+  const progressPercent = Math.min(100, Math.max(0, ((reputation - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
 
   return (
     <>
@@ -302,6 +350,23 @@ export default function Navbar() {
                           </div>
                         </div>
                       </div>
+
+                      {/* ── Reputation Progress ── */}
+                      <div className="mt-4 mb-2">
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                          <span className="font-semibold" style={{ color: userRank.color }}>{userRank.title}</span>
+                          <span className="text-ink-400 font-medium">{reputation} / {nextThreshold} pts</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500 ease-out" 
+                            style={{ width: `${progressPercent}%`, backgroundColor: userRank.color }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-ink-400 mt-1.5 text-center">
+                          {nextThreshold - reputation} points to next rank
+                        </p>
+                      </div>
                     </div>
 
                     {/* ── Activity Stats ── */}
@@ -407,7 +472,7 @@ export default function Navbar() {
                       )}
 
                       <Link
-                        to="/profile"
+                        to="/ask"
                         onClick={() => setProfileOpen(false)}
                         role="menuitem"
                         className="flex items-center gap-3 mx-2 px-3 py-2.5 text-sm font-medium text-ink-700
@@ -416,15 +481,34 @@ export default function Navbar() {
                       >
                         <span className="w-8 h-8 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center shrink-0">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           </svg>
                         </span>
-                        Change Password
+                        Ask a Question
                         <svg className="w-3.5 h-3.5 ml-auto text-ink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </Link>
+
+                      <Link
+                        to="/profile"
+                        onClick={() => setProfileOpen(false)}
+                        role="menuitem"
+                        className="flex items-center gap-3 mx-2 px-3 py-2.5 text-sm font-medium text-ink-700
+                                   rounded-xl hover:bg-brand-50 hover:text-brand-600
+                                   active:scale-[0.98] transition-all duration-150"
+                      >
+                        <span className="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a14 7 0 00-7-7z" />
+                          </svg>
+                        </span>
+                        Profile Settings
+                        <svg className="w-3.5 h-3.5 ml-auto text-ink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+
 
                       {/* Divider */}
                       <div className="mx-4 my-1 h-px" style={{ background: "#E2E8DE" }} role="none" />

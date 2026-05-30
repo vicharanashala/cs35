@@ -1,10 +1,23 @@
 import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { faqApi } from "../services/api";
 
 function FAQCard({ faq }) {
   const [open, setOpen] = useState(false);
+  const [voted, setVoted] = useState(null); // 'up' | 'down' | null
+  const qc = useQueryClient();
+
+  const feedbackMutation = useMutation({
+    mutationFn: (helpful) => faqApi.feedback(faq._id, helpful),
+    onSuccess: () => qc.invalidateQueries(["faqs"]),
+  });
+
+  const handleFeedback = (helpful) => {
+    if (voted) return;
+    setVoted(helpful ? "up" : "down");
+    feedbackMutation.mutate(helpful);
+  };
 
   return (
     <div className={`card overflow-hidden transition-shadow duration-300 ${open ? "shadow-md ring-1" : "shadow-sm hover:shadow-md"}`} style={open ? { ringColor: "#5E7A5A", borderColor: "#bdd4ba" } : { borderColor: "#E2E8DE" }}>
@@ -44,7 +57,33 @@ function FAQCard({ faq }) {
             <p className="text-[0.95rem] leading-relaxed whitespace-pre-line text-gray-600">
               {faq.answer}
             </p>
-            <div className="flex justify-end pt-2">
+            <div className="flex items-center justify-between pt-2">
+              {/* Feedback */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 font-medium">Was this helpful?</span>
+                <button
+                  onClick={() => handleFeedback(true)}
+                  disabled={!!voted}
+                  className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all ${
+                    voted === "up"
+                      ? "bg-green-100 border-green-300 text-green-700"
+                      : "border-gray-200 text-gray-500 hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                  } disabled:cursor-default`}
+                >
+                  👍 {faq.helpfulCount > 0 && <span>{faq.helpfulCount}</span>}
+                </button>
+                <button
+                  onClick={() => handleFeedback(false)}
+                  disabled={!!voted}
+                  className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all ${
+                    voted === "down"
+                      ? "bg-red-100 border-red-300 text-red-600"
+                      : "border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-300 hover:text-red-500"
+                  } disabled:cursor-default`}
+                >
+                  👎 {faq.unhelpfulCount > 0 && <span>{faq.unhelpfulCount}</span>}
+                </button>
+              </div>
               <Link to={`/faq/${faq._id}`} className="text-sm font-semibold hover:underline flex items-center gap-1" style={{ color: "#5E7A5A" }}>
                 Read full documentation
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -87,8 +126,14 @@ export default function FaqsPage() {
     staleTime: 1000 * 60 * 5,
   });
 
+  const { data: trendingSearches = [] } = useQuery({
+    queryKey: ["trending-searches"],
+    queryFn: () => faqApi.trending(),
+    staleTime: 1000 * 60 * 2,
+  });
+
   const filtered = useMemo(() => {
-    let r = [...faqs];
+    let r = Array.isArray(faqs) ? [...faqs] : Array.isArray(faqs?.data) ? [...faqs.data] : [];
     if (activeCategory !== "All Categories") {
       r = r.filter((f) => f.category === activeCategory);
     }
@@ -182,12 +227,33 @@ export default function FaqsPage() {
                 }}
               >
                 <option>All Categories</option>
-                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                {(Array.isArray(categories) ? categories : (categories?.data || [])).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Trending Searches ── */}
+      {trendingSearches.length > 0 && !search.trim() && (
+        <div className="border-b border-gray-100 bg-white py-3">
+          <div className="container-md px-4 max-w-4xl mx-auto flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mr-1">🔥 Trending:</span>
+            {trendingSearches.map((t) => (
+              <button
+                key={t.query}
+                onClick={() => {
+                  setSearch(t.query);
+                  setSearchParams((prev) => { prev.set("q", t.query); return prev; });
+                }}
+                className="text-xs font-medium px-3 py-1.5 rounded-full bg-gray-100 hover:bg-green-100 hover:text-green-700 text-gray-600 transition-colors border border-gray-200 hover:border-green-300"
+              >
+                {t.query}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="container-md py-12 px-4 max-w-4xl mx-auto">
         

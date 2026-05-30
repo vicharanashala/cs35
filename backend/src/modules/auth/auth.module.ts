@@ -4,10 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { OtpService } from './otp.service';
-import { EmailService } from './email.service';
 import { User, UserSchema } from '../../schemas/user.schema';
-import { Otp, OtpSchema } from '../../schemas/otp.schema';
 
 @Module({
   imports: [
@@ -16,16 +13,13 @@ import { Otp, OtpSchema } from '../../schemas/otp.schema';
         name: User.name,
         useFactory: () => UserSchema,
       },
-      {
-        name: Otp.name,
-        useFactory: () => OtpSchema,
-      },
     ]),
     JwtModule.registerAsync({
       global: true,
       inject: [],
       useFactory: () => ({
-        secret: process.env.JWT_SECRET || 'asksam-dev-secret-change-in-production',
+        secret:
+          process.env.JWT_SECRET || 'asksam-dev-secret-change-in-production',
         signOptions: { expiresIn: '7d' },
       }),
     }),
@@ -43,6 +37,6 @@ import { Otp, OtpSchema } from '../../schemas/otp.schema';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, OtpService, EmailService],
+  providers: [AuthService],
 })
 export class AuthModule {}

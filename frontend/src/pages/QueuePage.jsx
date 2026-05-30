@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { questionApi, faqApi, socket } from "../services/api";
+import { questionApi, faqApi } from "../services/api";
+import { socket } from "../services/socket";
 
 const PRIORITIES  = ["All", "High", "Medium", "Low"];
 const STATUSES    = ["All", "Unanswered", "Answered"];
@@ -130,15 +131,20 @@ export default function QueuePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleUpdate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["questions-open"] });
+  }, [queryClient]);
+
   useEffect(() => {
-    const handleUpdate = () => queryClient.invalidateQueries({ queryKey: ["questions-open"] });
+    if (!socket?.connected) return;
+
     socket.on("questionAdded", handleUpdate);
     socket.on("statusUpdated", handleUpdate);
     return () => {
       socket.off("questionAdded", handleUpdate);
       socket.off("statusUpdated", handleUpdate);
     };
-  }, [queryClient]);
+  }, [handleUpdate]);
 
   const activeFilterCount = [
     activeCategory !== "All Categories",
@@ -146,7 +152,7 @@ export default function QueuePage() {
     status !== "All",
   ].filter(Boolean).length;
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [], isLoading: areCategoriesLoading } = useQuery({
     queryKey: ["categories"],
     queryFn: () => faqApi.listCategories(),
     staleTime: 1000 * 60 * 5,
@@ -179,12 +185,6 @@ export default function QueuePage() {
 
   const reopened = filtered.filter((q) => q.status === "reopened");
   const open     = filtered.filter((q) => q.status !== "reopened");
-
-  const handleClear = () => {
-    setSearch(""); 
-    setPendingCategory("All Categories"); setPendingPriority("All"); setPendingStatus("All");
-    setActiveCategory("All Categories"); setPriority("All"); setStatus("All");
-  };
 
   return (
     <div style={{ background: "#F5F7F2" }}>
@@ -259,7 +259,10 @@ export default function QueuePage() {
                     <div>
                       <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>CATEGORY</p>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {["All Categories", ...categories].map((cat) => (
+                      {areCategoriesLoading ? (
+                        <div className="px-3 py-2 text-sm text-gray-500">Loading categories…</div>
+                      ) : (
+                        ['All Categories', ...categories].map((cat) => (
                           <button key={cat}
                             onClick={() => setPendingCategory(cat)}
                             className="w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors"
@@ -268,9 +271,10 @@ export default function QueuePage() {
                               : { color: "#6B7280" }}>
                             {cat}
                           </button>
-                        ))}
-                      </div>
+                        ))
+                      )}
                     </div>
+                  </div>
 
                     <div className="divider" />
 
