@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
-import { adminApi, questionApi, faqApi, answerApi, faqAdminApi, categoryApi, userApi, socket } from "../services/api";
+import { adminApi, questionApi, faqApi, answerApi, faqAdminApi, categoryApi, userApi } from "../services/api";
+import { socket } from "../services/socket";
 import { useDebounce } from "../hooks/useDebounce";
 
 import ReactQuill from "react-quill-new";
@@ -22,14 +24,18 @@ function timeAgo(date) {
 
 function StatusBadge({ status }) {
   const map = {
-    open: { bg: "#fef3c7", color: "#92400e", label: "Open" },
-    answered: { bg: "#d1fae5", color: "#065f46", label: "Answered" },
-    reopened: { bg: "#fed7aa", color: "#9a3412", label: "Reopened" },
-    closed: { bg: "#f3f4f6", color: "#374151", label: "Closed" },
-    verified: { bg: "#d1fae5", color: "#065f46", label: "Verified" },
+    open: { bg: "#fffbeb", border: "#fde68a", color: "#b45309", label: "Open" },
+    answered: { bg: "#f0fdf4", border: "#bbf7d0", color: "#15803d", label: "Answered" },
+    reopened: { bg: "#fff7ed", border: "#fed7aa", color: "#c2410c", label: "Reopened" },
+    closed: { bg: "#f9fafb", border: "#e5e7eb", color: "#4B5563", label: "Closed" },
+    verified: { bg: "#f0fdf4", border: "#bbf7d0", color: "#15803d", label: "Verified" },
   };
-  const s = map[status] || { bg: "#f3f4f6", color: "#374151", label: status };
-  return <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: s.bg, color: s.color }}>{s.label}</span>;
+  const s = map[status] || { bg: "#f9fafb", border: "#e5e7eb", color: "#4B5563", label: status };
+  return (
+    <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border" style={{ background: s.bg, borderColor: s.border, color: s.color }}>
+      {s.label}
+    </span>
+  );
 }
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
@@ -151,6 +157,13 @@ function QuestionsTab() {
   const [answerDraft, setAnswerDraft] = useState("");
   const [toast, setToast] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const detailPanelRef = useRef(null);
+
+  useEffect(() => {
+    if (selected && window.innerWidth < 1024) {
+      detailPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selected]);
 
   const debouncedFilterSearch = useDebounce(filter.search, 300);
 
@@ -160,6 +173,7 @@ function QuestionsTab() {
   });
 
   useEffect(() => {
+    if (!socket || typeof socket.on !== "function") return;
     const handleUpdate = () => {
       qc.invalidateQueries({ queryKey: ["admin-questions"] });
       qc.invalidateQueries({ queryKey: ["question-detail"] });
@@ -194,142 +208,158 @@ function QuestionsTab() {
     if (!answerDraft.trim() || !selected) return;
     answerMut.mutate({ id: selected._id, data: { content: answerDraft, contributorName: "Admin" } });
     setAnswerDraft("");
-  };
-
-  return (
+  };  return (
     <div className="h-full flex flex-col">
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       {confirm && <ConfirmModal message={confirm.message} onConfirm={() => { confirm.action(); setConfirm(null); }} onCancel={() => setConfirm(null)} />}
 
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <select className="input py-2 text-sm" value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))} style={{ maxWidth: 160 }}>
+      <div className="flex gap-3 mb-5 flex-wrap items-center">
+        <select className="input py-2.5 text-sm bg-white border border-[#E2E8DE] rounded-xl hover:border-[#bdd4ba] focus:border-[#5E7A5A] transition-all cursor-pointer font-medium text-slate-700 shadow-xs" value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))} style={{ maxWidth: 160 }}>
           <option value="">All Statuses</option>
           <option value="open">Open</option>
           <option value="answered">Answered</option>
           <option value="reopened">Reopened</option>
           <option value="closed">Closed</option>
         </select>
-        <select className="input py-2 text-sm" value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))} style={{ maxWidth: 160 }}>
+        <select className="input py-2.5 text-sm bg-white border border-[#E2E8DE] rounded-xl hover:border-[#bdd4ba] focus:border-[#5E7A5A] transition-all cursor-pointer font-medium text-slate-700 shadow-xs" value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))} style={{ maxWidth: 160 }}>
           <option value="">All Categories</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <div className="search-wrap flex-1" style={{ maxWidth: 300 }}>
-          <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="search-wrap flex-1 max-w-[320px]">
+          <svg className="search-icon w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input className="search-input text-sm" placeholder="Search questions..." value={filter.search} onChange={e => setFilter(f => ({ ...f, search: e.target.value }))} />
+          <input className="search-input text-sm rounded-xl py-2.5 pl-10 border border-[#E2E8DE] focus:border-[#5E7A5A] transition-all shadow-xs" placeholder="Search questions..." value={filter.search} onChange={e => setFilter(f => ({ ...f, search: e.target.value }))} />
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 min-h-0">
-        <div className="xl:col-span-5 card overflow-hidden flex flex-col min-h-0">
-          <div className="p-4 border-b shrink-0" style={{ borderColor: "#E2E8DE" }}>
-            <h2 className="font-semibold text-sm" style={{ color: "#1F2937" }}>Questions ({questions.length})</h2>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {qLoad ? (
-              <div className="p-4 space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-16 w-full" />)}</div>
-            ) : questions.length === 0 ? (
-              <div className="p-8 text-center text-sm" style={{ color: "#9CA3AF" }}>No questions found.</div>
-            ) : (
-              <div className="divide-y" style={{ borderColor: "#E2E8DE" }}>
-                {questions.map(q => (
-                  <button key={q._id} onClick={() => { setSelected(q); setAnswerDraft(""); }}
-                    className="w-full text-left p-4 transition-colors" style={selected?._id === q._id ? { background: "#f0f4ef" } : {}}>
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="font-medium text-sm line-clamp-1 pr-2" style={{ color: "#1F2937" }}>{q.question}</span>
-                      <StatusBadge status={q.status} />
-                    </div>
-                    <div className="flex items-center gap-2 text-xs" style={{ color: "#9CA3AF" }}>
-                      <span className="tag tag-brand">{q.category}</span>
-                      <span>· {q.contributorName || "Student"}</span>
-                      <span>· {timeAgo(q.createdAt)}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+      <div className="flex-1 card overflow-hidden flex flex-col min-h-0 h-full shadow-md rounded-2xl border border-[#E2E8DE] bg-white">
+        <div className="p-5 border-b shrink-0 flex justify-between items-center bg-[#F5F7F2]/80 backdrop-blur-xs" style={{ borderColor: "#E2E8DE" }}>
+          <div>
+            <h2 className="font-bold text-sm text-slate-800">Questions ({questions.length})</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">Click a question to view details, verify answers, or write administrative replies.</p>
           </div>
         </div>
-
-        <div className="xl:col-span-7 card overflow-hidden flex flex-col min-h-0">
-          {!selected ? (
-            <div className="flex-1 flex items-center justify-center text-center p-8">
-              <div>
-                <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: "#f0f4ef" }}>
-                  <svg className="w-8 h-8" style={{ color: "#9CA3AF" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <h3 className="font-semibold text-lg" style={{ color: "#1F2937" }}>Select a question</h3>
-                <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Choose a question to view details and answer it.</p>
-              </div>
-            </div>
+        <div className="flex-1 overflow-y-auto divide-y divide-[#E2E8DE]/60">
+          {qLoad ? (
+            <div className="p-5 space-y-4">{[1,2,3].map(i => <div key={i} className="skeleton h-20 w-full rounded-2xl" />)}</div>
+          ) : questions.length === 0 ? (
+            <div className="p-12 text-center text-sm text-slate-400 font-medium">No questions found matching your filter criteria.</div>
           ) : (
-            <>
-              <div className="p-5 border-b overflow-y-auto" style={{ borderColor: "#E2E8DE", background: "#F5F7F2", maxHeight: "40%" }}>
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <h2 className="text-base font-bold mb-1" style={{ color: "#1F2937" }}>{selected.question}</h2>
-                    <div className="flex items-center gap-2 text-xs" style={{ color: "#6B7280" }}>
-                      <span>by <strong>{selected.contributorName || "Student"}</strong></span>
-                      <span>· {timeAgo(selected.createdAt)}</span>
-                      <span>· <StatusBadge status={selected.status} /></span>
-                    </div>
-                  </div>
-                  <span className="tag tag-brand ml-2">{selected.category}</span>
+            questions.map(q => (
+              <button key={q._id} onClick={() => { setSelected(q); setAnswerDraft(""); }}
+                className="w-full text-left p-5 transition-all duration-200 hover:bg-[#f0f4ef]/20 cursor-pointer border-l-4 border-transparent flex flex-col gap-2" style={selected?._id === q._id ? { background: "#f0f4ef/40", borderLeftColor: "#5E7A5A" } : {}}>
+                <div className="flex justify-between items-start gap-4 w-full">
+                  <span className="font-semibold text-sm line-clamp-1 pr-2 text-slate-800 hover:text-[#5E7A5A] transition-colors">{q.question}</span>
+                  <StatusBadge status={q.status} />
                 </div>
-                {selected.tags?.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {selected.tags.map(t => <span key={t} className="tag tag-brand text-xs">{t}</span>)}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
-                {detail?.answers?.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9CA3AF" }}>Community Answers</h3>
-                    {detail.answers.map(a => (
-                      <div key={a._id} className="p-3 rounded-lg mb-2" style={{ background: a.isVerified ? "#d1fae5" : "#f9fafb", border: `1px solid ${a.isVerified ? "#6ee7b7" : "#e5e7eb"}` }}>
-                        <div className="flex justify-between items-start mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium" style={{ color: "#374151" }}>{a.contributorName}</span>
-                            {a.isVerified && <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: "#059669", color: "#fff" }}>Verified</span>}
-                          </div>
-                          <div className="flex gap-2">
-                            {!a.isVerified && <button onClick={() => verifyMut.mutate({ id: a._id, verified: true })} className="text-xs px-2 py-1 rounded" style={{ background: "#d1fae5", color: "#065f46" }}>Verify</button>}
-                            {a.isVerified && <button onClick={() => verifyMut.mutate({ id: a._id, verified: false })} className="text-xs px-2 py-1 rounded" style={{ background: "#fef3c7", color: "#92400e" }}>Unverify</button>}
-                            <button onClick={() => deleteMut.mutate(a._id)} className="text-xs px-2 py-1 rounded" style={{ background: "#fef2f2", color: "#dc2626" }}>Delete</button>
-                          </div>
-                        </div>
-                        <div className="text-sm quill-content" style={{ color: "#374151" }} dangerouslySetInnerHTML={{ __html: a.content }} />
-                        <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>{timeAgo(a.createdAt)}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="mt-auto pt-3 border-t" style={{ borderColor: "#E2E8DE" }}>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9CA3AF" }}>Admin Answer</h3>
-                  <ReactQuill theme="snow" value={answerDraft} onChange={setAnswerDraft} className="bg-white rounded-lg overflow-hidden" placeholder="Write your official answer..." />
-                  <div className="flex justify-between items-center mt-3">
-                    <div className="flex gap-2 flex-wrap">
-                      {selected.status !== "closed" && <button onClick={() => closeMut.mutate(selected._id)} className="btn-secondary text-xs px-3 py-1.5">Close</button>}
-                      {selected.status === "closed" && <button onClick={() => reopenMut.mutate(selected._id)} className="btn-secondary text-xs px-3 py-1.5">Reopen</button>}
-                      <button onClick={() => setConfirm({ message: "Delete this question permanently?", action: () => deleteMut.mutate(selected._id) })} className="btn-secondary text-xs px-3 py-1.5" style={{ color: "#dc2626" }}>Delete</button>
-                      <button onClick={() => setConfirm({ message: "Convert this question + verified answer to FAQ?", action: () => convertMut.mutate({ id: selected._id }) })} className="btn-secondary text-xs px-3 py-1.5" style={{ color: "#059669" }}>Convert to FAQ</button>
-                    </div>
-                    <button onClick={handleSubmitAnswer} disabled={!answerDraft.trim() || answerMut.isPending} className="btn-primary text-xs px-4 py-1.5">
-                      {answerMut.isPending ? "Submitting..." : "Submit Answer"}
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2.5 text-[11px] text-slate-400 mt-1">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38]"># {q.category}</span>
+                  <span>· by <strong className="text-slate-600 font-semibold">{q.contributorName || "Student"}</strong></span>
+                  <span>· {timeAgo(q.createdAt)}</span>
                 </div>
-              </div>
-            </>
+              </button>
+            ))
           )}
         </div>
       </div>
+
+      {selected && createPortal(
+        <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setSelected(null)}>
+          <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col border-l border-slate-100/80 animate-slide-in-right" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="p-6 border-b flex justify-between items-start bg-gradient-to-r from-[#f0f4ef]/60 to-white shrink-0 border-[#E2E8DE]">
+              <div className="flex-1 min-w-0 pr-6">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <StatusBadge status={selected.status} />
+                  <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38]"># {selected.category}</span>
+                </div>
+                <h2 className="text-lg font-bold leading-snug text-slate-800">{selected.question}</h2>
+                <p className="text-xs text-slate-400 mt-1.5 font-medium">
+                  by <strong className="text-slate-600 font-semibold">{selected.contributorName || "Student"}</strong> · {timeAgo(selected.createdAt)}
+                </p>
+              </div>
+              <button onClick={() => setSelected(null)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-700 shrink-0 cursor-pointer border border-slate-200/60 shadow-xs bg-white">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-slate-50/40">
+              {selected.tags?.length > 0 && (
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-400">Tags</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selected.tags.map(t => <span key={t} className="px-2 py-0.5 rounded text-xs bg-white border border-[#E2E8DE] text-slate-600 font-medium">#{t}</span>)}
+                  </div>
+                </div>
+              )}
+
+              {selected.details && (
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-400">Question Details</h3>
+                  <div className="p-4 rounded-xl border border-slate-100 bg-white shadow-xs text-sm leading-relaxed text-slate-600 quill-content" dangerouslySetInnerHTML={{ __html: selected.details }} />
+                </div>
+              )}
+
+              <div>
+                <h3 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-400">Community Answers</h3>
+                {detail?.answers?.length > 0 ? (
+                  <div className="space-y-3">
+                    {detail.answers.map(a => (
+                      <div key={a._id} className="p-4 rounded-xl border transition-all shadow-xs" style={{ background: a.isVerified ? "#f0fdf4" : "#ffffff", borderColor: a.isVerified ? "#bbf7d0" : "#e5e7eb" }}>
+                        <div className="flex justify-between items-center gap-2 mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-800">{a.contributorName}</span>
+                            {a.isVerified && <span className="badge badge-green bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-xxs font-bold border border-emerald-100">Verified</span>}
+                          </div>
+                          <div className="flex gap-1.5">
+                            {!a.isVerified ? (
+                              <button onClick={() => verifyMut.mutate({ id: a._id, verified: true })} className="text-xxs font-bold px-2.5 py-1 rounded bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 transition-colors cursor-pointer">Verify</button>
+                            ) : (
+                              <button onClick={() => verifyMut.mutate({ id: a._id, verified: false })} className="text-xxs font-bold px-2.5 py-1 rounded bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer">Unverify</button>
+                            )}
+                            <button onClick={() => deleteMut.mutate(a._id)} className="text-xxs font-bold px-2.5 py-1 rounded bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors cursor-pointer">Delete</button>
+                          </div>
+                        </div>
+                        <div className="text-sm leading-relaxed text-slate-600 quill-content" dangerouslySetInnerHTML={{ __html: a.content }} />
+                        <p className="text-xxs text-slate-400 mt-2">Submitted {timeAgo(a.createdAt)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic py-2">No answers posted yet by the community.</p>
+                )}
+              </div>
+
+              {/* Editor Section */}
+              <div className="mt-auto pt-6 border-t border-slate-200/80 bg-white p-6 -mx-6 -mb-6 shadow-xs" style={{ boxShadow: "0 -4px 10px -2px rgba(0,0,0,0.03)" }}>
+                <h3 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-400">Write Administrative Answer</h3>
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs focus-within:border-[#5E7A5A] transition-all bg-white mb-4">
+                  <ReactQuill theme="snow" value={answerDraft} onChange={setAnswerDraft} className="bg-white border-0" placeholder="Write the official administrative answer..." />
+                </div>
+                <div className="flex justify-between items-center gap-2 flex-wrap">
+                  <div className="flex gap-2">
+                    {selected.status !== "closed" ? (
+                      <button onClick={() => closeMut.mutate(selected._id)} className="btn-secondary text-xs px-3 py-2 cursor-pointer rounded-xl">Close Question</button>
+                    ) : (
+                      <button onClick={() => reopenMut.mutate(selected._id)} className="btn-secondary text-xs px-3 py-2 cursor-pointer rounded-xl">Reopen Question</button>
+                    )}
+                    <button onClick={() => setConfirm({ message: "Are you sure you want to delete this question permanently? This will also delete all replies.", action: () => deleteMut.mutate(selected._id) })} className="btn-secondary text-xs px-3 py-2 text-red-600 border-red-200 hover:bg-red-50 cursor-pointer rounded-xl">Delete</button>
+                    <button onClick={() => setConfirm({ message: "Create an official FAQ from this question + verified answer?", action: () => convertMut.mutate({ id: selected._id }) })} className="btn-secondary text-xs px-3 py-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 cursor-pointer rounded-xl">Convert to FAQ</button>
+                  </div>
+                  <button onClick={handleSubmitAnswer} disabled={!answerDraft.trim() || answerMut.isPending} className="btn-primary text-xs px-5 py-2.5 cursor-pointer rounded-xl font-bold transition-transform active:scale-95">
+                    {answerMut.isPending ? "Submitting..." : "Submit Answer"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -349,6 +379,10 @@ function FaqsTab() {
     queryKey: ["admin-faqs", { ...filter, search: debouncedFilterSearch }],
     queryFn: () => faqApi.list({ category: filter.category || undefined, search: debouncedFilterSearch || undefined }),
   });
+
+  const faqList = useMemo(() => {
+    return Array.isArray(faqs) ? faqs : (Array.isArray(faqs?.data) ? faqs.data : []);
+  }, [faqs]);
 
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: faqApi.listCategories });
 
@@ -377,11 +411,11 @@ function FaqsTab() {
 
       {isLoading ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-20 w-full" />)}</div>
-      ) : faqs.length === 0 ? (
+      ) : faqList.length === 0 ? (
         <div className="text-center py-12 text-sm" style={{ color: "#9CA3AF" }}>No FAQs found.</div>
       ) : (
         <div className="flex-1 overflow-y-auto space-y-2">
-          {faqs.map(faq => (
+          {faqList.map(faq => (
             <div key={faq._id} className="card p-4" style={faq.isPinned ? { borderLeft: "3px solid #5E7A5A" } : {}}>
               {editing?._id === faq._id ? (
                 <div className="space-y-3">
@@ -657,21 +691,19 @@ export default function AdminPage() {
       case "users": return <UsersTab />;
       default: return <DashboardTab />;
     }
-  };
-
-  return (
-    <div className="min-h-screen flex" style={{ background: "#F5F7F2" }}>
+  };  return (
+    <div className="min-h-screen flex font-sans" style={{ background: "#F5F7F2" }}>
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r shrink-0 flex flex-col hidden md:flex" style={{ borderColor: "#E2E8DE" }}>
-        <div className="h-16 flex items-center px-6 border-b" style={{ borderColor: "#E2E8DE" }}>
-          <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain rounded-full shadow-sm mr-2" />
-          <span className="font-bold text-base" style={{ color: "#1F2937" }}>AskSam Admin</span>
+        <div className="h-16 flex items-center px-6 border-b bg-gradient-to-r from-[#f0f4ef]/60 to-white" style={{ borderColor: "#E2E8DE" }}>
+          <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain rounded-full shadow-sm mr-2.5 ring-2 ring-white" />
+          <span className="font-extrabold text-base tracking-tight text-slate-800">AskSam <span className="text-[#5E7A5A]">Admin</span></span>
         </div>
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto bg-slate-50/20">
           {NAV.map(nav => (
             <button key={nav.id} onClick={() => setActiveTab(nav.id)}
-              className="w-full text-left flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              style={activeTab === nav.id ? { background: "#f0f4ef", color: "#5E7A5A" } : { color: "#6B7280" }}>
+              className="w-full text-left flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer border-l-4 border-transparent"
+              style={activeTab === nav.id ? { background: "#f0f4ef", color: "#5E7A5A", borderLeftColor: "#5E7A5A", fontWeight: "700" } : { color: "#6B7280" }}>
               <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={nav.icon} />
               </svg>
@@ -679,8 +711,8 @@ export default function AdminPage() {
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t" style={{ borderColor: "#E2E8DE" }}>
-          <button onClick={handleLogout} className="w-full text-left flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+        <div className="p-4 border-t bg-slate-50/50" style={{ borderColor: "#E2E8DE" }}>
+          <button onClick={handleLogout} className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50/60 border border-transparent hover:border-red-100 transition-all cursor-pointer">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
@@ -689,29 +721,30 @@ export default function AdminPage() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0">
         <div className="h-16 bg-white border-b flex items-center justify-between px-6 shrink-0" style={{ borderColor: "#E2E8DE" }}>
-          <h1 className="font-semibold text-lg" style={{ color: "#1F2937" }}>{NAV.find(n => n.id === activeTab)?.label || "Dashboard"}</h1>
+          <h1 className="font-bold text-lg text-slate-800">{NAV.find(n => n.id === activeTab)?.label || "Dashboard"}</h1>
           <div className="relative">
-            <button onClick={() => setDropdownOpen(!dropdownOpen)} className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 transition-transform hover:scale-105" style={{ background: "#5E7A5A" }}>
+            <button onClick={() => setDropdownOpen(!dropdownOpen)} className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 transition-all duration-200 hover:scale-105 hover:shadow-md cursor-pointer border-2 border-white ring-2 ring-[#5E7A5A]/30" style={{ background: "#5E7A5A" }}>
               {user?.name?.charAt(0)?.toUpperCase() || "A"}
             </button>
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border py-1 z-50 animate-fade-in" style={{ borderColor: "#E2E8DE" }}>
-                <div className="px-4 py-2 border-b" style={{ borderColor: "#F5F7F2" }}>
-                  <p className="text-sm font-semibold truncate" style={{ color: "#1F2937" }}>{user?.name || "Admin"}</p>
-                  <p className="text-xs" style={{ color: "#9CA3AF" }}>{user?.email || user?.username || ""}</p>
+              <div className="absolute right-0 mt-2.5 w-52 bg-white rounded-2xl shadow-xl border py-1.5 z-50 animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
+                <div className="px-4 py-2.5 border-b" style={{ borderColor: "#F5F7F2" }}>
+                  <p className="text-sm font-bold truncate text-slate-800">{user?.name || "Admin"}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 truncate">{user?.email || user?.username || ""}</p>
                 </div>
-                <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                  Sign Out
-                </button>
+                <div className="p-1">
+                  <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2 transition-colors cursor-pointer">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    Sign Out
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
-
         <div className="p-6 flex-1 min-h-0 overflow-y-auto" onClick={() => setDropdownOpen(false)}>
           {renderTab()}
         </div>

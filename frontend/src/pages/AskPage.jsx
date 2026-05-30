@@ -58,6 +58,8 @@ export default function AskPage() {
   const [submitted, setSubmitted]       = useState("");
   const [touched, setTouched]           = useState({});
   const [error, setError]               = useState("");
+  const [tags, setTags]                 = useState([]);
+  const [tagInput, setTagInput]         = useState("");
 
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -137,18 +139,35 @@ export default function AskPage() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Related questions from FAQ
-  const { data: faqs = [] } = useQuery({
-    queryKey: ["faqs"],
-    queryFn: () => faqApi.list(),
-    staleTime: 1000 * 60 * 5,
+  // Debounced title state for semantic duplicate detection
+  const [debouncedTitle, setDebouncedTitle] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTitle(title);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [title]);
+
+  // Semantic duplicate detection using React Query
+  const { data: similarFaqs = [], isLoading: isCheckingSimilar } = useQuery({
+    queryKey: ["similar-faqs", debouncedTitle],
+    queryFn: () => faqApi.similar(debouncedTitle),
+    enabled: debouncedTitle.trim().length >= 4,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
-  const related = useMemo(() => {
-    if (title.trim().length < 3) return [];
-    const q = title.toLowerCase();
-    return faqs.filter((f) => f.question?.toLowerCase().includes(q) || f.category?.toLowerCase().includes(q)).slice(0, 4);
-  }, [title, faqs]);
+  const potentialDuplicates = useMemo(() => {
+    if (!Array.isArray(similarFaqs)) return [];
+    return similarFaqs.filter(f => f.similarity >= 0.70);
+  }, [similarFaqs]);
+
+  const relatedSuggestions = useMemo(() => {
+    if (!Array.isArray(similarFaqs)) return [];
+    return similarFaqs.filter(f => f.similarity >= 0.50 && f.similarity < 0.70);
+  }, [similarFaqs]);
+
+  const [expandedFaqId, setExpandedFaqId] = useState(null);
 
 
 
@@ -217,6 +236,79 @@ export default function AskPage() {
                   />
                   {titleError && <p className="input-hint" style={{ color: "#dc2626" }}>Please enter at least 4 characters</p>}
                 </div>
+
+                {isCheckingSimilar && (
+                  <div className="flex items-center gap-2 text-xs py-1 animate-fade-in" style={{ color: "#5E7A5A" }}>
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Checking for duplicate answers...</span>
+                  </div>
+                )}
+
+                {/* Duplicate Warning Card */}
+                {potentialDuplicates.length > 0 && (
+                  <div className="p-4 rounded-xl border animate-slide-down" style={{ background: "#FFFBEB", borderColor: "#FCD34D" }}>
+                    <div className="flex gap-2.5 items-start">
+                      <div className="shrink-0 text-amber-500 mt-0.5">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold mb-1" style={{ color: "#92400E" }}>Wait, an answer already exists!</h4>
+                        <p className="text-xs mb-3 text-amber-800">
+                          We found highly similar questions in our database (above 70% match). Click "View Answer" to see if it solves your question instantly!
+                        </p>
+                        
+                        <div className="space-y-2.5">
+                          {potentialDuplicates.map((faq) => (
+                            <div key={faq._id} className="p-3 bg-white rounded-lg border border-amber-200 shadow-sm transition-all hover:border-amber-400">
+                              <div className="flex items-start justify-between gap-3">
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full animate-fade-in" style={{ background: "#FEF3C7", color: "#B45309" }}>
+                                  {Math.round(faq.similarity * 100)}% Match
+                                </span>
+                                <span className="text-xs" style={{ color: "#9CA3AF" }}>{faq.category}</span>
+                              </div>
+                              <p className="text-sm font-medium mt-1.5" style={{ color: "#1F2937" }}>
+                                {faq.question}
+                              </p>
+                              
+                              <button
+                                type="button"
+                                onClick={() => setExpandedFaqId(expandedFaqId === faq._id ? null : faq._id)}
+                                className="text-xs font-semibold mt-2 underline flex items-center gap-1 cursor-pointer"
+                                style={{ color: "#5E7A5A" }}
+                              >
+                                {expandedFaqId === faq._id ? "Hide Answer" : "View Answer"}
+                                <svg className={`w-3 h-3 transition-transform ${expandedFaqId === faq._id ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+
+                              {expandedFaqId === faq._id && (
+                                <div className="mt-3 p-3 rounded bg-slate-50 border border-slate-200 text-xs animate-slide-down">
+                                  <p className="font-semibold text-slate-700 mb-1">Answer:</p>
+                                  <p className="text-slate-600 leading-relaxed whitespace-pre-line">{faq.answer}</p>
+                                  <div className="mt-3 flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={handleClose}
+                                      className="px-3 py-1 bg-emerald-600 text-white rounded font-medium hover:bg-emerald-700 text-xxs transition-colors cursor-pointer"
+                                    >
+                                      This solved my question
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Tags */}
                 <div>
@@ -351,20 +443,20 @@ export default function AskPage() {
               </ul>
             </div>
 
-            {/* Related Questions */}
-            {related.length > 0 && (
+            {/* Related Questions (Semantic Suggestions) */}
+            {relatedSuggestions.length > 0 && (
               <div className="card p-5 animate-fade-in">
-                <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Related Questions</h3>
+                <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Related FAQs</h3>
                 <div className="space-y-3">
-                  {related.map((faq) => (
-                    <Link key={faq._id} to={`/faq/${faq._id}`}
-                      className="block group">
-                      <p className="text-sm leading-snug group-hover:underline" style={{ color: "#5E7A5A" }}>
+                  {relatedSuggestions.map((faq) => (
+                    <Link key={faq._id} to={`/faq/${faq._id}`} className="block group">
+                      <p className="text-sm leading-snug group-hover:underline font-medium" style={{ color: "#5E7A5A" }}>
                         {faq.question}
                       </p>
                       <div className="flex items-center gap-2 mt-1 text-xs" style={{ color: "#9CA3AF" }}>
+                        <span className="font-semibold text-amber-600">{Math.round(faq.similarity * 100)}% match</span>
+                        <span>·</span>
                         <span>{faq.category}</span>
-                        {faq.answerCount > 0 && <span>· {faq.answerCount} answers</span>}
                       </div>
                     </Link>
                   ))}

@@ -96,9 +96,13 @@ export default function HomePage() {
     staleTime: 1000 * 60 * 5,
   });
 
+  const faqList = useMemo(() => {
+    return Array.isArray(faqs) ? faqs : (Array.isArray(faqs?.data) ? faqs.data : []);
+  }, [faqs]);
+
   const topFaqs = useMemo(() =>
-    [...faqs].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
-  [faqs]);
+    [...faqList].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
+  [faqList]);
 
   const debouncedSearch = useDebounce(search, 300);
 

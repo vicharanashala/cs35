@@ -35,6 +35,7 @@ export const faqApi = {
   feedback: (id, helpful) => safeRequest(client.patch(`/faqs/${id}/feedback`, { helpful }).then((r) => r.data)),
   trending: () => safeRequest(client.get("/search/trending").then((r) => r.data)),
   failedSearches: () => safeRequest(client.get("/admin/search/failed").then((r) => r.data)),
+  similar: (q) => safeRequest(client.get("/faqs/similar", { params: { q } }).then((r) => r.data)),
 };
 
 // ── Question API ─────────────────────────────────────────────
@@ -49,7 +50,8 @@ export const questionApi = {
   close: (id) => safeRequest(client.patch(`/questions/${id}/close`).then((r) => r.data)),
   reopen: (id) => safeRequest(client.patch(`/questions/${id}/reopen`).then((r) => r.data)),
   addAnswer: (id, data) => safeRequest(client.patch(`/questions/${id}/answer`, data).then((r) => r.data)),
-  convertToFaq: (id, answerId) => safeRequest(client.patch(`/questions/${id}/convert-to-faq`, { answerId }).then((r) => r.data)),
+  convertToFaq: (id, { answerId, category, isNewCategory } = {}) =>
+    safeRequest(client.post(`/questions/${id}/convert-to-faq`, { answerId, category, isNewCategory }).then((r) => r.data)),
   vote: (questionId, answerId, direction) =>
     safeRequest(client.patch(`/questions/${questionId}/vote`, { answerId, direction }).then((r) => r.data)),
 };

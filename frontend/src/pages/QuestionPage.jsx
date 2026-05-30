@@ -172,6 +172,19 @@ export default function QuestionPage() {
     }
   }, [id, queryClient]);
 
+  // Listen for FAQ conversion so the page knows if the question was converted
+  useEffect(() => {
+    if (!socket?.connected) return;
+    const handleFaqCreated = (data) => {
+      if (data?.questionId === id) {
+        // Question was converted to FAQ — refresh to show updated status
+        queryClient.invalidateQueries({ queryKey: ["question", id] });
+      }
+    };
+    socket.on("faqCreated", handleFaqCreated);
+    return () => { socket.off("faqCreated", handleFaqCreated); };
+  }, [id, queryClient]);
+
   useEffect(() => {
     if (!socket?.connected) return;
     socket.on("answerAdded", handleUpdate);
@@ -495,7 +508,8 @@ export default function QuestionPage() {
                   )}
                 </div>
 
-                {/* Reply Form */}
+                {/* Reply Form — hidden if user is the question owner */}
+                {user?._id !== question?.contributorId && (
                 <div id="answer-form" className="card p-5">
                   <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Add your Answer</h3>
                   {submitError && (
@@ -557,6 +571,12 @@ export default function QuestionPage() {
                     </button>
                   </form>
                 </div>
+                )}
+                {user?._id === question?.contributorId && (
+                  <div className="card p-5 text-center text-sm" style={{ color: "#9CA3AF" }}>
+                    You cannot answer your own question.
+                  </div>
+                )}
               </section>
             </div>
 

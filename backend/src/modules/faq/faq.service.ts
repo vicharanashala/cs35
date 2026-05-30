@@ -40,6 +40,62 @@ export class FaqService implements OnModuleInit {
 
   async onModuleInit() {
     await this.seedFromJson();
+    void this.backfillEmbeddings();
+  }
+
+  async backfillEmbeddings() {
+    if (!this.hasMongoDB || !this.faqModel) return;
+    try {
+      const faqsWithoutEmbedding = await this.faqModel.find({
+        $or: [
+          { embedding: { $exists: false } },
+          { embedding: { $size: 0 } }
+        ]
+      }).exec();
+
+      if (faqsWithoutEmbedding.length > 0) {
+        console.log(`[FaqService] Backfilling embeddings for ${faqsWithoutEmbedding.length} FAQs...`);
+        let count = 0;
+        for (const faq of faqsWithoutEmbedding) {
+          const embedding = await this.aiService.generateEmbedding(faq.question);
+          if (embedding && embedding.length > 0) {
+            await this.faqModel.findByIdAndUpdate(faq._id, { $set: { embedding } }).exec();
+            count++;
+          }
+        }
+        console.log(`[FaqService] Successfully backfilled embeddings for ${count}/${faqsWithoutEmbedding.length} FAQs.`);
+      }
+    } catch (err) {
+      console.error('[FaqService] Failed to backfill embeddings:', err);
+    }
+  }
+
+  async getSimilarFAQs(query: string, threshold = 0.5, limit = 4) {
+    if (!this.hasMongoDB || !this.faqModel) return [];
+    if (!query || query.trim().length < 3) return [];
+
+    try {
+      const queryEmbedding = await this.aiService.generateEmbedding(query);
+      if (!queryEmbedding || queryEmbedding.length === 0) return [];
+
+      const allFaqs = await this.faqModel.find().lean().exec();
+
+      const scoredFaqs = allFaqs
+        .map(faq => {
+          const similarity = faq.embedding && faq.embedding.length > 0
+            ? this.aiService.cosineSimilarity(queryEmbedding, faq.embedding)
+            : 0;
+          return { ...faq, similarity };
+        })
+        .filter(faq => faq.similarity >= threshold)
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, limit);
+
+      return scoredFaqs;
+    } catch (err) {
+      console.error('[FaqService] Error finding similar FAQs:', err);
+      return [];
+    }
   }
 
   private async seedFromJson() {
@@ -187,7 +243,8 @@ export class FaqService implements OnModuleInit {
 
   async createFaq(data: Partial<Faq>) {
     try {
-      return await this.faqModel.create({ ...data, isAnswered: true });
+      const embedding = data.question ? await this.aiService.generateEmbedding(data.question) : [];
+      return await this.faqModel.create({ ...data, embedding, isAnswered: true });
     } catch {
       return null;
     }
@@ -195,8 +252,12 @@ export class FaqService implements OnModuleInit {
 
   async updateFaq(id: string, data: Partial<Faq>) {
     try {
+      const updateData = { ...data } as any;
+      if (data.question) {
+        updateData.embedding = await this.aiService.generateEmbedding(data.question);
+      }
       return await this.faqModel
-        .findByIdAndUpdate(id, data, { new: true })
+        .findByIdAndUpdate(id, updateData, { new: true })
         .exec();
     } catch {
       return null;
@@ -500,21 +561,9 @@ export class FaqService implements OnModuleInit {
       answer.isVerified = verified;
       await answer.save();
 
-      const hasVerified = await this.answerModel
-        .findOne({ questionId: answer.questionId, isVerified: true })
-        .exec();
-      if (hasVerified) {
-        await this.questionModel
-          .findByIdAndUpdate(answer.questionId, { status: 'answered' })
-          .exec();
-        this.eventsGateway.emitStatusUpdated(answer.questionId.toString(), 'answered');
-      } else {
-        await this.questionModel
-          .findByIdAndUpdate(answer.questionId, { status: 'open' })
-          .exec();
-        this.eventsGateway.emitStatusUpdated(answer.questionId.toString(), 'open');
-      }
-      
+      // NOTE: Question status is NOT changed here — that happens in createFaqFromAnswer
+      // when the admin actually converts the question to an FAQ.
+
       if (verified && answer.contributorId) {
         await this.userModel.findByIdAndUpdate(answer.contributorId, { $inc: { reputation: 20 } }).exec();
         if (this.notificationModel) {
@@ -528,8 +577,68 @@ export class FaqService implements OnModuleInit {
         }
         this.eventsGateway.emitUserUpdated(answer.contributorId.toString());
       }
-      
+
       return answer;
+    } catch {
+      return null;
+    }
+  }
+
+  async createFaqFromAnswer(
+    questionId: string,
+    answerId?: string,
+    category?: string,
+    isNewCategory = false,
+  ) {
+    try {
+      const question = await this.questionModel.findById(questionId).exec();
+      if (!question) return null;
+
+      // Determine answer content
+      let answerContent = '';
+      if (answerId) {
+        const answer = await this.answerModel.findById(answerId).exec();
+        answerContent = answer?.content || '';
+      } else {
+        const verifiedAnswer = await this.answerModel
+          .findOne({ questionId, isVerified: true })
+          .exec();
+        answerContent = verifiedAnswer?.content || '';
+      }
+
+      // Resolve category
+      const finalCategory = category || question.category;
+
+      // If a new category was requested, create it in the FAQ collection
+      // (the categories list is derived from distinct FAQ categories)
+      if (isNewCategory && finalCategory) {
+        // Ensure at least one FAQ exists with this category by creating a placeholder
+        // The category list is derived from distinct('category') on the FAQ collection
+        // so we just create the FAQ with the new category name — no separate category doc needed
+      }
+
+      const faq = await this.faqModel.create({
+        question: question.question,
+        answer: answerContent,
+        category: finalCategory,
+        tags: question.tags || [],
+        isAnswered: true,
+        isPinned: false,
+        views: 0,
+      });
+
+      // Close the question
+      await this.questionModel
+        .findByIdAndUpdate(questionId, { status: 'closed' })
+        .exec();
+      this.eventsGateway.emitStatusUpdated(questionId, 'closed');
+      this.eventsGateway.emitFaqConverted(faq);
+
+      return {
+        faq,
+        isNewCategory,
+        category: finalCategory,
+      };
     } catch {
       return null;
     }
@@ -714,12 +823,13 @@ export class FaqService implements OnModuleInit {
           if (a.isVerified) entry.verified++;
         }
       }
-      return Array.from(dateMap.entries()).map(([date, stats]) => ({
-        date,
-        ...stats,
-      }));
+      const flatMap: Record<string, number> = {};
+      for (const [date, stats] of dateMap) {
+        flatMap[date] = stats.questions + stats.answers + stats.verified;
+      }
+      return flatMap;
     } catch {
-      return [];
+      return {};
     }
   }
 
@@ -885,7 +995,7 @@ export class FaqService implements OnModuleInit {
       };
     }
   }
-  
+
   // ── Notifications ───────────────────────────────────────────
 
   async getNotifications(userId: string, isAdmin = false) {
@@ -893,7 +1003,7 @@ export class FaqService implements OnModuleInit {
     try {
       const userIds = [userId];
       if (isAdmin) userIds.push('admin');
-      
+
       return await this.notificationModel
         .find({ userId: { $in: userIds } })
         .sort({ createdAt: -1 })

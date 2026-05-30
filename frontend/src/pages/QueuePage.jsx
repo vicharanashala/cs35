@@ -167,6 +167,8 @@ export default function QueuePage() {
 
   const filtered = useMemo(() => {
     let r = [...questions];
+    // Always exclude closed questions from the queue
+    r = r.filter((x) => x.status !== 'closed');
     if (search.trim()) {
       const q = search.toLowerCase();
       r = r.filter((x) => (x.question || "").toLowerCase().includes(q));
@@ -184,7 +186,7 @@ export default function QueuePage() {
   }, [questions, search, activeCategory, priority, status, sortBy]);
 
   const reopened = filtered.filter((q) => q.status === "reopened");
-  const open     = filtered.filter((q) => q.status !== "reopened");
+  const open     = filtered.filter((q) => q.status === "open");
 
   return (
     <div style={{ background: "#F5F7F2" }}>

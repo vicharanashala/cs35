@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Suspense, lazy, Component } from "react";
 import MainLayout from "./layouts/MainLayout";
 import { useAuth } from "./hooks/useAuth";
+import { DarkModeProvider } from "./hooks/useDarkMode";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -109,31 +110,33 @@ function AppLayout({ children }) {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <Suspense fallback={<PageLoader />}>
-        <AppLayout>
-          <Routes>
-            {/* Auth */}
-            <Route path="/login" element={<LoginPage />} />
+    <DarkModeProvider>
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <AppLayout>
+            <Routes>
+              {/* Auth */}
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* Main Platform (Requires Login) */}
-            <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/faqs" element={<ProtectedRoute><FaqsPage /></ProtectedRoute>} />
-            <Route path="/faq/:id" element={<ProtectedRoute><FaqPage /></ProtectedRoute>} />
-            <Route path="/queue" element={<ProtectedRoute><QueuePage /></ProtectedRoute>} />
-            <Route path="/ask" element={<ProtectedRoute><AskPage /></ProtectedRoute>} />
-            <Route path="/question/:id" element={<ProtectedRoute><QuestionPage /></ProtectedRoute>} />
-            <Route path="/my-questions" element={<ProtectedRoute><MyQuestionsPage /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            
-            {/* Admin (Requires Admin Role) */}
-            <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
-            
-            {/* Fallback */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
-      </Suspense>
-    </ErrorBoundary>
+              {/* Main Platform (Requires Login) */}
+              <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+              <Route path="/faqs" element={<ProtectedRoute><FaqsPage /></ProtectedRoute>} />
+              <Route path="/faq/:id" element={<ProtectedRoute><FaqPage /></ProtectedRoute>} />
+              <Route path="/queue" element={<ProtectedRoute><QueuePage /></ProtectedRoute>} />
+              <Route path="/ask" element={<ProtectedRoute><AskPage /></ProtectedRoute>} />
+              <Route path="/question/:id" element={<ProtectedRoute><QuestionPage /></ProtectedRoute>} />
+              <Route path="/my-questions" element={<ProtectedRoute><MyQuestionsPage /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+
+              {/* Admin (Requires Admin Role) */}
+              <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
+
+              {/* Fallback */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppLayout>
+        </Suspense>
+      </ErrorBoundary>
+    </DarkModeProvider>
   );
 }

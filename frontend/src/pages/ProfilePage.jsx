@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { userApi, questionApi } from "../services/api";
+import { userApi, questionApi, userStatsApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
-import { getUserTitle } from "../utils/gamification";
+import { getUserTitle, heatmapColor } from "../utils/gamification";
 
 function timeAgo(d) {
   if (!d) return "";
@@ -33,8 +33,15 @@ export default function ProfilePage() {
     enabled: !!profile?._id,
   });
 
+  const { data: activityData } = useQuery({
+    queryKey: ['user-activity', profile?._id],
+    queryFn: () => userStatsApi.activity(profile._id),
+    enabled: !!profile?._id,
+  });
+
   const questions = questionsData || [];
   const userRank = getUserTitle(profile?.reputation || 0);
+  const activityMap = activityData || {};
 
   const stats = [
     {
@@ -179,6 +186,40 @@ export default function ProfilePage() {
                   </p>
                 </div>
               ))}
+            </div>
+
+            {/* Activity Heatmap */}
+            <div className="card p-5">
+              <h2 className="font-semibold mb-4" style={{ color: "#1F2937" }}>
+                Activity Heatmap
+              </h2>
+              <div className="heatmap-grid">
+                {Array.from({ length: 365 }, (_, i) => {
+                  const d = new Date();
+                  d.setDate(d.getDate() - (364 - i));
+                  const key = d.toISOString().split("T")[0];
+                  const count = activityMap[key] || 0;
+                  return (
+                    <div
+                      key={key}
+                      className="heatmap-cell"
+                      style={{ background: heatmapColor(count) }}
+                      title={`${key}: ${count} contribution${count !== 1 ? "s" : ""}`}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-end gap-1.5 mt-3">
+                <span className="text-xs" style={{ color: "#9CA3AF" }}>Less</span>
+                {[0, 1, 2, 3, 4, 5].map((level) => (
+                  <div
+                    key={level}
+                    className="w-3 h-3 rounded-sm"
+                    style={{ background: heatmapColor(level === 0 ? 0 : level * 3) }}
+                  />
+                ))}
+                <span className="text-xs" style={{ color: "#9CA3AF" }}>More</span>
+              </div>
             </div>
 
             <div className="card">

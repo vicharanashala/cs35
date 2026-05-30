@@ -1,5 +1,6 @@
 import { Module, Type, DynamicModule, ForwardReference } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from '../auth/auth.module';
 import { Faq, FaqSchema } from '../../schemas/faq.schema';
 import { Question, QuestionSchema } from '../../schemas/question.schema';
 import { Answer, AnswerSchema } from '../../schemas/answer.schema';
@@ -35,7 +36,7 @@ if (process.env.MONGODB_URI) {
 }
 
 @Module({
-  imports: [...mongooseImports, AiModule],
+  imports: [...mongooseImports, AiModule, AuthModule],
   controllers: [FaqController],
   providers: [FaqService, EventsGateway],
 })

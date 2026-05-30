@@ -3,9 +3,13 @@ import { Module, Type, DynamicModule, ForwardReference } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { JwtModule } from '@nestjs/jwt';
+import { APP_GUARD } from '@nestjs/core';
 import { FaqModule } from './modules/faq/faq.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AiModule } from './modules/ai/ai.module';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 
 type NestModuleImport =
   | Type<any>
@@ -39,6 +43,15 @@ if (process.env.MONGODB_URI) {
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    JwtModule.registerAsync({
+      global: true,
+      inject: [],
+      useFactory: () => ({
+        secret:
+          process.env.JWT_SECRET || 'asksam-dev-secret-change-in-production',
+        signOptions: { expiresIn: '7d' },
+      }),
+    }),
     ThrottlerModule.forRoot([
       {
         name: 'short',
@@ -53,6 +66,16 @@ if (process.env.MONGODB_URI) {
     ]),
     ...mongooseImports,
     ...featureModules,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
 export class AppModule {}

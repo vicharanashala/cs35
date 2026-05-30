@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { faqApi } from "../services/api";
+import { useDebounce } from "../hooks/useDebounce";
+
 
 function FAQCard({ faq }) {
   const [open, setOpen] = useState(false);
@@ -114,10 +116,15 @@ export default function FaqsPage() {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [search, setSearch] = useState(initialSearch);
 
+  const debouncedSearch = useDebounce(search, 300);
+
   const { data: faqs = [], isLoading, isError } = useQuery({
-    queryKey: ["faqs"],
-    queryFn: () => faqApi.list(),
-    staleTime: 1000 * 60 * 5,
+    queryKey: ["faqs", activeCategory, debouncedSearch],
+    queryFn: () => faqApi.list({
+      category: activeCategory !== "All Categories" ? activeCategory : undefined,
+      search: debouncedSearch.trim() || undefined
+    }),
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
   const { data: categories = [] } = useQuery({
@@ -133,21 +140,8 @@ export default function FaqsPage() {
   });
 
   const filtered = useMemo(() => {
-    let r = Array.isArray(faqs) ? [...faqs] : Array.isArray(faqs?.data) ? [...faqs.data] : [];
-    if (activeCategory !== "All Categories") {
-      r = r.filter((f) => f.category === activeCategory);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      r = r.filter((f) => 
-        (f.question || "").toLowerCase().includes(q) ||
-        (f.answer || "").toLowerCase().includes(q) ||
-        (f.category || "").toLowerCase().includes(q) ||
-        (f.tags || []).some((t) => t.toLowerCase().includes(q))
-      );
-    }
-    return r;
-  }, [faqs, activeCategory, search]);
+    return Array.isArray(faqs) ? [...faqs] : Array.isArray(faqs?.data) ? [...faqs.data] : [];
+  }, [faqs]);
 
   const groupedFaqs = useMemo(() => {
     const groups = {};
@@ -286,29 +280,39 @@ export default function FaqsPage() {
           )}
 
           {!isLoading && !isError && filtered.length > 0 && (
-            <div className="space-y-16">
-              {groupedFaqs.map((group) => (
-                <div key={group.category} id={`category-${group.category}`} className="scroll-mt-12">
-                  
-                  {/* Category Header */}
-                  <div className="flex items-center gap-4 mb-6">
-                    <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
-                      {group.category}
-                    </h2>
-                    <div className="h-px bg-gray-200 flex-1 mt-2"></div>
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-gray-500 mt-1 shadow-sm border border-gray-200">
-                      {group.faqs.length} {group.faqs.length === 1 ? 'FAQ' : 'FAQs'}
-                    </span>
-                  </div>
-                  
-                  {/* Category Accordions */}
-                  <div className="space-y-4">
-                    {group.faqs.map((faq) => <FAQCard key={faq._id} faq={faq} />)}
-                  </div>
-                  
+            search.trim() ? (
+              <div className="space-y-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-1.5 animate-fade-in">
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  Smart Search Results (sorted by relevance):
                 </div>
-              ))}
-            </div>
+                {filtered.map((faq) => <FAQCard key={faq._id} faq={faq} />)}
+              </div>
+            ) : (
+              <div className="space-y-16">
+                {groupedFaqs.map((group) => (
+                  <div key={group.category} id={`category-${group.category}`} className="scroll-mt-12">
+                    
+                    {/* Category Header */}
+                    <div className="flex items-center gap-4 mb-6">
+                      <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+                        {group.category}
+                      </h2>
+                      <div className="h-px bg-gray-200 flex-1 mt-2"></div>
+                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-gray-500 mt-1 shadow-sm border border-gray-200">
+                        {group.faqs.length} {group.faqs.length === 1 ? 'FAQ' : 'FAQs'}
+                      </span>
+                    </div>
+                    
+                    {/* Category Accordions */}
+                    <div className="space-y-4">
+                      {group.faqs.map((faq) => <FAQCard key={faq._id} faq={faq} />)}
+                    </div>
+                    
+                  </div>
+                ))}
+              </div>
+            )
           )}
 
           {/* Empty State */}
