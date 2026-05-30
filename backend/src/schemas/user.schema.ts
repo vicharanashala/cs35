@@ -19,6 +19,12 @@ export class User extends Document {
   questionsAnswered: Types.ObjectId[];
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Question' }], default: [] })
   questionsBookmarked: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  following: Types.ObjectId[];
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  followers: Types.ObjectId[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -676,7 +676,7 @@ export class FaqService implements OnModuleInit {
 
   async getActivityHeatmap(userId: string) {
     try {
-      const [questions, answers, verifiedAnswers] = await Promise.all([
+      const [questions, answers] = await Promise.all([
         this.questionModel
           .find({ contributorId: new Types.ObjectId(userId) })
           .select('createdAt')
@@ -688,6 +688,7 @@ export class FaqService implements OnModuleInit {
           .lean()
           .exec(),
       ]);
+      const verifiedAnswers = answers.filter((a: any) => a.isVerified);
 
       const dateMap = new Map<string, { questions: number; answers: number; verified: number }>();
       const now = new Date();

@@ -105,6 +105,27 @@ export default function AskPage() {
     e.target.value = "";
   };
 
+  const addTag = (value) => {
+    const trimmed = value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "");
+    if (trimmed && !tags.includes(trimmed) && tags.length < 5) {
+      setTags((prev) => [...prev, trimmed]);
+    }
+    setTagInput("");
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === "," || e.key === " ") {
+      e.preventDefault();
+      addTag(tagInput);
+    } else if (e.key === "Backspace" && !tagInput && tags.length > 0) {
+      setTags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setTags((prev) => prev.filter((t) => t !== tagToRemove));
+  };
+
   const finalCategory = category === "new_category" ? customCategory.trim() : category;
   const titleError    = touched.title    && title.trim().length < 4;
   const categoryError = touched.category && !finalCategory;
@@ -138,7 +159,7 @@ export default function AskPage() {
     setIsSubmitting(true);
     try {
       const contributorName = user?.name || "Student";
-      await questionApi.create({ question: title.trim(), category: finalCategory, details: details.trim(), tags: [], contributorName, contributorId: user?._id });
+      await questionApi.create({ question: title.trim(), category: finalCategory, details: details.trim(), tags, contributorName, contributorId: user?._id });
       setSubmitted(title);
       setShowSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
@@ -195,6 +216,40 @@ export default function AskPage() {
                     className={`input ${titleError ? "input-error" : ""}`}
                   />
                   {titleError && <p className="input-hint" style={{ color: "#dc2626" }}>Please enter at least 4 characters</p>}
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="label">Tags <span className="text-xs font-normal" style={{ color: "#9CA3AF" }}>(optional, up to 5)</span></label>
+                  <div
+                    className="tag-input-wrap"
+                    onClick={() => document.getElementById("tag-input-field")?.focus()}
+                  >
+                    {tags.map((tag) => (
+                      <span key={tag} className="tag-chip">
+                        #{tag}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeTag(tag); }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    {tags.length < 5 && (
+                      <input
+                        id="tag-input-field"
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={handleTagKeyDown}
+                        onBlur={() => addTag(tagInput)}
+                        placeholder={tags.length === 0 ? "e.g. ai, admission, noc" : "Add tag..."}
+                        className="tag-input-field"
+                      />
+                    )}
+                  </div>
+                  <p className="input-hint">Press Enter, comma or space to add a tag. Backspace to remove last tag.</p>
                 </div>
 
                 {/* Category */}

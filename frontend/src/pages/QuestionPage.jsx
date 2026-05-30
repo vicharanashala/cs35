@@ -1,9 +1,11 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { questionApi, faqApi } from "../services/api";
+import { questionApi, faqApi, answerApi } from "../services/api";
 import { socket } from "../services/socket";
 import { useAuth } from "../hooks/useAuth";
+import { useReputation } from "../hooks/useReputation";
+import { useAchievements } from "../hooks/useAchievements";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 
@@ -42,12 +44,20 @@ function VoteBtn({ count, active, onClick, direction }) {
   );
 }
 
-function AnswerCard({ answer, onVote, userVotes }) {
+function AnswerCard({ answer, onVote, userVotes, onAccept, canAccept }) {
   const vote = userVotes[answer._id] || 0;
   const votes = (answer.upvotes || 0) + vote;
 
   return (
-    <article className="card p-5">
+    <article className={`card p-5 ${answer.isAccepted ? 'accepted-answer' : ''}`}>
+      {answer.isAccepted && (
+        <div className="flex items-center gap-1.5 mb-3">
+          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+          <span className="accepted-badge">Accepted Answer</span>
+        </div>
+      )}
       <AnswerContent content={answer.content} />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 pt-4 border-t" style={{ borderColor: "#E2E8DE" }}>
@@ -76,6 +86,21 @@ function AnswerCard({ answer, onVote, userVotes }) {
           )}
           <VoteBtn count={votes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
           <VoteBtn count={0} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
+          {canAccept && !answer.isAccepted && (
+            <button
+              onClick={() => onAccept(answer._id)}
+              className="text-xs px-2 py-1 rounded border cursor-pointer"
+              style={{ borderColor: "#E2E8DE", color: "#6B7280", background: "transparent" }}
+              title="Mark as accepted answer"
+            >
+              ✓ Accept
+            </button>
+          )}
+          {answer.isAccepted && (
+            <span className="text-xs px-2 py-1 rounded" style={{ background: "#ECFDF5", color: "#059669" }}>
+              ✓ Accepted
+            </span>
+          )}
         </div>
       </div>
     </article>
@@ -135,6 +160,8 @@ export default function QuestionPage() {
   const { id } = useParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { can: canAcceptAnswer } = useReputation();
+  const { toasts, checkAchievements, dismissToast } = useAchievements();
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
@@ -150,12 +177,29 @@ export default function QuestionPage() {
     socket.on("answerAdded", handleUpdate);
     socket.on("statusUpdated", handleUpdate);
     socket.on("voteUpdated", handleUpdate);
+    socket.on("answerAccepted", handleUpdate);
     return () => {
       socket.off("answerAdded", handleUpdate);
       socket.off("statusUpdated", handleUpdate);
       socket.off("voteUpdated", handleUpdate);
+      socket.off("answerAccepted", handleUpdate);
     };
   }, [handleUpdate]);
+
+  // Accept answer handler
+  const handleAcceptAnswer = useCallback(
+    async (answerId) => {
+      if (!canAcceptAnswer("verifiedAnswer")) return;
+      try {
+        await answerApi.accept(answerId, true, id);
+        queryClient.invalidateQueries({ queryKey: ["question", id] });
+        checkAchievements();
+      } catch (err) {
+        console.error("Failed to accept answer:", err);
+      }
+    },
+    [id, canAcceptAnswer, queryClient, checkAchievements]
+  );
 
   const [localAnswers, setLocalAnswers] = useState([]);
   const [userVotes, setUserVotes]       = useState({});
@@ -280,6 +324,7 @@ export default function QuestionPage() {
       content: answerContent,
       contributorName: answerName,
       isVerified: false,
+      isAccepted: false,
       createdAt: new Date().toISOString(),
       upvotes: 0,
     };
@@ -294,6 +339,7 @@ export default function QuestionPage() {
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
       queryClient.invalidateQueries({ queryKey: ["user-profile"] });
       queryClient.invalidateQueries({ queryKey: ["users-leaderboard"] });
+      checkAchievements({ bookmarkCount: 0 });
     } catch (err) {
       console.error("Failed to post answer:", err);
       setSubmitError("Failed to post answer. Please try again.");
@@ -418,7 +464,16 @@ export default function QuestionPage() {
 
                 {/* Community Answers */}
                 <div className="space-y-4 mb-10">
-                  {sorted.map((a) => <AnswerCard key={a._id} answer={a} onVote={handleVote} userVotes={userVotes} />)}
+                  {sorted.map((a) => (
+                    <AnswerCard
+                      key={a._id}
+                      answer={a}
+                      onVote={handleVote}
+                      userVotes={userVotes}
+                      onAccept={handleAcceptAnswer}
+                      canAccept={canAcceptAnswer("verifiedAnswer") && user?._id === question?.contributorId}
+                    />
+                  ))}
 
                   {sorted.length === 0 && !verifiedAnswer && (
                     <div className="card p-10 text-center">
@@ -555,6 +610,28 @@ export default function QuestionPage() {
           </div>
         )}
       </div>
+
+      {/* Achievement Toast Layer */}
+      {toasts.map((achievement) => (
+        <div
+          key={achievement.id}
+          className="achievement-toast"
+          onClick={() => dismissToast(achievement.id)}
+        >
+          <span className="achievement-icon">{achievement.icon}</span>
+          <div className="achievement-text">
+            <span className="achievement-label">Achievement Unlocked!</span>
+            <span>{achievement.label}</span>
+          </div>
+          <button
+            onClick={() => dismissToast(achievement.id)}
+            className="ml-2 text-white opacity-60 hover:opacity-100 cursor-pointer"
+            style={{ background: "none", border: "none", fontSize: "1rem", lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
 
       {/* Floating Answer Button — desktop only */}
       {!isLoading && !isError && question && (
