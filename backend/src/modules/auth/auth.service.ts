@@ -297,6 +297,7 @@ export class AuthService {
           questionsCount,
           answersCount,
           verifiedCount,
+          reputation: user.reputation,
         },
       };
     } catch {

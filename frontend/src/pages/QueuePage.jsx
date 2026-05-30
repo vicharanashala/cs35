@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { questionApi, faqApi } from "../services/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { questionApi, faqApi, socket } from "../services/api";
 
 const PRIORITIES  = ["All", "High", "Medium", "Low"];
 const STATUSES    = ["All", "Unanswered", "Answered"];
@@ -105,6 +105,7 @@ function Skeleton() {
 }
 
 export default function QueuePage() {
+  const queryClient = useQueryClient();
   const [search, setSearch]               = useState("");
   const [activeCategory, setActiveCategory] = useState("All Categories");
   const [priority, setPriority]           = useState("All");
@@ -128,6 +129,16 @@ export default function QueuePage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const handleUpdate = () => queryClient.invalidateQueries({ queryKey: ["questions-open"] });
+    socket.on("questionAdded", handleUpdate);
+    socket.on("statusUpdated", handleUpdate);
+    return () => {
+      socket.off("questionAdded", handleUpdate);
+      socket.off("statusUpdated", handleUpdate);
+    };
+  }, [queryClient]);
 
   const activeFilterCount = [
     activeCategory !== "All Categories",

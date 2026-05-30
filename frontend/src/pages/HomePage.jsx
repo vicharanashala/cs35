@@ -3,7 +3,8 @@ import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
-import { faqApi, questionApi } from "../services/api";
+import { faqApi, questionApi, userApi } from "../services/api";
+import { getUserTitle } from "../utils/gamification";
 
 function timeAgo(d) {
   if (!d) return "";
@@ -125,6 +126,21 @@ export default function HomePage() {
   const recentDiscussions = useMemo(() =>
     [...questions].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 3),
   [questions]);
+
+  // 4. Top Contributors
+  const { data: users = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ["users-leaderboard"],
+    queryFn: () => userApi.list(),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const topContributors = useMemo(() => {
+    const list = Array.isArray(users) ? users : users.data || [];
+    return [...list]
+      .filter((u) => u.reputation > 0)
+      .sort((a, b) => (b.reputation || 0) - (a.reputation || 0))
+      .slice(0, 5);
+  }, [users]);
 
   return (
     <div style={{ background: "#F5F7F2" }}>
@@ -285,57 +301,112 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── 3. Recent Discussions (Community) ── */}
-        <section>
-          <div className="flex items-end justify-between mb-5">
-            <div>
-              <h2 className="section-title flex items-center gap-2">
-                <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-                </svg>
-                Recent Discussions
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Community-driven Q&A. Help your peers!</p>
+        {/* ── 3. Community Section (Discussions & Leaderboard) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <section className="lg:col-span-2">
+            <div className="flex items-end justify-between mb-5">
+              <div>
+                <h2 className="section-title flex items-center gap-2">
+                  <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                  </svg>
+                  Recent Discussions
+                </h2>
+                <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Community-driven Q&A. Help your peers!</p>
+              </div>
+              <Link to="/queue" className="text-sm font-medium hover:underline" style={{ color: "#5E7A5A" }}>
+                View Queue →
+              </Link>
             </div>
-            <Link to="/queue" className="text-sm font-medium hover:underline" style={{ color: "#5E7A5A" }}>
-              View Queue →
-            </Link>
-          </div>
 
-          <div className="space-y-3">
-            {loadingQuestions ? (
-              [...Array(3)].map((_, i) => (
-                <div key={i} className="card p-4">
-                  <div className="skeleton h-4 w-1/2 mb-2" />
-                  <div className="skeleton h-3 w-1/3" />
-                </div>
-              ))
-            ) : recentDiscussions.length > 0 ? (
-              recentDiscussions.map((q) => (
-                <Link key={q._id} to={`/question/${q._id}`} className="card-hover p-5 block">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="tag tag-neutral">{q.category}</span>
-                    {q.isReopened && <span className="badge badge-orange">Reopened</span>}
+            <div className="space-y-3">
+              {loadingQuestions ? (
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className="card p-4">
+                    <div className="skeleton h-4 w-1/2 mb-2" />
+                    <div className="skeleton h-3 w-1/3" />
                   </div>
-                  <h3 className="font-medium text-base mb-2" style={{ color: "#1F2937" }}>
-                    {q.question}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: "#9CA3AF" }}>
-                    <span>Asked by {q.contributor || "Student"}</span>
-                    <span>·</span>
-                    <span>{timeAgo(q.createdAt)}</span>
-                    <span>·</span>
-                    <span className="font-medium" style={{ color: "#5E7A5A" }}>{q.answers?.length || 0} answers</span>
+                ))
+              ) : recentDiscussions.length > 0 ? (
+                recentDiscussions.map((q) => (
+                  <Link key={q._id} to={`/question/${q._id}`} className="card-hover p-5 block">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="tag tag-neutral">{q.category}</span>
+                      {q.isReopened && <span className="badge badge-orange">Reopened</span>}
+                    </div>
+                    <h3 className="font-medium text-base mb-2" style={{ color: "#1F2937" }}>
+                      {q.question}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: "#9CA3AF" }}>
+                      <span>Asked by {q.contributor || "Student"}</span>
+                      <span>·</span>
+                      <span>{timeAgo(q.createdAt)}</span>
+                      <span>·</span>
+                      <span className="font-medium" style={{ color: "#5E7A5A" }}>{q.answers?.length || 0} answers</span>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                 <div className="card p-8 text-center">
+                   <p className="text-sm" style={{ color: "#9CA3AF" }}>No recent discussions found.</p>
+                 </div>
+              )}
+            </div>
+          </section>
+
+          <section className="lg:col-span-1">
+            <div className="mb-5">
+              <h2 className="section-title flex items-center gap-2">
+                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                Top Contributors
+              </h2>
+              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Earn reputation by helping others.</p>
+            </div>
+            
+            <div className="card overflow-hidden">
+              <div className="p-4 bg-white">
+                {loadingUsers ? (
+                  [...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 py-3 border-b last:border-0" style={{ borderColor: "#E2E8DE" }}>
+                      <div className="skeleton h-8 w-8 rounded-full" />
+                      <div className="skeleton h-4 w-24" />
+                    </div>
+                  ))
+                ) : topContributors.length > 0 ? (
+                  <div className="divide-y" style={{ borderColor: "#E2E8DE" }}>
+                    {topContributors.map((user, idx) => {
+                      const rank = getUserTitle(user.reputation || 0);
+                      return (
+                      <div key={user._id} className="flex items-center gap-3 py-3 px-1">
+                        <div className="w-6 text-center font-bold" style={{ color: idx === 0 ? "#EAB308" : idx === 1 ? "#9CA3AF" : idx === 2 ? "#B45309" : "#D1D5DB" }}>
+                          #{idx + 1}
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xs" style={{ background: "#dde8db", color: "#3a4f38" }}>
+                          {user.name ? user.name.charAt(0).toUpperCase() : "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate flex items-center gap-2" style={{ color: "#1F2937" }}>
+                            {user.name}
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ background: rank.bg, color: rank.color }}>
+                              {rank.title}
+                            </span>
+                          </p>
+                          <p className="text-xs font-semibold mt-0.5" style={{ color: rank.color }}>{user.reputation} points</p>
+                        </div>
+                      </div>
+                    )})}
                   </div>
-                </Link>
-              ))
-            ) : (
-               <div className="card p-8 text-center">
-                 <p className="text-sm" style={{ color: "#9CA3AF" }}>No recent discussions found.</p>
-               </div>
-            )}
-          </div>
-        </section>
+                ) : (
+                  <div className="py-6 text-center">
+                    <p className="text-sm" style={{ color: "#9CA3AF" }}>No contributors yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
 
         {/* ── Footer CTA ── */}
         <section className="card p-8 text-center bg-white">

@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi, faqApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
 
 const TIPS = [
   "Be specific and clear",
@@ -103,20 +105,6 @@ export default function AskPage() {
     e.target.value = "";
   };
 
-  const insertFormat = (prefix, suffix = "") => {
-    const el = textareaRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const selected = details.slice(start, end);
-    const newText = details.slice(0, start) + prefix + selected + suffix + details.slice(end);
-    setDetails(newText);
-    setTimeout(() => {
-      el.focus();
-      el.setSelectionRange(start + prefix.length, end + prefix.length);
-    }, 0);
-  };
-
   const finalCategory = category === "new_category" ? customCategory.trim() : category;
   const titleError    = touched.title    && title.trim().length < 4;
   const categoryError = touched.category && !finalCategory;
@@ -127,14 +115,6 @@ export default function AskPage() {
     queryFn: () => faqApi.listCategories(),
     staleTime: 1000 * 60 * 5,
   });
-
-  // Auto-grow textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [details]);
 
   // Related questions from FAQ
   const { data: faqs = [] } = useQuery({
@@ -248,90 +228,30 @@ export default function AskPage() {
                 {/* Details */}
                 <div>
                   <label className="label">Details</label>
-                  <div className="rounded-lg overflow-hidden" style={{ border: "1px solid #E2E8DE" }}>
-                    {/* Toolbar */}
-                    <div className="flex items-center gap-1 px-3 py-2 border-b" style={{ borderColor: "#E2E8DE", background: "#F5F7F2" }}>
-                      <button type="button" onClick={() => insertFormat("**", "**")} title="Bold"
-                        className="w-8 h-8 rounded flex items-center justify-center text-base font-extrabold hover:bg-gray-200 transition-colors"
-                        style={{ color: "#374151" }}>
-                        B
-                      </button>
-                      <button type="button" onClick={() => insertFormat("*", "*")} title="Italic"
-                        className="w-8 h-8 rounded flex items-center justify-center text-base font-serif italic font-bold hover:bg-gray-200 transition-colors"
-                        style={{ color: "#374151" }}>
-                        I
-                      </button>
-                      <div className="w-px h-4 mx-1" style={{ background: "#D1D5DB" }} />
-                      <button type="button" onClick={() => insertFormat("- ")} title="Bullet list"
-                        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
-                        style={{ color: "#374151" }}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
-                          <line x1="8" y1="6" x2="21" y2="6"></line>
-                          <line x1="8" y1="12" x2="21" y2="12"></line>
-                          <line x1="8" y1="18" x2="21" y2="18"></line>
-                          <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                          <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                          <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                        </svg>
-                      </button>
-                      <button type="button" onClick={() => insertFormat("1. ")} title="Numbered list"
-                        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
-                        style={{ color: "#374151" }}>
-                        <span className="text-sm font-bold">1.</span>
-                      </button>
-                      <button type="button" onClick={() => insertFormat("`", "`")} title="Code"
-                        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
-                        style={{ color: "#374151" }}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                          <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                        </svg>
-                      </button>
-                      <button type="button" onClick={() => insertFormat("[", "](url)")} title="Link"
-                        className="w-8 h-8 rounded flex items-center justify-center hover:bg-gray-200 transition-colors"
-                        style={{ color: "#374151" }}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                          <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-                        </svg>
-                      </button>
-                      
-                      <div className="w-px h-4 mx-1" style={{ background: "#D1D5DB" }} />
-                      
-                      {/* Speech to Text */}
-                      <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
-                        className="w-8 h-8 rounded transition-colors flex items-center justify-center relative"
-                        style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent" }}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                          <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-                        </svg>
-                        {isListening && (
-                          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                          </span>
-                        )}
-                      </button>
-
-                      {/* Image Upload */}
-                      <button type="button" onClick={() => fileInputRef.current?.click()} title="Upload Image"
-                        className="w-8 h-8 rounded hover:bg-gray-200 transition-colors flex items-center justify-center"
-                        style={{ color: "#374151" }}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                          <path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                        </svg>
-                      </button>
-                      <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
-                      
-                    </div>
-                    <textarea
-                      ref={textareaRef}
-                      value={details}
-                      onChange={(e) => setDetails(e.target.value)}
-                      placeholder="Write the details of your question…"
-                      rows={6}
-                      className="w-full px-4 py-3 text-sm resize-none focus:outline-none placeholder-gray-500"
-                      style={{ color: "#1F2937", background: "#fff", minHeight: "140px", fontFamily: "inherit" }}
-                    />
+                  <div className="flex items-center gap-2 mb-2">
+                    {/* Speech to Text */}
+                    <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
+                      className="w-8 h-8 rounded transition-colors flex items-center justify-center relative border"
+                      style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent", borderColor: "#E2E8DE" }}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                      </svg>
+                      {isListening && (
+                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                        </span>
+                      )}
+                    </button>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>Click to dictate</span>
                   </div>
+                  <ReactQuill 
+                    theme="snow" 
+                    value={details} 
+                    onChange={setDetails} 
+                    placeholder="Write the details of your question…"
+                    className="bg-white rounded-lg overflow-hidden" 
+                  />
                 </div>
 
 

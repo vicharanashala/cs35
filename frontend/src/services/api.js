@@ -1,9 +1,16 @@
 import axios from "axios";
+import { io } from "socket.io-client";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 const client = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_URL,
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
+});
+
+export const socket = io(API_URL.replace("/api", ""), {
+  autoConnect: true,
 });
 
 client.interceptors.response.use(
@@ -98,6 +105,12 @@ export const adminApi = {
 export const authApi = {
   signup: (data) => safeRequest(client.post("/auth/signup", data).then((r) => r.data)),
   login: (data) => safeRequest(client.post("/auth/login", data).then((r) => r.data)),
-  requestPasswordReset: (username) => safeRequest(client.post("/auth/forgot-password/request", { username }).then((r) => r.data)),
-  resetPasswordWithOtp: (data) => safeRequest(client.post("/auth/forgot-password/reset", data).then((r) => r.data)),
+  forgotPassword: (data) => safeRequest(client.post("/auth/forgot-password", data).then((r) => r.data)),
+};
+
+// ── Notification API ──────────────────────────────────────────
+
+export const notificationApi = {
+  list: (userId, isAdmin = false) => safeRequest(client.get(`/notifications/${userId}?isAdmin=${isAdmin}`).then((r) => r.data)),
+  markRead: (id) => safeRequest(client.patch(`/notifications/${id}/read`).then((r) => r.data)),
 };

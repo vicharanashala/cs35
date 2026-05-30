@@ -224,7 +224,7 @@ export class FaqController {
   @Patch('users/:id')
   updateUser(
     @Param('id') id: string,
-    @Body() body: { isActive?: boolean; role?: string },
+    @Body() body: { isActive?: boolean; role?: string; reputation?: number },
   ) {
     return this.faqService.updateUser(id, body);
   }
@@ -239,5 +239,17 @@ export class FaqController {
   @Get('admin/stats')
   getStats() {
     return this.faqService.getStats();
+  }
+
+  // ── Notification Routes ──────────────────────────────────────
+
+  @Get('notifications/:userId')
+  getNotifications(@Param('userId') userId: string, @Query('isAdmin') isAdmin?: string) {
+    return this.faqService.getNotifications(userId, isAdmin === 'true');
+  }
+
+  @Patch('notifications/:id/read')
+  markNotificationRead(@Param('id') id: string) {
+    return this.faqService.markNotificationRead(id);
   }
 }

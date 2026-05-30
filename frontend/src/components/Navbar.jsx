@@ -1,8 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { userApi } from "../services/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { userApi, notificationApi } from "../services/api";
+
+function timeAgo(dateStr) {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
+}
 
 const NAV_LINKS = [
   { label: "Home", to: "/" },
@@ -16,8 +27,11 @@ export default function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const qc = useQueryClient();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const profileRef = useRef(null);
+  const notifRef = useRef(null);
 
   const { data: profileData } = useQuery({
     queryKey: ['user-profile'],
@@ -25,6 +39,22 @@ export default function Navbar() {
     enabled: isAuthenticated,
     staleTime: 30000,
   });
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications', user?._id],
+    queryFn: () => notificationApi.list(user?._id, user?.role === 'admin'),
+    enabled: !!user?._id,
+    refetchInterval: 30000,
+  });
+
+  const markReadMut = useMutation({
+    mutationFn: (id) => notificationApi.markRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries(['notifications', user?._id]);
+    }
+  });
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -42,6 +72,9 @@ export default function Navbar() {
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -115,14 +148,102 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Right Side */}
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-4">
 
             {isAuthenticated ? (
-              <div className="relative" ref={profileRef}>
-                {/* Avatar Button */}
-                <button
-                  type="button"
-                  onClick={() => setProfileOpen(prev => !prev)}
+              <>
+                {/* ── Notifications ── */}
+                <div className="relative" ref={notifRef}>
+                  <button
+                    type="button"
+                    onClick={() => { setNotifOpen(prev => !prev); setProfileOpen(false); }}
+                    className="relative p-2 text-ink-600 hover:bg-warm-100 rounded-full transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                    )}
+                  </button>
+
+                  {notifOpen && (
+                    <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border overflow-hidden animate-scale-in z-50 origin-top-right" style={{ borderColor: "#E2E8DE" }}>
+                      <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: "#E2E8DE", background: "#FAFAF5" }}>
+                        <h3 className="font-bold text-sm" style={{ color: "#1F2937" }}>Notifications</h3>
+                        {unreadCount > 0 && (
+                          <button 
+                            className="text-xs font-semibold hover:underline" 
+                            style={{ color: "#5E7A5A" }}
+                            onClick={() => {
+                              notifications.forEach(n => {
+                                if (!n.isRead) markReadMut.mutate(n._id);
+                              });
+                            }}
+                          >
+                            Mark all as read
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-[22rem] overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          <div className="divide-y" style={{ borderColor: "#E2E8DE" }}>
+                            {notifications.map((n) => (
+                              <Link
+                                key={n._id}
+                                to={n.link}
+                                onClick={() => {
+                                  if (!n.isRead) markReadMut.mutate(n._id);
+                                  setNotifOpen(false);
+                                }}
+                                className={`block px-4 py-3 hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-blue-50/20' : ''}`}
+                              >
+                                <div className="flex gap-3 items-start">
+                                  {/* Icon based on type */}
+                                  <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${!n.isRead ? 'bg-white shadow-sm border border-gray-100' : 'bg-gray-100'}`}>
+                                    {n.type === 'new_question' && <span className="text-sm">❓</span>}
+                                    {n.type === 'answer_added' && <span className="text-sm">💬</span>}
+                                    {n.type === 'answer_verified' && <span className="text-sm">✅</span>}
+                                    {n.type === 'points_adjusted' && <span className="text-sm">💎</span>}
+                                    {!['new_question', 'answer_added', 'answer_verified', 'points_adjusted'].includes(n.type) && <span className="text-sm">🔔</span>}
+                                  </div>
+                                  
+                                  <div className="flex-1">
+                                    <div className="flex justify-between items-start mb-0.5">
+                                      <p className={`text-xs ${!n.isRead ? 'font-bold' : 'font-semibold'}`} style={{ color: !n.isRead ? "#111827" : "#4B5563" }}>
+                                        {n.title}
+                                      </p>
+                                      <span className="text-[10px] whitespace-nowrap ml-2" style={{ color: "#9CA3AF" }}>
+                                        {timeAgo(n.createdAt)}
+                                      </span>
+                                    </div>
+                                    <p className={`text-xs line-clamp-2 ${!n.isRead ? 'text-gray-700' : 'text-gray-500'}`}>{n.message}</p>
+                                  </div>
+                                  {!n.isRead && <div className="w-2 h-2 mt-2 rounded-full bg-brand-500 shrink-0 shadow-sm" />}
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="px-4 py-10 flex flex-col items-center text-center">
+                            <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                              <span className="text-xl opacity-50">📭</span>
+                            </div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-1">All caught up!</h4>
+                            <p className="text-xs text-gray-500">You don't have any new notifications.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Profile ── */}
+                <div className="relative" ref={profileRef}>
+                  {/* Avatar Button */}
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(prev => !prev); setNotifOpen(false); }}
                   aria-expanded={profileOpen}
                   aria-label="Open profile menu"
                   className="relative w-10 h-10 rounded-full flex items-center justify-center
@@ -328,6 +449,7 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
+              </>
             ) : (
               <Link
                 to="/login"

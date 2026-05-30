@@ -55,10 +55,6 @@ export class AuthController {
       newPassword: string;
     },
   ) {
-    return this.authService.resetPasswordWithOtp(
-      body.username,
-      body.otp,
-      body.newPassword,
-    );
+    return this.authService.resetPasswordWithOtp(body.username, body.otp, body.newPassword);
   }
 }

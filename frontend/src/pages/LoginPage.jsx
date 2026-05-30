@@ -12,7 +12,7 @@ export default function LoginPage() {
 
   const [form, setForm] = useState({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
   const [forgotStep, setForgotStep] = useState("request"); // "request" | "reset"
-  const [forgotForm, setForgotForm] = useState({ username: "", otp: "", newPassword: "", confirmNewPassword: "" });
+  const [forgotForm, setForgotForm] = useState({ username: "", newPassword: "", confirmNewPassword: "" });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);

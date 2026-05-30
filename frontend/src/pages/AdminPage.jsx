@@ -4,6 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, questionApi, faqApi, answerApi, faqAdminApi, categoryApi, userApi } from "../services/api";
 import { useDebounce } from "../hooks/useDebounce";
 import { useAuth } from "../hooks/useAuth";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
+import { getUserTitle } from "../utils/gamification";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -52,6 +55,29 @@ function Toast({ message, type = "success", onClose }) {
   return (
     <div className="fixed bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg animate-slide-up" style={{ background: colors.bg, color: colors.color }}>
       <p className="text-sm font-medium">{message}</p>
+    </div>
+  );
+}
+
+function AdjustPointsModal({ user, onConfirm, onCancel }) {
+  const [points, setPoints] = useState(user?.reputation || 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+      <div className="card p-6 max-w-sm w-full mx-4 animate-scale-in">
+        <h3 className="font-bold text-lg mb-3" style={{ color: "#1F2937" }}>Adjust Reputation</h3>
+        <p className="text-sm mb-5" style={{ color: "#6B7280" }}>Set total reputation points for <strong>{user?.name}</strong>.</p>
+        <input 
+          type="number" 
+          value={points} 
+          onChange={(e) => setPoints(Number(e.target.value))} 
+          className="input mb-5" 
+        />
+        <div className="flex gap-3 justify-end">
+          <button onClick={onCancel} className="btn-secondary px-4 py-2">Cancel</button>
+          <button onClick={() => onConfirm(points)} className="btn-primary px-4 py-2" style={{ background: "#059669" }}>Save Points</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -233,7 +259,7 @@ function QuestionsTab() {
                             <button onClick={() => deleteMut.mutate(a._id)} className="text-xs px-2 py-1 rounded" style={{ background: "#fef2f2", color: "#dc2626" }}>Delete</button>
                           </div>
                         </div>
-                        <p className="text-sm" style={{ color: "#374151" }}>{a.content}</p>
+                        <div className="text-sm quill-content" style={{ color: "#374151" }} dangerouslySetInnerHTML={{ __html: a.content }} />
                         <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>{timeAgo(a.createdAt)}</p>
                       </div>
                     ))}
@@ -242,7 +268,7 @@ function QuestionsTab() {
 
                 <div className="mt-auto pt-3 border-t" style={{ borderColor: "#E2E8DE" }}>
                   <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9CA3AF" }}>Admin Answer</h3>
-                  <textarea className="input w-full text-sm resize-none" rows={4} value={answerDraft} onChange={e => setAnswerDraft(e.target.value)} placeholder="Write your official answer..." />
+                  <ReactQuill theme="snow" value={answerDraft} onChange={setAnswerDraft} className="bg-white rounded-lg overflow-hidden" placeholder="Write your official answer..." />
                   <div className="flex justify-between items-center mt-3">
                     <div className="flex gap-2 flex-wrap">
                       {selected.status !== "closed" && <button onClick={() => closeMut.mutate(selected._id)} className="btn-secondary text-xs px-3 py-1.5">Close</button>}
@@ -316,7 +342,7 @@ function FaqsTab() {
               {editing?._id === faq._id ? (
                 <div className="space-y-3">
                   <input className="input text-sm" defaultValue={editing.question} onChange={e => setEditing(p => ({ ...p, question: e.target.value }))} />
-                  <textarea className="input text-sm resize-none" rows={3} defaultValue={editing.answer} onChange={e => setEditing(p => ({ ...p, answer: e.target.value }))} />
+                  <ReactQuill theme="snow" value={editing.answer || ""} onChange={val => setEditing(p => ({ ...p, answer: val }))} className="bg-white rounded-lg overflow-hidden" />
                   <div className="flex gap-2">
                     <button onClick={() => updateMut.mutate({ id: faq._id, data: { question: editing.question, answer: editing.answer, category: editing.category } })} className="btn-primary text-xs px-3 py-1.5">Save</button>
                     <button onClick={() => setEditing(null)} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
@@ -331,7 +357,7 @@ function FaqsTab() {
                     </div>
                     <span className="tag tag-brand text-xs">{faq.category}</span>
                   </div>
-                  <p className="text-sm mb-2 line-clamp-2" style={{ color: "#6B7280" }}>{faq.answer}</p>
+                  <div className="text-sm mb-2 line-clamp-2 quill-content" style={{ color: "#6B7280" }} dangerouslySetInnerHTML={{ __html: faq.answer }} />
                   <div className="flex items-center gap-2">
                     <button onClick={() => setEditing({ ...faq })} className="text-xs px-2 py-1 rounded" style={{ background: "#f3f4f6", color: "#374151" }}>Edit</button>
                     <button onClick={() => pinMut.mutate({ id: faq._id, pinned: !faq.isPinned })} className="text-xs px-2 py-1 rounded" style={{ background: faq.isPinned ? "#fef3c7" : "#d1fae5", color: faq.isPinned ? "#92400e" : "#065f46" }}>
@@ -365,7 +391,7 @@ function FaqCreateModal({ onClose, onCreate, isCreating, categories }) {
           </div>
           <div>
             <label className="label">Answer</label>
-            <textarea className="input py-2 resize-none" rows={3} value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} placeholder="Enter answer..." />
+            <ReactQuill theme="snow" value={form.answer} onChange={val => setForm(f => ({ ...f, answer: val }))} className="bg-white rounded-lg overflow-hidden" placeholder="Enter answer..." />
           </div>
           <div>
             <label className="label">Category</label>
@@ -444,6 +470,7 @@ function UsersTab() {
   const qc = useQueryClient();
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState("");
+  const [adjustUser, setAdjustUser] = useState(null);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -461,6 +488,16 @@ function UsersTab() {
   return (
     <div className="h-full flex flex-col min-h-0">
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {adjustUser && (
+        <AdjustPointsModal 
+          user={adjustUser}
+          onConfirm={(newPoints) => {
+            updateMut.mutate({ id: adjustUser._id, data: { reputation: newPoints } });
+            setAdjustUser(null);
+          }}
+          onCancel={() => setAdjustUser(null)}
+        />
+      )}
 
       <div className="mb-4">
         <div className="search-wrap" style={{ maxWidth: 300 }}>
@@ -487,11 +524,14 @@ function UsersTab() {
                   <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Status</th>
                   <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Joined</th>
                   <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Questions</th>
+                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Reputation</th>
                   <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(u => (
+                {filtered.map(u => {
+                  const rank = getUserTitle(u.reputation || 0);
+                  return (
                   <tr key={u._id} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: "#F5F7F2" }}>
                     <td className="p-3 font-medium" style={{ color: "#1F2937" }}>{u.name || "—"}</td>
                     <td className="p-3" style={{ color: "#374151" }}>{u.username || "—"}</td>
@@ -508,7 +548,16 @@ function UsersTab() {
                     <td className="p-3 text-center" style={{ color: "#6B7280" }}>{timeAgo(u.createdAt)}</td>
                     <td className="p-3 text-center" style={{ color: "#6B7280" }}>{u.questionsAsked?.length || 0}</td>
                     <td className="p-3 text-center">
-                      <div className="flex gap-1 justify-center">
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-sm" style={{ color: rank.color }}>{u.reputation || 0} pts</span>
+                        <span className="text-xs font-semibold px-1.5 rounded-full mt-1" style={{ background: rank.bg, color: rank.color }}>{rank.title}</span>
+                      </div>
+                    </td>
+                    <td className="p-3 text-center">
+                      <div className="flex gap-1 justify-center flex-wrap">
+                        {u.role !== "admin" && (
+                          <button onClick={() => setAdjustUser(u)} className="text-xs px-2 py-1 rounded" style={{ background: "#EEF2FF", color: "#4F46E5" }}>Adj Pts</button>
+                        )}
                         {u.role !== "admin" && (
                           u.isActive
                             ? <button onClick={() => updateMut.mutate({ id: u._id, data: { isActive: false } })} className="text-xs px-2 py-1 rounded" style={{ background: "#fef3c7", color: "#92400e" }}>Suspend</button>
@@ -518,7 +567,7 @@ function UsersTab() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
