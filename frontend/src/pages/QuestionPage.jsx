@@ -49,7 +49,7 @@ function AnswerCard({ answer, onVote, userVotes, onAccept, canAccept }) {
   const votes = (answer.upvotes || 0) + vote;
 
   return (
-    <article className={`card p-5 ${answer.isAccepted ? 'accepted-answer' : ''}`}>
+    <article id={`answer-${answer._id}`} className={`card p-5 ${answer.isAccepted ? 'accepted-answer' : ''}`}>
       {answer.isAccepted && (
         <div className="flex items-center gap-1.5 mb-3">
           <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -112,7 +112,7 @@ function VerifiedHero({ answer, onVote, userVotes }) {
   const votes = (answer.upvotes || 0) + vote;
 
   return (
-    <div className="rounded-xl border-2 p-6 mb-6 animate-fade-in" style={{ background: "#F0FDF4", borderColor: "#6EE7B7" }}>
+    <div id={`answer-${answer._id}`} className="rounded-xl border-2 p-6 mb-6 animate-fade-in" style={{ background: "#F0FDF4", borderColor: "#6EE7B7" }}>
       <div className="flex items-center gap-2 mb-4">
         <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "#059669" }}>
           <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -275,7 +275,7 @@ export default function QuestionPage() {
 
   const { data: relatedQuestions = [] } = useQuery({
     queryKey: ["faqs-related", question?.category],
-    queryFn: () => faqApi.list({ category: question?.category }),
+    queryFn: () => faqApi.list({ category: question?.category }).then((r) => r.data || r),
     enabled: !!question?.category,
     staleTime: 1000 * 60 * 5,
   });
@@ -304,6 +304,23 @@ export default function QuestionPage() {
     }
     return list;
   }, [communityAnswers, sortBy, userVotes]);
+
+  // Deep linking scroll
+  useEffect(() => {
+    if (!isLoading && question && window.location.hash) {
+      setTimeout(() => {
+        const id = window.location.hash.substring(1);
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.classList.add("ring-2", "ring-brand-500", "ring-offset-2");
+          setTimeout(() => {
+            element.classList.remove("ring-2", "ring-brand-500", "ring-offset-2");
+          }, 3000);
+        }
+      }, 300); // small delay to ensure DOM paint
+    }
+  }, [isLoading, question]);
 
   const handleVote = async (answerId, dir) => {
     const cur = userVotes[answerId] || 0;
