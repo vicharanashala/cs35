@@ -39,7 +39,7 @@ function VoteBtn({ count, active, onClick, direction }) {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d={direction === "up" ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
       </svg>
-      {direction === "up" ? count : Math.abs(count)}
+      {direction === "up" ? (count || "") : (Math.abs(count) || "")}
     </button>
   );
 }

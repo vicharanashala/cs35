@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { useAuth } from './context/useAuth'
+import { useAuth } from './hooks/useAuth'
 import { useDarkMode } from './hooks/useDarkMode'
 
 // Layouts

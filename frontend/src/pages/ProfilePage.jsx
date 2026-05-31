@@ -168,7 +168,7 @@ export default function ProfilePage() {
                   Ask a Question
                 </Link>
                 <Link
-                  to="/"
+                  to="/faqs"
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all border"
                   style={{ borderColor: "#E5E7EB", color: "#374151" }}
                 >

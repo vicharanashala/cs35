@@ -108,9 +108,9 @@ export default function MyQuestionsPage() {
   const [search, setSearch] = useState("");
 
   const { data: allQuestions = [], isLoading } = useQuery({
-    queryKey: ["my-questions", user?.name],
+    queryKey: ["my-questions", user?._id],
     queryFn: () => questionApi.list({ contributorId: user?._id }),
-    enabled: !!user?.name,
+    enabled: !!user?._id,
     staleTime: 1000 * 30,
   });
 

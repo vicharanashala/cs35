@@ -374,7 +374,7 @@ export default function HomePage() {
                       {q.question}
                     </h3>
                     <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: "#9CA3AF" }}>
-                      <span>Asked by {q.contributor || "Student"}</span>
+                      <span>Asked by {q.contributorName || "Student"}</span>
                       <span>·</span>
                       <span>{timeAgo(q.createdAt)}</span>
                       <span>·</span>
