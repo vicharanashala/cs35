@@ -82,7 +82,7 @@ function QuestionRow({ question }) {
             </div>
           )}
           <div className="mt-3 flex gap-2">
-            <Link to={`/question/${question._id}`} className="btn-primary btn-sm">
+            <Link to={`/questions/${question._id}`} className="btn-primary btn-sm">
               Answer this question
             </Link>
           </div>
