@@ -142,8 +142,8 @@ export class FaqService implements OnModuleInit {
   async getAllFAQs(category?: string, search?: string, page = 1, limit = 20) {
     try {
       const filter: Record<string, any> = {};
-      if (category) filter.category = category;
-      
+      if (category) filter.category = { $regex: `^${category}$`, $options: 'i' };
+
       let allFaqs: any[] = await this.faqModel.find(filter).lean().exec();
 
       if (search) {
@@ -306,7 +306,7 @@ export class FaqService implements OnModuleInit {
     try {
       const filter: Record<string, unknown> = {};
       if (status) filter.status = status;
-      if (category) filter.category = category;
+      if (category) filter.category = { $regex: `^${category}$`, $options: 'i' };
       if (search) {
         filter.$or = [
           { question: { $regex: search, $options: 'i' } },
@@ -400,13 +400,16 @@ export class FaqService implements OnModuleInit {
       this.eventsGateway.emitQuestionAdded(q);
       
       if (this.notificationModel) {
-        await this.notificationModel.create({
+        const notif = await this.notificationModel.create({
           userId: 'admin',
           type: 'new_question',
           title: 'New Question',
           message: `${data.contributorName || 'A student'} asked: ${data.question}`,
           link: `/question/${q?._id || ''}`,
+          senderId: data.contributorId ? data.contributorId.toString() : undefined,
+          senderName: data.contributorName || 'A student',
         });
+        this.eventsGateway.emitNotification(notif);
       }
       
       return q;
@@ -518,13 +521,19 @@ export class FaqService implements OnModuleInit {
       if (this.notificationModel) {
         const q = await this.questionModel.findById(questionId).exec();
         if (q && q.contributorId) {
-          await this.notificationModel.create({
-            userId: q.contributorId.toString(),
-            type: 'answer_added',
-            title: 'New Answer',
-            message: `${data.contributorName} answered your question.`,
-            link: `/question/${questionId}`,
-          });
+          const questionOwner = await this.userModel.findById(q.contributorId).exec();
+          if (!questionOwner || questionOwner.notificationPreferences?.notifyOnAnswer !== false) {
+            const notif = await this.notificationModel.create({
+              userId: q.contributorId.toString(),
+              type: 'answer_added',
+              title: 'New Answer',
+              message: `${data.contributorName} answered your question.`,
+              link: `/question/${questionId}#answer-${answer._id}`,
+              senderId: data.contributorId ? data.contributorId.toString() : undefined,
+              senderName: data.contributorName || 'Someone',
+            });
+            this.eventsGateway.emitNotification(notif);
+          }
         }
       }
       
@@ -565,15 +574,18 @@ export class FaqService implements OnModuleInit {
       // when the admin actually converts the question to an FAQ.
 
       if (verified && answer.contributorId) {
-        await this.userModel.findByIdAndUpdate(answer.contributorId, { $inc: { reputation: 20 } }).exec();
-        if (this.notificationModel) {
-          await this.notificationModel.create({
+        const answerOwner = await this.userModel.findByIdAndUpdate(answer.contributorId, { $inc: { reputation: 20 } }, { new: true }).exec();
+        if (this.notificationModel && (!answerOwner || answerOwner.notificationPreferences?.notifyOnVerification !== false)) {
+          const notif = await this.notificationModel.create({
             userId: answer.contributorId.toString(),
             type: 'answer_verified',
             title: 'Answer Verified',
             message: 'Your answer was verified by an admin! You earned 20 pts.',
-            link: `/question/${answer.questionId}`,
+            link: `/question/${answer.questionId}#answer-${answer._id}`,
+            senderId: 'admin',
+            senderName: 'Admin',
           });
+          this.eventsGateway.emitNotification(notif);
         }
         this.eventsGateway.emitUserUpdated(answer.contributorId.toString());
       }
@@ -922,7 +934,7 @@ export class FaqService implements OnModuleInit {
     }
   }
 
-  async updateUser(id: string, data: { isActive?: boolean; role?: string; reputation?: number }) {
+  async updateUser(id: string, data: { isActive?: boolean; role?: string; reputation?: number; notificationPreferences?: any }) {
     try {
       const user = await this.userModel
         .findByIdAndUpdate(id, data, { new: true })
@@ -930,13 +942,16 @@ export class FaqService implements OnModuleInit {
         .exec();
         
       if (data.reputation !== undefined && this.notificationModel && user) {
-        await this.notificationModel.create({
+        const notif = await this.notificationModel.create({
           userId: id,
           type: 'points_adjusted',
           title: 'Reputation Adjusted',
           message: `An admin has adjusted your reputation points. You now have ${user.reputation} pts.`,
           link: `/profile`,
+          senderId: 'admin',
+          senderName: 'Admin',
         });
+        this.eventsGateway.emitNotification(notif);
       }
       
       return user;

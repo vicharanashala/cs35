@@ -25,6 +25,15 @@ export class User extends Document {
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   followers: Types.ObjectId[];
+
+  @Prop({
+    type: Object,
+    default: { notifyOnAnswer: true, notifyOnVerification: true },
+  })
+  notificationPreferences: {
+    notifyOnAnswer: boolean;
+    notifyOnVerification: boolean;
+  };
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from 'react-hot-toast';
 import { Link } from "react-router-dom";
 import { userApi, questionApi, userStatsApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
@@ -24,8 +25,23 @@ export default function ProfilePage() {
     staleTime: 30000,
   });
 
-  // API returns { success: true, user: {...} } — unwrap one level
   const profile = profileData?.user || profileData || null;
+  const qc = useQueryClient();
+
+  const updateMut = useMutation({
+    mutationFn: (data) => userApi.update(profile?._id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user-profile'] });
+      toast.success("Settings updated");
+    }
+  });
+
+  const handleToggle = (key) => {
+    if (!profile) return;
+    const currentPrefs = profile.notificationPreferences || { notifyOnAnswer: true, notifyOnVerification: true };
+    const newPrefs = { ...currentPrefs, [key]: !currentPrefs[key] };
+    updateMut.mutate({ notificationPreferences: newPrefs });
+  };
 
   const { data: questionsData, isLoading: questionsLoading } = useQuery({
     queryKey: ['user-profile-questions'],
@@ -161,6 +177,32 @@ export default function ProfilePage() {
                   </svg>
                   Browse FAQs
                 </Link>
+              </div>
+            </div>
+
+            <div className="card p-6">
+              <h2 className="text-sm font-semibold mb-4" style={{ color: "#374151" }}>
+                Notification Settings
+              </h2>
+              <div className="space-y-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-sm font-medium" style={{ color: "#374151" }}>When my question is answered</span>
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-success toggle-sm"
+                    checked={profile?.notificationPreferences?.notifyOnAnswer !== false}
+                    onChange={() => handleToggle('notifyOnAnswer')}
+                  />
+                </label>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-sm font-medium" style={{ color: "#374151" }}>When my answer is verified</span>
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-success toggle-sm"
+                    checked={profile?.notificationPreferences?.notifyOnVerification !== false}
+                    onChange={() => handleToggle('notifyOnVerification')}
+                  />
+                </label>
               </div>
             </div>
           </div>

@@ -20,6 +20,15 @@ export class Notification extends Document {
 
   @Prop({ default: false })
   isRead: boolean;
+
+  @Prop()
+  senderId?: string;
+
+  @Prop()
+  senderName?: string;
+
+  @Prop()
+  senderAvatar?: string;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);

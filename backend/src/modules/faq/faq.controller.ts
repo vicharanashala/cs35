@@ -86,7 +86,7 @@ export class FaqController {
   }
 
   @Patch('faqs/:id/view')
-  @Roles('admin')
+  @Public()
   incrementFaqViews(@Param('id') id: string) {
     return this.faqService.incrementFaqViews(id);
   }
@@ -384,11 +384,19 @@ export class FaqController {
   }
 
   @Patch('users/:id')
-  @Roles('admin')
   updateUser(
     @Param('id') id: string,
-    @Body() body: { isActive?: boolean; role?: string; reputation?: number },
+    @Body() body: { isActive?: boolean; role?: string; reputation?: number; notificationPreferences?: any },
+    @CurrentUser() user: { sub?: string; role?: string },
   ) {
+    if (user.role !== 'admin' && user.sub !== id) {
+      throw new ForbiddenException('You can only update your own profile');
+    }
+    if (user.role !== 'admin') {
+      delete body.isActive;
+      delete body.role;
+      delete body.reputation;
+    }
     return this.faqService.updateUser(id, body);
   }
 

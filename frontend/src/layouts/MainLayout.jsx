@@ -1,9 +1,23 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import { userApi, faqApi } from "../services/api";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { userApi, faqApi, notificationApi } from "../services/api";
 import { useDebounce } from "../hooks/useDebounce";
+import { socket } from "../services/socket";
+import toast from 'react-hot-toast';
+
+function timeAgo(dateStr) {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
+}
 
 const NAV_LINKS = [
   { to: "/",           label: "Home" },
@@ -15,13 +29,17 @@ const NAV_LINKS = [
 export default function MainLayout({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [search, setSearch]     = useState("");
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
+  const { dark, toggle: toggleDarkMode } = useDarkMode();
   const dropdownRef = useRef(null);
+  const notifRef = useRef(null);
   const searchRef = useRef(null);
+  const qc = useQueryClient();
 
   const userName = user?.name || "Student";
   const userRole = user?.role || "student";
@@ -34,6 +52,23 @@ export default function MainLayout({ children }) {
     enabled: isAuthenticated,
     staleTime: 30000,
   });
+
+  // Fetch notifications
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications', user?._id],
+    queryFn: () => notificationApi.list(user?._id, user?.role === 'admin'),
+    enabled: !!user?._id,
+    refetchInterval: 30000,
+  });
+
+  const markReadMut = useMutation({
+    mutationFn: (id) => notificationApi.markRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notifications', user?._id] });
+    }
+  });
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const username = profileData?.user?.username || user?.email || "";
   const joinDate = profileData?.user?.createdAt
@@ -83,6 +118,9 @@ export default function MainLayout({ children }) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowDropdown(false);
       }
@@ -94,9 +132,66 @@ export default function MainLayout({ children }) {
   // Close dropdown on route change
   useEffect(() => {
     setDropdownOpen(false);
+    setNotifOpen(false);
     setShowDropdown(false);
     setMenuOpen(false);
   }, [location.pathname]);
+
+  // Real-time synchronization
+  useEffect(() => {
+    if (!socket || typeof socket.on !== "function") return;
+
+    const handleUpdate = () => {
+      if (isAuthenticated) {
+        qc.invalidateQueries({ queryKey: ["notifications", user?._id] });
+        qc.invalidateQueries({ queryKey: ["user-profile"] });
+      }
+    };
+
+    socket.on("questionAdded", handleUpdate);
+    socket.on("answerAdded", handleUpdate);
+    socket.on("statusUpdated", handleUpdate);
+
+    const handleUserUpdate = (data) => {
+      if (isAuthenticated && data?.userId === user?._id) {
+        qc.invalidateQueries({ queryKey: ["user-profile"] });
+        qc.invalidateQueries({ queryKey: ["notifications", user?._id] });
+      }
+    };
+    socket.on("userUpdated", handleUserUpdate);
+
+    const handleNewNotification = (notif) => {
+      if (isAuthenticated && (notif.userId === user?._id || (notif.userId === 'admin' && user?.role === 'admin'))) {
+        toast(
+          (t) => (
+            <div className="flex items-start gap-3 cursor-pointer" onClick={() => { navigate(notif.link); toast.dismiss(t.id); }}>
+              {notif.senderName && (
+                <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold shrink-0 mt-0.5">
+                  {notif.senderName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-900">{notif.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.message}</p>
+              </div>
+            </div>
+          ),
+          { duration: 5000 }
+        );
+        qc.invalidateQueries({ queryKey: ["notifications", user?._id] });
+      }
+    };
+
+    socket.on("newNotification", handleNewNotification);
+
+    return () => {
+      socket.off("questionAdded", handleUpdate);
+      socket.off("answerAdded", handleUpdate);
+      socket.off("statusUpdated", handleUpdate);
+      socket.off("userUpdated", handleUserUpdate);
+      socket.off("newNotification", handleNewNotification);
+    };
+  }, [qc, isAuthenticated, user?._id]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F5F7F2" }}>
@@ -189,12 +284,111 @@ export default function MainLayout({ children }) {
             </Link>
           )}
 
+          {/* ── Notifications Bell Icon ── */}
+          {isAuthenticated && (
+            <div className="relative flex items-center" ref={notifRef}>
+              <button
+                type="button"
+                onClick={() => { setNotifOpen(!notifOpen); setDropdownOpen(false); }}
+                className="relative p-2 text-gray-500 hover:bg-gray-100 hover:text-brand-600 rounded-full transition-colors focus:outline-none shrink-0"
+                aria-label="Notifications"
+              >
+                <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border overflow-hidden animate-scale-in z-50 origin-top-right" style={{ borderColor: "#E2E8DE" }}>
+                  <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: "#E2E8DE", background: "#FAFAF5" }}>
+                    <h3 className="font-bold text-sm" style={{ color: "#1F2937" }}>Notifications</h3>
+                    {unreadCount > 0 && (
+                      <button 
+                        className="text-xs font-semibold hover:underline" 
+                        style={{ color: "#5E7A5A" }}
+                        onClick={() => {
+                          notifications.forEach(n => {
+                            if (!n.isRead) markReadMut.mutate(n._id);
+                          });
+                        }}
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-[22rem] overflow-y-auto">
+                    {notifications.length > 0 ? (
+                      <div className="divide-y divide-gray-100">
+                        {notifications.map((n) => (
+                          <Link
+                            key={n._id}
+                            to={n.link}
+                            onClick={() => {
+                              if (!n.isRead) markReadMut.mutate(n._id);
+                              setNotifOpen(false);
+                            }}
+                            className={`block px-4 py-3 hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-blue-50/10' : ''}`}
+                          >
+                            <div className="flex gap-3 items-start">
+                              <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${!n.isRead ? 'bg-white shadow-sm border border-gray-100 text-brand-700 font-bold' : 'bg-gray-100 text-gray-600 font-bold'}`}>
+                                {n.senderName ? (
+                                  <span className="text-sm">{n.senderName.charAt(0).toUpperCase()}</span>
+                                ) : (
+                                  <>
+                                    {n.type === 'new_question' && <span className="text-sm">❓</span>}
+                                    {n.type === 'answer_added' && <span className="text-sm">💬</span>}
+                                    {n.type === 'answer_verified' && <span className="text-sm">✅</span>}
+                                    {n.type === 'points_adjusted' && <span className="text-sm">💎</span>}
+                                    {!['new_question', 'answer_added', 'answer_verified', 'points_adjusted'].includes(n.type) && <span className="text-sm">🔔</span>}
+                                  </>
+                                )}
+                              </div>
+                              
+                              <div className="flex-1">
+                                <div className="flex justify-between items-start mb-0.5">
+                                  <p className={`text-xs ${!n.isRead ? 'font-bold' : 'font-semibold'}`} style={{ color: !n.isRead ? "#111827" : "#4B5563" }}>
+                                    {n.title}
+                                  </p>
+                                  <span className="text-[10px] whitespace-nowrap ml-2" style={{ color: "#9CA3AF" }}>
+                                    {timeAgo(n.createdAt)}
+                                  </span>
+                                </div>
+                                <p className={`text-xs line-clamp-2 ${!n.isRead ? 'text-gray-700' : 'text-gray-500'}`}>{n.message}</p>
+                              </div>
+                              {!n.isRead && <div className="w-2 h-2 mt-2 rounded-full bg-brand-500 shrink-0 shadow-sm" />}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-10 flex flex-col items-center text-center">
+                        <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                          <span className="text-xl opacity-50">📭</span>
+                        </div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-1">All caught up!</h4>
+                        <p className="text-xs text-gray-500">You don't have any new notifications.</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="border-t p-2 text-center" style={{ borderColor: "#E2E8DE", background: "#FAFAF5" }}>
+                    <Link to="/notifications" onClick={() => setNotifOpen(false)} className="text-xs font-semibold hover:underline" style={{ color: "#5E7A5A" }}>
+                      View all notifications
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Avatar & Profile Dropdown ── */}
           <div className="relative" ref={dropdownRef}>
             {isAuthenticated ? (
               <>
                 <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  onClick={() => { setDropdownOpen(!dropdownOpen); setNotifOpen(false); }}
                   className="relative w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 transition-all duration-200 hover:ring-2 hover:ring-brand-300/60 hover:ring-offset-2 hover:ring-offset-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2"
                   style={{ background: "#5E7A5A" }}
                   aria-expanded={dropdownOpen}
@@ -299,6 +493,33 @@ export default function MainLayout({ children }) {
                       )}
 
                       <div className="my-1.5 border-t border-gray-100" />
+
+                      {/* Dark Mode Toggle */}
+                      <button
+                        onClick={() => { setDropdownOpen(false); toggleDarkMode(); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-50 group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center group-hover:bg-[#f0f4ef] group-hover:text-[#5E7A5A] transition-colors">
+                          {dark ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-sm font-medium text-gray-700 group-hover:text-[#5E7A5A] transition-colors">
+                            {dark ? "Light Mode" : "Dark Mode"}
+                          </span>
+                        </div>
+                        {/* Toggle indicator */}
+                        <div className={`w-9 h-5 rounded-full p-0.5 transition-colors ${dark ? "bg-[#5E7A5A]" : "bg-gray-200"}`}>
+                          <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform flex items-center justify-center ${dark ? "translate-x-4" : "translate-x-0"}`} />
+                        </div>
+                      </button>
 
                       <button
                         onClick={handleLogout}

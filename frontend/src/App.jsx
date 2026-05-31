@@ -13,6 +13,7 @@ const AskPage = lazy(() => import("./pages/AskPage"));
 const FaqPage = lazy(() => import("./pages/FaqPage"));
 const MyQuestionsPage = lazy(() => import("./pages/MyQuestionsPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 
 function PageLoader() {
@@ -127,6 +128,7 @@ export default function App() {
               <Route path="/question/:id" element={<ProtectedRoute><QuestionPage /></ProtectedRoute>} />
               <Route path="/my-questions" element={<ProtectedRoute><MyQuestionsPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
 
               {/* Admin (Requires Admin Role) */}
               <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
