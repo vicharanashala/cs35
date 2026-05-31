@@ -206,8 +206,8 @@ export default function QueuePage() {
 
         <div className="space-y-4">
           <div className="card p-4">
-            <div className="flex flex-col sm:flex-row gap-3 items-center">
-              <div className="search-wrap flex-1 w-full">
+            <div className="flex flex-col sm:flex-row gap-3 items-center w-full min-w-0">
+              <div className="search-wrap flex-1 min-w-0 w-full">
                 <svg className="search-icon w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -345,17 +345,20 @@ export default function QueuePage() {
           )}
 
           {!isLoading && !isError && filtered.length === 0 && (
-            <div className="card p-10 text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-xl flex items-center justify-center" style={{ background: "#f0f4ef" }}>
-                <svg className="w-6 h-6" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="card p-12 text-center">
+              <div className="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full opacity-60 blur-xl" style={{ background: "#dde8db" }}></div>
+                <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm border" style={{ background: "#F5F7F2", borderColor: "#E2E8DE" }}>
+                  <svg className="w-8 h-8" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
               </div>
-              <p className="font-semibold mb-1" style={{ color: "#1F2937" }}>
+              <p className="text-xl font-bold mb-2" style={{ color: "#1F2937" }}>
                 {search ? `No results for "${search}"` : "Queue is clear!"}
               </p>
-              <p className="text-sm" style={{ color: "#9CA3AF" }}>
-                {search ? "Try a different search term" : "All questions have been answered."}
+              <p className="text-base" style={{ color: "#6B7280" }}>
+                {search ? "Try a different search term or clear your filters." : "All questions have been answered. You guys are awesome!"}
               </p>
             </div>
           )}

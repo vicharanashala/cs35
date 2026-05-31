@@ -399,6 +399,13 @@ export class FaqService implements OnModuleInit {
       const q = await this.questionModel.create(newQuestionData);
       this.eventsGateway.emitQuestionAdded(q);
       
+      if (data.contributorId && this.userModel) {
+        await this.userModel.findByIdAndUpdate(data.contributorId, {
+          $addToSet: { questionsAsked: q._id }
+        }).exec();
+        this.eventsGateway.emitUserUpdated(data.contributorId.toString());
+      }
+      
       if (this.notificationModel) {
         const notif = await this.notificationModel.create({
           userId: 'admin',

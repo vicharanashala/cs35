@@ -187,8 +187,7 @@ export default function AskPage() {
     try {
       const contributorName = user?.name || "Student";
       await questionApi.create({ question: title.trim(), category: finalCategory, details: details.trim(), tags, contributorName, contributorId: user?._id });
-      setSubmitted(title);
-      setShowSuccess(true);
+      setSubmitted(title); setShowSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
       queryClient.invalidateQueries({ queryKey: ["my-questions"] });
       queryClient.invalidateQueries({ queryKey: ["user-profile"] });
@@ -202,6 +201,13 @@ export default function AskPage() {
   const handleClose = () => {
     setShowSuccess(false); setTitle(""); setCategory(""); setCustomCategory(""); setDetails(""); setTouched({});
   };
+
+  useEffect(() => {
+    if (showSuccess) {
+      const t = setTimeout(() => navigate("/queue"), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [showSuccess, navigate]);
 
   return (
     <div style={{ background: "#F5F7F2" }}>

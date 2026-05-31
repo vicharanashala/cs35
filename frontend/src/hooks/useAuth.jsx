@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { userApi } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -36,8 +37,22 @@ export function AuthProvider({ children }) {
     window.location.replace("/login");
   }, [queryClient]);
 
+  const loadUser = useCallback(async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    try {
+      const data = await userApi.me();
+      if (data) {
+        setUser(data);
+        localStorage.setItem("authUser", JSON.stringify(data));
+      }
+    } catch (err) {
+      console.error("Failed to load user:", err);
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading: false, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, loadUser, loading: false, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

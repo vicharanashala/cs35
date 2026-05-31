@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi, faqApi, answerApi } from "../services/api";
 import { socket } from "../services/socket";
@@ -158,6 +158,7 @@ function VerifiedHero({ answer, onVote, userVotes }) {
 
 export default function QuestionPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { can: canAcceptAnswer } = useReputation();
@@ -219,7 +220,7 @@ export default function QuestionPage() {
   const [sortBy, setSortBy]             = useState("verified");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [answerContent, setAnswerContent] = useState("");
-  const [answerName, setAnswerName] = useState(user?.name || "");
+  const [answerName, setAnswerName] = useState(user?.name || localStorage.getItem("authUser") ? JSON.parse(localStorage.getItem("authUser") || "{}").name || "Anonymous" : "Anonymous");
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [voteError, setVoteError] = useState("");
@@ -363,8 +364,7 @@ export default function QuestionPage() {
       await questionApi.addAnswer(id, { contributorName: answerName, content: answerContent, contributorId: user?._id });
       setLocalAnswers((prev) => [newAnswer, ...prev]);
       setAnswerContent("");
-      setSubmitSuccess(true);
-      setTimeout(() => setSubmitSuccess(false), 3000);
+      setSubmitSuccess(true); setTimeout(() => { setSubmitSuccess(false); navigate("/queue"); }, 2000);
       queryClient.invalidateQueries({ queryKey: ["question", id] });
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
       queryClient.invalidateQueries({ queryKey: ["user-profile"] });

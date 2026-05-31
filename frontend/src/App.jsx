@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useDarkMode } from './hooks/useDarkMode'
@@ -35,13 +35,13 @@ function ThemeSetter() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <>
       <AuthSetter />
       <ThemeSetter />
       <Routes>
+        <Route path="login" element={<LoginPage />} />
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
-          <Route path="login" element={<LoginPage />} />
           <Route path="ask" element={<AskPage />} />
           <Route path="faqs" element={<FaqsPage />} />
           <Route path="faqs/:id" element={<FaqPage />} />
@@ -54,6 +54,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </>
   )
 }

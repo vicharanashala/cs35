@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useDarkMode } from "../hooks/useDarkMode";
@@ -26,7 +26,7 @@ const NAV_LINKS = [
   { to: "/ask",        label: "Ask Question" },
 ];
 
-export default function MainLayout({ children }) {
+export default function MainLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -145,6 +145,8 @@ export default function MainLayout({ children }) {
       if (isAuthenticated) {
         qc.invalidateQueries({ queryKey: ["notifications", user?._id] });
         qc.invalidateQueries({ queryKey: ["user-profile"] });
+        qc.invalidateQueries({ queryKey: ["user-activity", user?._id] });
+        qc.invalidateQueries({ queryKey: ["user-profile-questions"] });
       }
     };
 
@@ -156,6 +158,8 @@ export default function MainLayout({ children }) {
       if (isAuthenticated && data?.userId === user?._id) {
         qc.invalidateQueries({ queryKey: ["user-profile"] });
         qc.invalidateQueries({ queryKey: ["notifications", user?._id] });
+        qc.invalidateQueries({ queryKey: ["user-activity", user?._id] });
+        qc.invalidateQueries({ queryKey: ["user-profile-questions"] });
       }
     };
     socket.on("userUpdated", handleUserUpdate);
@@ -635,7 +639,7 @@ export default function MainLayout({ children }) {
       {/* ── Content ── */}
       <main className="flex-1">
         <div key={location.pathname} className="animate-fade-in">
-          {children}
+          <Outlet />
         </div>
       </main>
 

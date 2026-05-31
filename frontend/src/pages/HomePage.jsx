@@ -161,34 +161,40 @@ export default function HomePage() {
   return (
     <div style={{ background: "#F5F7F2" }}>
       {/* ── Hero ── */}
-      <section className="bg-white border-b" style={{ borderColor: "#E2E8DE" }}>
-        <div className="container-xl py-10 sm:py-14">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+      <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #F5F7F2 0%, #ffffff 100%)", borderBottom: "1px solid #E2E8DE" }}>
+        {/* Soft abstract blobs for background */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-30" style={{ background: "#dde8db" }}></div>
+          <div className="absolute top-24 -right-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-30" style={{ background: "#f8f0e0" }}></div>
+        </div>
+        <div className="container-xl py-16 sm:py-24 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left */}
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-3" style={{ color: "#1F2937" }}>
+            <div className="max-w-2xl">
+              <h1 className="text-5xl sm:text-6xl lg:text-[4rem] font-extrabold tracking-tight mb-6 text-gray-900 leading-[1.05]">
                 Get Answers.<br />
                 <span style={{ color: "#5E7A5A" }}>Share Knowledge.</span>
               </h1>
-              <p className="text-base mb-8" style={{ color: "#6B7280" }}>
-                Ask questions, help others, and build a smarter student community together.
+              <p className="text-lg sm:text-xl mb-10 text-gray-600 leading-relaxed max-w-lg">
+                Ask questions, help others, and build a smarter student community together. Your experience makes a difference.
               </p>
 
               {/* Hero search */}
-              <form onSubmit={handleSearch} className="flex gap-2 relative" ref={searchRef}>
-                <div className="search-wrap flex-1">
-                  <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 relative" ref={searchRef}>
+                <div className="search-wrap flex-1 shadow-md rounded-full transition-shadow hover:shadow-lg bg-white">
+                  <svg className="search-icon w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
-                    className="search-input py-3"
+                    className="search-input py-4 text-base pl-12 bg-transparent shadow-none w-full"
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
                     onFocus={() => setShowDropdown(true)}
                     placeholder="Search FAQs — e.g. NOC, offer letter, stipend…"
+                    style={{ background: "transparent", boxShadow: "none" }}
                   />
                 </div>
-                <button type="submit" className="btn-primary">Search</button>
+                <button type="submit" className="btn-primary py-4 px-8 text-base shadow-md hover:shadow-lg rounded-full shrink-0">Search</button>
 
                 {/* Search dropdown */}
                 {showDropdown && debouncedSearch.trim().length > 1 && (

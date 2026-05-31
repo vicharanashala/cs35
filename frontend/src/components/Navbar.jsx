@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
-import { useUser } from '../context/UserContext'
+import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../context/ThemeContext'
 
 export default function Navbar() {
@@ -8,7 +8,7 @@ export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
   const navigate = useNavigate()
-  const { user } = useUser()
+  const { user } = useAuth()
   const { darkMode, toggleDarkMode } = useTheme()
 
   const handleSearch = (e) => {
@@ -19,7 +19,6 @@ export default function Navbar() {
     }
   }
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -30,7 +29,9 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const initials = user ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() : '??'
+  const initials = user?.name
+    ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    : '??'
 
   return (
     <header className="sticky top-0 z-50 bg-sand-100/90 backdrop-blur-sm border-b border-sand-200">
@@ -60,9 +61,7 @@ export default function Navbar() {
               />
               <svg
                 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -95,21 +94,21 @@ export default function Navbar() {
                 onClick={() => setDropdownOpen(prev => !prev)}
                 className="w-9 h-9 bg-brown-500 rounded-full flex items-center justify-center
                            text-sand-50 font-semibold text-sm hover:bg-brown-600 transition-colors"
-                aria-label="Profile menu"
+                aria-label="Open profile menu"
               >
                 {initials}
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-sand-200
-                                  rounded-2xl shadow-lg overflow-hidden z-50">
+                <div className="absolute right-0 mt-2 w-64 bg-white border border-sand-200
+                                  rounded-2xl shadow-lg overflow-hidden z-50 animate-scale-in">
                   {/* User Info */}
                   <div className="px-4 py-3 border-b border-sand-100">
                     <p className="text-sm font-semibold text-charcoal-800">
-                      {user?.firstName} {user?.lastName}
+                      {user?.name || 'Student'}
                     </p>
-                    <p className="text-xs text-charcoal-400">@{user?.username}</p>
-                    <p className="text-xs text-brown-600 font-medium mt-0.5">{user?.role}</p>
+                    <p className="text-xs text-charcoal-400">@{user?.username || user?.email || 'user'}</p>
+                    <p className="text-xs text-brown-600 font-medium mt-0.5 capitalize">{user?.role || 'student'}</p>
                   </div>
 
                   {/* Menu Items */}
@@ -139,47 +138,7 @@ export default function Navbar() {
                       My Questions
                     </Link>
                     <button
-                      onClick={() => { setDropdownOpen(false); toggleDarkMode() }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-charcoal-700
-                                 hover:bg-sand-50 transition-colors"
-                    >
-                      {darkMode ? (
-                        <>
-                          <svg className="w-4 h-4 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                          Light Mode
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                          </svg>
-                          Dark Mode
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Logout */}
-                  <button
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    onClick={() => {
-                      setDropdownOpen(false)
-                      localStorage.removeItem("authUser")
-                      window.location.replace("/login")
-                    }}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Logout
-                  </button>
-                    <button
-                      onClick={() => { setDropdownOpen(false); toggleDarkMode() }}
+                      onClick={() => { setDropdownOpen(false); toggleDarkMode(); }}
                       className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-charcoal-700
                                  hover:bg-sand-50 transition-colors"
                     >
@@ -206,11 +165,13 @@ export default function Navbar() {
                   {/* Logout */}
                   <div className="border-t border-sand-100 py-1">
                     <button
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left text-red-500
                                  hover:bg-red-50 transition-colors"
                       onClick={() => {
                         setDropdownOpen(false)
-                        // logout logic placeholder
+                        localStorage.removeItem('authToken')
+                        localStorage.removeItem('authUser')
+                        window.location.replace('/login')
                       }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
