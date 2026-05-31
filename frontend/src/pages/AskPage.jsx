@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi, faqApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
@@ -45,6 +45,14 @@ function SuccessModal({ show, question, onClose }) {
 
 export default function AskPage() {
   const navigate      = useNavigate();
+  const location = useLocation();
+
+  // Auto-focus textarea when navigated with state.openModal (e.g. from HomePage)
+  useEffect(() => {
+    if (location.state?.openModal && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [])
   const textareaRef   = useRef(null);
   const queryClient  = useQueryClient();
   const { user } = useAuth();

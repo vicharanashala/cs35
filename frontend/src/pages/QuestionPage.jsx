@@ -39,7 +39,7 @@ function VoteBtn({ count, active, onClick, direction }) {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d={direction === "up" ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
       </svg>
-      {count}
+      {direction === "up" ? count : Math.abs(count)}
     </button>
   );
 }
@@ -85,7 +85,7 @@ function AnswerCard({ answer, onVote, userVotes, onAccept, canAccept }) {
             </span>
           )}
           <VoteBtn count={votes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
-          <VoteBtn count={0} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
+          <VoteBtn count={Math.abs(votes)} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
           {canAccept && !answer.isAccepted && (
             <button
               onClick={() => onAccept(answer._id)}
@@ -147,7 +147,7 @@ function VerifiedHero({ answer, onVote, userVotes }) {
         </div>
         <div className="flex items-center gap-1.5">
           <VoteBtn count={votes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
-          <VoteBtn count={0} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
+          <VoteBtn count={Math.abs(votes)} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
         </div>
       </div>
     </div>
