@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-06-01T17:22:37.948Z",
+  "timestamp": "2026-06-01T17:52:13.819Z",
   "total": 14,
-  "passed": 13,
-  "skipped": 1,
+  "passed": 14,
+  "skipped": 0,
   "failed": 0,
   "codeErrors": "0",
   "results": [
@@ -12,9 +12,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\HomePage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -23,9 +21,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\LoginPage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -34,9 +30,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\FaqsPage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -45,9 +39,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\AskPage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -56,9 +48,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\QueuePage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -67,9 +57,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\MyQuestionsPage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -78,9 +66,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\ProfilePage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -89,9 +75,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\NotificationsPage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -100,9 +84,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\AdminPage.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -111,9 +93,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\FaqPage_plural.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -122,9 +102,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\FaqPage_singular.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -133,9 +111,7 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\QuestionPage_plural.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
@@ -144,22 +120,17 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\QuestionPage_singular.png",
-      "errors": [
-        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
-      ],
+      "errors": [],
       "warnings": []
     },
     {
       "route": "/api/faq",
       "label": "API_FAQs",
-      "status": 0,
+      "status": 200,
       "ok": true,
-      "skipped": true,
       "screenshot": null,
       "errors": [],
-      "warnings": [
-        "[skipped] Backend not running — page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/faqs\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/faqs\", waiting until \"load\"\u001b[22m\n"
-      ]
+      "warnings": []
     }
   ]
 }
