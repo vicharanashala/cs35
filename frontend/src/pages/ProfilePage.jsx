@@ -295,7 +295,7 @@ export default function ProfilePage() {
                 ) : (
                   questions.slice(0, 10).map((q) => (
                     <div key={q._id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
-                      <Link to={`/question/${q._id}`} className="block">
+                      <Link to={`/questions/${q._id}`} className="block">
                         <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>
                           {q.question}
                         </p>

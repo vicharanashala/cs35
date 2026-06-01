@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { faqApi } from "../services/api";
 
 function formatDate(dateStr) {
@@ -15,6 +15,7 @@ function formatDate(dateStr) {
 export default function FaqPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: faq, isLoading, isError } = useQuery({
     queryKey: ["faq", id],

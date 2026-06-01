@@ -7,7 +7,6 @@ import { userApi, faqApi, notificationApi } from "../services/api";
 import { useDebounce } from "../hooks/useDebounce";
 import { socket } from "../services/socket";
 import toast from 'react-hot-toast';
-import logo from "../assets/logo.png";
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -82,6 +81,7 @@ export default function MainLayout() {
         verified: profileData.user.verifiedCount ?? 0,
       }
     : null;
+  const hasActivity = stats && (stats.questions > 0 || stats.answers > 0 || stats.verified > 0);
 
   const isActive = (p) => (p === "/" ? location.pathname === "/" : location.pathname.startsWith(p));
 
@@ -104,7 +104,7 @@ export default function MainLayout() {
   const handleResultClick = (id) => {
     setSearch("");
     setShowDropdown(false);
-    navigate(`/faq/${id}`);
+    navigate(`/faqs/${id}`);
   };
 
   const handleLogout = () => {
@@ -130,19 +130,12 @@ export default function MainLayout() {
   }, []);
 
   // Close dropdown on route change
-  const prevPathnameRef = useRef(location.pathname);
   useEffect(() => {
-    if (prevPathnameRef.current !== location.pathname) {
-      prevPathnameRef.current = location.pathname;
-      const timer = setTimeout(() => {
-        setDropdownOpen(false);
-        setNotifOpen(false);
-        setShowDropdown(false);
-        setMenuOpen(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  });
+    setDropdownOpen(false);
+    setNotifOpen(false);
+    setShowDropdown(false);
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   // Real-time synchronization
   useEffect(() => {
@@ -173,9 +166,12 @@ export default function MainLayout() {
 
     const handleNewNotification = (notif) => {
       if (isAuthenticated && (notif.userId === user?._id || (notif.userId === 'admin' && user?.role === 'admin'))) {
+        const safeLink = (notif.link || "/")
+          .replace(/\/question\//g, "/questions/")
+          .replace(/\/faq\//g, "/faqs/");
         toast(
           (t) => (
-            <div className="flex items-start gap-3 cursor-pointer" onClick={() => { navigate(notif.link); toast.dismiss(t.id); }}>
+            <div className="flex items-start gap-3 cursor-pointer" onClick={() => { navigate(safeLink); toast.dismiss(t.id); }}>
               {notif.senderName && (
                 <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold shrink-0 mt-0.5">
                   {notif.senderName.charAt(0).toUpperCase()}
@@ -202,16 +198,16 @@ export default function MainLayout() {
       socket.off("userUpdated", handleUserUpdate);
       socket.off("newNotification", handleNewNotification);
     };
-  }, [qc, isAuthenticated, user?._id, navigate, user?.role]);
+  }, [qc, isAuthenticated, user?._id]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F5F7F2" }}>
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 bg-white border-b" style={{ borderColor: "#E2E8DE" }}>
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b" style={{ borderColor: "#E2E8DE" }}>
         <div className="container-xl h-14 flex items-center gap-4 relative">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            <img src={logo} alt="AskSam Logo" className="w-8 h-8 object-contain rounded-full shadow-sm" />
+            <img src="/logo.png" alt="AskSam Logo" className="w-8 h-8 object-contain rounded-full shadow-sm" />
             <span className="text-base font-bold" style={{ color: "#1F2937" }}>AskSam</span>
           </Link>
 

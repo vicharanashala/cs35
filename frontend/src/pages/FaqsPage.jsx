@@ -86,7 +86,7 @@ function FAQCard({ faq }) {
                   👎 {faq.unhelpfulCount > 0 && <span>{faq.unhelpfulCount}</span>}
                 </button>
               </div>
-              <Link to={`/faq/${faq._id}`} className="text-sm font-semibold hover:underline flex items-center gap-1" style={{ color: "#5E7A5A" }}>
+              <Link to={`/faqs/${faq._id}`} className="text-sm font-semibold hover:underline flex items-center gap-1" style={{ color: "#5E7A5A" }}>
                 Read full documentation
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </Link>
@@ -155,6 +155,15 @@ export default function FaqsPage() {
       faqs: groups[cat]
     }));
   }, [filtered]);
+
+  // Smooth scroll helper for the quick links
+  const scrollToCategory = (cat) => {
+    const el = document.getElementById(`category-${cat}`);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 32;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F9FAFB]">

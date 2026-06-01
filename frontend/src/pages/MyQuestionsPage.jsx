@@ -58,7 +58,7 @@ function QuestionRow({ question, onDelete }) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
-            to={`/question/${question._id}`}
+            to={`/questions/${question._id}`}
             className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
             style={{ background: "#f0f4ef", color: "#5E7A5A" }}
           >

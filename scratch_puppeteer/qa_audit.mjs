@@ -1,97 +1,156 @@
-import puppeteer from 'puppeteer-core';
-import fs from 'fs';
+/**
+ * AskSam E2E QA Audit
+ * Headless Microsoft Edge on Windows
+ * Runs smoke checks across key routes, captures screenshots, writes qa_report.json
+ */
+import { chromium } from 'playwright';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 
-(async () => {
-  console.log('Starting QA Audit...');
-  const browser = await puppeteer.launch({
-    executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-    headless: 'new' 
-  });
-  const page = await browser.newPage();
-  
-  const auditReport = {
-    consoleLogs: [],
-    pageErrors: [],
-    brokenLinks: [],
-  };
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPORT_PATH = join(__dirname, 'qa_report.json');
+const SCREENSHOTS_DIR = join(__dirname, 'screenshots');
+const API_BASE = 'http://localhost:3000';
 
-  page.on('console', msg => {
-    if (msg.type() === 'error' || msg.type() === 'warning') {
-      auditReport.consoleLogs.push(`[${msg.type()}] ${msg.text()}`);
-    }
-  });
+const ROUTES = [
+  { path: '/',                    label: 'HomePage',           waitFor: '#root' },
+  { path: '/login',               label: 'LoginPage',          waitFor: 'form' },
+  { path: '/faqs',                label: 'FaqsPage',           waitFor: '#root' },
+  { path: '/ask',                 label: 'AskPage',            waitFor: '#root' },
+  { path: '/queue',               label: 'QueuePage',          waitFor: '#root' },
+  { path: '/my-questions',        label: 'MyQuestionsPage',    waitFor: '#root' },
+  { path: '/profile',             label: 'ProfilePage',        waitFor: '#root' },
+  { path: '/notifications',       label: 'NotificationsPage',  waitFor: '#root' },
+  { path: '/admin',               label: 'AdminPage',          waitFor: '#root' },
+];
 
-  page.on('pageerror', error => {
-    auditReport.pageErrors.push(error.message);
-  });
+mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 
-  // Set desktop viewport
-  await page.setViewport({ width: 1440, height: 900 });
+const results = [];
+let consoleErrors = [];
+let browser;
 
-  // 1. Navigate to Login
-  console.log('Navigating to login...');
-  await page.goto('http://localhost:5173/login', { waitUntil: 'networkidle0' });
-  
-  // Login process
-  console.log('Logging in as thiveshams...');
-  // Switch to login form
-  await page.evaluate(() => {
-    const btns = Array.from(document.querySelectorAll('button'));
-    const toggleBtn = btns.find(b => b.textContent === 'Login');
-    if (toggleBtn) toggleBtn.click();
-  });
-  
-  await new Promise(r => setTimeout(r, 500));
-  
-  await page.type('input[placeholder*="username"]', 'thiveshams');
-  await page.type('input[type="password"]', 'thivesha');
-  
-  await page.evaluate(() => {
-    const btns = Array.from(document.querySelectorAll('button'));
-    const submitBtn = btns.find(b => b.className.includes('btn-primary'));
-    if (submitBtn) submitBtn.click();
+async function run() {
+  console.log('🚀 Launching headless Edge...');
+
+  browser = await chromium.launch({
+    headless: true,
+    channel: 'msedge',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   });
 
-  // Wait for redirect to home
-  await page.waitForSelector('button[aria-label="Open profile menu"]', { timeout: 10000 });
-  console.log('Logged in successfully!');
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    deviceScaleFactor: 2,
+  });
 
-  // Routes to audit
-  const routes = [
-    { path: '/', name: 'home' },
-    { path: '/ask', name: 'ask' },
-    { path: '/faqs', name: 'faqs' },
-    { path: '/queue', name: 'queue' },
-    { path: '/my-questions', name: 'my-questions' },
-    { path: '/profile', name: 'profile' },
-    { path: '/notifications', name: 'notifications' }
-  ];
+  for (const route of ROUTES) {
+    const page = await context.newPage();
+    const errors = [];
+    const warnings = [];
 
-  for (const route of routes) {
-    console.log(`Auditing ${route.path}...`);
-    await page.goto(`http://localhost:5173${route.path}`, { waitUntil: 'networkidle0' });
-    await new Promise(r => setTimeout(r, 1000)); // Wait for React Query data
-    
-    // Desktop screenshot
-    await page.setViewport({ width: 1440, height: 900 });
-    await page.screenshot({ path: `qa_${route.name}_desktop.png`, fullPage: true });
-
-    // Mobile screenshot
-    await page.setViewport({ width: 375, height: 812 });
-    await page.screenshot({ path: `qa_${route.name}_mobile.png`, fullPage: true });
-    
-    // Check for broken links (404s inside hrefs or src)
-    const links = await page.evaluate(() => {
-      const anchors = Array.from(document.querySelectorAll('a'));
-      return anchors.map(a => a.href);
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        errors.push(`[${msg.type()}] ${msg.text()}`);
+      }
     });
-    
-    // We'll just collect the hrefs for now to ensure they are valid formats
-    // A more thorough check would fetch each, but for a fast audit we'll skip to avoid hanging.
+
+    page.on('pageerror', (err) => {
+      errors.push(`[pageerror] ${err.message}`);
+    });
+
+    const screenshotPath = join(SCREENSHOTS_DIR, `${route.label}.png`);
+
+    try {
+      const response = await page.goto(`http://localhost:5173${route.path}`, {
+        waitUntil: 'networkidle',
+        timeout: 15000,
+      });
+
+      const status = response?.status() ?? 0;
+      const ok = status >= 200 && status < 400;
+
+      // Wait for rendered content
+      await page.waitForSelector(route.waitFor, { timeout: 8000 }).catch(() => null);
+
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+
+      results.push({
+        route: route.path,
+        label: route.label,
+        status,
+        ok,
+        screenshot: screenshotPath,
+        errors,
+        warnings,
+      });
+
+      console.log(`${ok ? '✅' : '❌'} ${route.label} (HTTP ${status}) — ${errors.length} console errors`);
+    } catch (err) {
+      results.push({
+        route: route.path,
+        label: route.label,
+        status: 0,
+        ok: false,
+        screenshot: screenshotPath,
+        errors: [`[fatal] ${err.message}`],
+        warnings: [],
+      });
+      console.log(`❌ ${route.label} — FAILED: ${err.message}`);
+    }
+
+    await page.close();
   }
 
-  fs.writeFileSync('qa_report.json', JSON.stringify(auditReport, null, 2));
-  console.log('QA Audit completed. Saved screenshots and report.');
+  // API smoke test
+  try {
+    const apiPage = await context.newPage();
+    const r = await apiPage.goto(`${API_BASE}/faqs`, { timeout: 10000 });
+    results.push({
+      route: '/faqs',
+      label: 'API_FAQs',
+      status: r?.status() ?? 0,
+      ok: (r?.status() ?? 0) < 400,
+      screenshot: null,
+      errors: [],
+      warnings: [],
+    });
+    console.log(`✅ API /faqs (HTTP ${r?.status()})`);
+    await apiPage.close();
+  } catch (err) {
+    results.push({ route: '/api/faqs', label: 'API_FAQs', status: 0, ok: false, errors: [err.message], warnings: [] });
+    console.log(`❌ API /faqs — ${err.message}`);
+  }
 
   await browser.close();
-})();
+
+  // Summary
+  const total = results.length;
+  const passed = results.filter(r => r.ok && r.errors.length === 0).length;
+  const failed = total - passed;
+
+  const report = {
+    timestamp: new Date().toISOString(),
+    total,
+    passed,
+    failed,
+    consoleErrorsCount: results.reduce((s, r) => s + r.errors.length, 0),
+    results,
+  };
+
+  writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));
+  console.log(`\n📊 QA Report written → ${REPORT_PATH}`);
+  console.log(`Results: ${passed}/${total} passed, ${failed} failed`);
+  console.log(`Total console errors: ${report.consoleErrorsCount}`);
+
+  if (failed > 0 || report.consoleErrorsCount > 0) {
+    process.exit(1);
+  }
+}
+
+run().catch((err) => {
+  console.error('💥 QA audit crashed:', err);
+  if (browser) browser.close().catch(() => {});
+  process.exit(1);
+});

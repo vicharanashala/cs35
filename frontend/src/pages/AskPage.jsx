@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi, faqApi, aiApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
@@ -45,6 +45,15 @@ function SuccessModal({ show, question, onClose }) {
 
 export default function AskPage() {
   const navigate      = useNavigate();
+  const location = useLocation();
+
+  // Auto-focus textarea when navigated with state.openModal (e.g. from HomePage)
+  useEffect(() => {
+    if (location.state?.openModal && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [])
+  const textareaRef   = useRef(null);
   const queryClient  = useQueryClient();
   const { user } = useAuth();
 
@@ -61,12 +70,10 @@ export default function AskPage() {
   const [tagInput, setTagInput]         = useState("");
   const [aiSuggestedCategory, setAiSuggestedCategory] = useState(null);
   const [aiSuggestionAccepted, setAiSuggestionAccepted] = useState(false);
-  const aiSuggestionRef = useRef(null);
 
   const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
-
-  const [debouncedTitle, setDebouncedTitle] = useState("");
 
   const toggleListen = () => {
     if (isListening) {
@@ -95,6 +102,19 @@ export default function AskPage() {
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target.result;
+      const imageMarkdown = `\n![Image](${base64})\n`;
+      setDetails((prev) => prev + imageMarkdown);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const addTag = (value) => {
@@ -146,15 +166,10 @@ export default function AskPage() {
   });
 
   useEffect(() => {
-    aiSuggestionRef.current = aiSuggestion;
-  }, [aiSuggestion]);
-
-  useEffect(() => {
-    const suggestion = aiSuggestionRef.current;
-    if (suggestion?.category && !aiSuggestionAccepted) {
-      setAiSuggestedCategory(suggestion.category);
+    if (aiSuggestion?.category && !aiSuggestionAccepted) {
+      setAiSuggestedCategory(aiSuggestion.category);
     }
-  }, [aiSuggestionAccepted]);
+  }, [aiSuggestion, aiSuggestionAccepted]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
@@ -163,6 +178,8 @@ export default function AskPage() {
   });
 
   // Debounced title state for semantic duplicate detection
+  const [debouncedTitle, setDebouncedTitle] = useState("");
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedTitle(title);
@@ -507,7 +524,7 @@ export default function AskPage() {
                 <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Related FAQs</h3>
                 <div className="space-y-3">
                   {relatedSuggestions.map((faq) => (
-                    <Link key={faq._id} to={`/faq/${faq._id}`} className="block group">
+                    <Link key={faq._id} to={`/faqs/${faq._id}`} className="block group">
                       <p className="text-sm leading-snug group-hover:underline font-medium" style={{ color: "#5E7A5A" }}>
                         {faq.question}
                       </p>

@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "../hooks/useDebounce";
 import { faqApi, questionApi, userApi } from "../services/api";
 import { getUserTitle } from "../utils/gamification";
-import hero from "../assets/hero.png";
 
 function timeAgo(d) {
   if (!d) return "";
@@ -206,7 +205,7 @@ export default function HomePage() {
                         {searchResults.map((faq) => (
                           <Link
                             key={faq._id}
-                            to={`/faq/${faq._id}`}
+                            to={`/faqs/${faq._id}`}
                             onClick={() => setShowDropdown(false)}
                             className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
                           >
@@ -257,7 +256,7 @@ export default function HomePage() {
             {/* Right — illustration */}
             <div className="hidden lg:flex items-center justify-center">
               <img
-                src={hero}
+                src="/hero.png"
                 alt="Students collaborating"
                 className="w-full max-w-sm object-contain"
                 style={{ borderRadius: "1rem" }}
@@ -296,7 +295,7 @@ export default function HomePage() {
               ))
             ) : topFaqs.length > 0 ? (
               topFaqs.map((faq) => (
-                <Link key={faq._id} to={`/faq/${faq._id}`} className="card-hover p-5 flex flex-col h-full">
+                <Link key={faq._id} to={`/faqs/${faq._id}`} className="card-hover p-5 flex flex-col h-full">
                   <span className="tag tag-brand w-max mb-3">{faq.category}</span>
                   <h3 className="text-base font-semibold leading-snug mb-2" style={{ color: "#1F2937" }}>
                     {faq.question}
@@ -372,7 +371,7 @@ export default function HomePage() {
                 ))
               ) : recentDiscussions.length > 0 ? (
                 recentDiscussions.map((q) => (
-                  <Link key={q._id} to={`/question/${q._id}`} className="card-hover p-5 block">
+                  <Link key={q._id} to={`/questions/${q._id}`} className="card-hover p-5 block">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <span className="tag tag-neutral">{q.category}</span>
                       {q.isReopened && <span className="badge badge-orange">Reopened</span>}

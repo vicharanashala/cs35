@@ -33,25 +33,16 @@ function ThemeSetter() {
   return null;
 }
 
-// Protected Route Wrapper
-function ProtectedRoute({ children, requireAdmin = false }) {
-  const { user } = useAuth() || {};
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  if (requireAdmin && user.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
-  return children;
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth() || { isAuthenticated: false, loading: false };
+  if (loading) return null;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
-// Public Route Wrapper (Login Page)
 function PublicRoute({ children }) {
-  const { user } = useAuth() || {};
-  if (user) {
-    return <Navigate to={user.role === "admin" ? "/admin" : "/"} replace />;
-  }
-  return children;
+  const { isAuthenticated, loading } = useAuth() || { isAuthenticated: false, loading: false };
+  if (loading) return null;
+  return isAuthenticated ? <Navigate to="/" replace /> : children;
 }
 
 export default function App() {
@@ -60,18 +51,34 @@ export default function App() {
       <AuthSetter />
       <ThemeSetter />
       <Routes>
-        <Route path="login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-        <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+        <Route
+          path="login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<HomePage />} />
           <Route path="ask" element={<AskPage />} />
           <Route path="faqs" element={<FaqsPage />} />
           <Route path="faqs/:id" element={<FaqPage />} />
+          <Route path="faq/:id" element={<FaqPage />} />
           <Route path="questions/:id" element={<QuestionPage />} />
+          <Route path="question/:id" element={<QuestionPage />} />
           <Route path="queue" element={<QueuePage />} />
           <Route path="my-questions" element={<MyQuestionsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
+          <Route path="admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
