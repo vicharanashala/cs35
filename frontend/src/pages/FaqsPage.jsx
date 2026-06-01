@@ -156,15 +156,6 @@ export default function FaqsPage() {
     }));
   }, [filtered]);
 
-  // Smooth scroll helper for the quick links
-  const scrollToCategory = (cat) => {
-    const el = document.getElementById(`category-${cat}`);
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 32;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
       

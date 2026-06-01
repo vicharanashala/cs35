@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return */
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Groq } from 'groq-sdk';
@@ -21,7 +22,7 @@ export class AiService {
       );
     }
 
-    this.initEmbedder();
+    void this.initEmbedder();
   }
 
   private async initEmbedder() {
@@ -73,8 +74,17 @@ export class AiService {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
-  async suggestCategory(question: string): Promise<{ category: string; confidence: number }> {
-    const CATEGORIES = ['NOC', 'Offer Letter', 'ViBe', 'Samagama', 'Stipend', 'General'];
+  async suggestCategory(
+    question: string,
+  ): Promise<{ category: string; confidence: number }> {
+    const CATEGORIES = [
+      'NOC',
+      'Offer Letter',
+      'ViBe',
+      'Samagama',
+      'Stipend',
+      'General',
+    ];
     if (!this.groq) {
       return { category: 'General', confidence: 0 };
     }
@@ -98,8 +108,12 @@ Return ONLY a JSON object: {"category": "the best category"}`;
       const parsed = JSON.parse(raw);
       const suggested = parsed.category?.trim();
 
-      if (CATEGORIES.some((c) => c.toLowerCase() === suggested?.toLowerCase())) {
-        const match = CATEGORIES.find((c) => c.toLowerCase() === suggested.toLowerCase());
+      if (
+        CATEGORIES.some((c) => c.toLowerCase() === suggested?.toLowerCase())
+      ) {
+        const match = CATEGORIES.find(
+          (c) => c.toLowerCase() === suggested.toLowerCase(),
+        );
         return { category: match, confidence: 0.85 };
       }
       return { category: 'General', confidence: 0.5 };

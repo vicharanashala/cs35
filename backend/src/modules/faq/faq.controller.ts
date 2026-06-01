@@ -105,7 +105,10 @@ export class FaqController {
 
   @Patch('faqs/:id/feedback')
   @Public()
-  submitFaqFeedback(@Param('id') id: string, @Body() body: { helpful: boolean }) {
+  submitFaqFeedback(
+    @Param('id') id: string,
+    @Body() body: { helpful: boolean },
+  ) {
     return this.faqService.submitFaqFeedback(id, body.helpful);
   }
 
@@ -392,7 +395,13 @@ export class FaqController {
   @Patch('users/:id')
   updateUser(
     @Param('id') id: string,
-    @Body() body: { isActive?: boolean; role?: string; reputation?: number; notificationPreferences?: any },
+    @Body()
+    body: {
+      isActive?: boolean;
+      role?: string;
+      reputation?: number;
+      notificationPreferences?: any;
+    },
     @CurrentUser() user: { sub?: string; role?: string },
   ) {
     if (user.role !== 'admin' && user.sub !== id) {
@@ -439,6 +448,7 @@ export class FaqController {
     @Param('id') id: string,
     @CurrentUser() user: { sub?: string; role?: string },
   ) {
+    void user;
     return this.faqService.markNotificationRead(id);
   }
 }

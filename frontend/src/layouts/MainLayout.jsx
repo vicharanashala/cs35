@@ -82,7 +82,6 @@ export default function MainLayout() {
         verified: profileData.user.verifiedCount ?? 0,
       }
     : null;
-  const hasActivity = stats && (stats.questions > 0 || stats.answers > 0 || stats.verified > 0);
 
   const isActive = (p) => (p === "/" ? location.pathname === "/" : location.pathname.startsWith(p));
 
@@ -131,12 +130,19 @@ export default function MainLayout() {
   }, []);
 
   // Close dropdown on route change
+  const prevPathnameRef = useRef(location.pathname);
   useEffect(() => {
-    setDropdownOpen(false);
-    setNotifOpen(false);
-    setShowDropdown(false);
-    setMenuOpen(false);
-  }, [location.pathname]);
+    if (prevPathnameRef.current !== location.pathname) {
+      prevPathnameRef.current = location.pathname;
+      const timer = setTimeout(() => {
+        setDropdownOpen(false);
+        setNotifOpen(false);
+        setShowDropdown(false);
+        setMenuOpen(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  });
 
   // Real-time synchronization
   useEffect(() => {
@@ -196,7 +202,7 @@ export default function MainLayout() {
       socket.off("userUpdated", handleUserUpdate);
       socket.off("newNotification", handleNewNotification);
     };
-  }, [qc, isAuthenticated, user?._id]);
+  }, [qc, isAuthenticated, user?._id, navigate, user?.role]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F5F7F2" }}>

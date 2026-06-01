@@ -16,4 +16,5 @@ export class SearchAnalytics extends Document {
   lastSearchedAt: Date;
 }
 
-export const SearchAnalyticsSchema = SchemaFactory.createForClass(SearchAnalytics);
+export const SearchAnalyticsSchema =
+  SchemaFactory.createForClass(SearchAnalytics);

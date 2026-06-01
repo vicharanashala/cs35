@@ -163,7 +163,6 @@ export default function QuestionPage() {
   const { user } = useAuth();
   const { can: canAcceptAnswer } = useReputation();
   const { toasts, checkAchievements, dismissToast } = useAchievements();
-  const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
 
@@ -254,19 +253,6 @@ export default function QuestionPage() {
     setIsListening(true);
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target.result;
-      const imageMarkdown = `\n![Image](${base64})\n`;
-      setAnswerContent((prev) => prev + imageMarkdown);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
   const { data: question, isLoading, isError } = useQuery({
     queryKey: ["question", id],
     queryFn: () => questionApi.getById(id),
@@ -284,7 +270,7 @@ export default function QuestionPage() {
   const verifiedAnswer = useMemo(() => {
     if (!question?.answers) return null;
     return question.answers.find((a) => a.isVerified) || null;
-  }, [question?.answers]);
+  }, [question]);
 
   const communityAnswers = useMemo(() => {
     const all = [...(question?.answers || []), ...localAnswers];

@@ -23,7 +23,9 @@ export function DarkModeProvider({ children }) {
     }
     try {
       localStorage.setItem("darkMode", String(dark));
-    } catch {}
+    } catch {
+      // localStorage not available
+    }
   }, [dark]);
 
   const toggle = () => setDark((d) => !d);
@@ -35,6 +37,7 @@ export function DarkModeProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDarkMode() {
   return useContext(DarkModeContext);
 }

@@ -9,7 +9,10 @@ import {
   Notification,
   NotificationSchema,
 } from '../../schemas/notification.schema';
-import { SearchAnalytics, SearchAnalyticsSchema } from '../../schemas/search-analytics.schema';
+import {
+  SearchAnalytics,
+  SearchAnalyticsSchema,
+} from '../../schemas/search-analytics.schema';
 import { FaqService } from './faq.service';
 import { FaqController } from './faq.controller';
 import { EventsGateway } from './events.gateway';
