@@ -20,17 +20,17 @@ import NotificationsPage from './pages/NotificationsPage'
 import AdminPage from './pages/AdminPage'
 
 function AuthSetter() {
-  const { loadUser } = useAuth()
-  useEffect(() => { loadUser() }, [loadUser])
-  return null
+  const { loadUser } = useAuth() || {};
+  useEffect(() => { loadUser?.(); }, [loadUser]);
+  return null;
 }
 
 function ThemeSetter() {
-  const { theme } = useDarkMode()
+  const { dark } = useDarkMode() || { dark: false };
   useEffect(() => {
-    document.documentElement.style.colorScheme = theme
-  }, [theme])
-  return null
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+  }, [dark]);
+  return null;
 }
 
 export default function App() {

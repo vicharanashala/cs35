@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { questionApi, faqApi } from "../services/api";
+import { questionApi, faqApi, aiApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
@@ -68,6 +68,8 @@ export default function AskPage() {
   const [error, setError]               = useState("");
   const [tags, setTags]                 = useState([]);
   const [tagInput, setTagInput]         = useState("");
+  const [aiSuggestedCategory, setAiSuggestedCategory] = useState(null);
+  const [aiSuggestionAccepted, setAiSuggestionAccepted] = useState(false);
 
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -136,10 +138,38 @@ export default function AskPage() {
     setTags((prev) => prev.filter((t) => t !== tagToRemove));
   };
 
+  const acceptAiSuggestion = () => {
+    if (aiSuggestedCategory) {
+      setCategory(aiSuggestedCategory);
+      setAiSuggestionAccepted(true);
+      setAiSuggestedCategory(null);
+      setTouched((t) => ({ ...t, category: true }));
+    }
+  };
+
+  const discardAiSuggestion = () => {
+    setAiSuggestedCategory(null);
+    setAiSuggestionAccepted(true);
+  };
+
   const finalCategory = category === "new_category" ? customCategory.trim() : category;
   const titleError    = touched.title    && title.trim().length < 4;
   const categoryError = touched.category && !finalCategory;
   const isValid       = title.trim().length >= 4 && !!finalCategory;
+
+  // AI category suggestion — fires when title is >= 4 chars (debounced same as duplicate check)
+  const { data: aiSuggestion, isLoading: isAILoading } = useQuery({
+    queryKey: ["ai-suggest-category", debouncedTitle],
+    queryFn: () => aiApi.suggestCategory(debouncedTitle),
+    enabled: debouncedTitle.trim().length >= 4,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  useEffect(() => {
+    if (aiSuggestion?.category && !aiSuggestionAccepted) {
+      setAiSuggestedCategory(aiSuggestion.category);
+    }
+  }, [aiSuggestion, aiSuggestionAccepted]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
@@ -385,6 +415,37 @@ export default function AskPage() {
                     </div>
                   )}
                   {categoryError && <p className="input-hint" style={{ color: "#dc2626" }}>Please provide a category</p>}
+
+                  {/* AI Category Suggestion Pill */}
+                  {aiSuggestedCategory && !aiSuggestionAccepted && (
+                    <div className="flex items-center gap-2 animate-fade-in mt-1">
+                      {isAILoading ? (
+                        <span className="text-xs" style={{ color: "#9CA3AF" }}>AI thinking…</span>
+                      ) : (
+                        <>
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>
+                            🤖 AI suggests: <strong>{aiSuggestedCategory}</strong>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={acceptAiSuggestion}
+                            className="text-xxs px-2 py-0.5 rounded font-medium transition-colors"
+                            style={{ background: "#10B981", color: "#fff" }}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            type="button"
+                            onClick={discardAiSuggestion}
+                            className="text-xxs px-2 py-0.5 rounded font-medium transition-colors"
+                            style={{ background: "#F3F4F6", color: "#6B7280" }}
+                          >
+                            Keep mine
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Details */}

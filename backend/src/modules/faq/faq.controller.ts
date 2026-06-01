@@ -377,6 +377,12 @@ export class FaqController {
 
   // ── User Routes ─────────────────────────────────────────────
 
+  @Get('users/leaderboard')
+  @Public()
+  getLeaderboard() {
+    return this.faqService.getLeaderboard();
+  }
+
   @Get('users')
   @Roles('admin')
   getAllUsers() {

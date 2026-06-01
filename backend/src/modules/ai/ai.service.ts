@@ -73,6 +73,42 @@ export class AiService {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
+  async suggestCategory(question: string): Promise<{ category: string; confidence: number }> {
+    const CATEGORIES = ['NOC', 'Offer Letter', 'ViBe', 'Samagama', 'Stipend', 'General'];
+    if (!this.groq) {
+      return { category: 'General', confidence: 0 };
+    }
+
+    try {
+      const prompt = `You are a category classifier for the Samagama student Q&A platform.
+Given the question title below, pick the single best category from this list: ${CATEGORIES.join(', ')}.
+Return ONLY a JSON object: {"category": "the best category"}`;
+
+      const chatCompletion = await this.groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: prompt },
+          { role: 'user', content: `Question: "${question}"` },
+        ],
+        model: 'llama-3.1-8b-instant',
+        temperature: 0.1,
+        response_format: { type: 'json_object' },
+      });
+
+      const raw = chatCompletion.choices[0]?.message?.content || '{}';
+      const parsed = JSON.parse(raw);
+      const suggested = parsed.category?.trim();
+
+      if (CATEGORIES.some((c) => c.toLowerCase() === suggested?.toLowerCase())) {
+        const match = CATEGORIES.find((c) => c.toLowerCase() === suggested.toLowerCase());
+        return { category: match, confidence: 0.85 };
+      }
+      return { category: 'General', confidence: 0.5 };
+    } catch (error) {
+      this.logger.error('Error in suggestCategory', error);
+      return { category: 'General', confidence: 0 };
+    }
+  }
+
   async yakshaPreModerate(
     question: string,
     details: string,
@@ -113,7 +149,7 @@ Respond ONLY with a valid JSON object matching this schema:
 
       const chatCompletion = await this.groq.chat.completions.create({
         messages: [{ role: 'system', content: prompt }],
-        model: 'llama3-8b-8192',
+        model: 'llama-3.1-8b-instant',
         temperature: 0.2,
         response_format: { type: 'json_object' },
       });
@@ -169,7 +205,7 @@ Respond ONLY with a valid JSON object matching this schema:
 
       const chatCompletion = await this.groq.chat.completions.create({
         messages: [{ role: 'system', content: prompt }],
-        model: 'llama3-8b-8192',
+        model: 'llama-3.1-8b-instant',
         temperature: 0.3,
         response_format: { type: 'json_object' },
       });

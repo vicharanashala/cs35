@@ -142,7 +142,7 @@ export default function HomePage() {
     queryKey: ["users-leaderboard"],
     queryFn: async () => {
       try {
-        return await userApi.list();
+        return await userApi.leaderboard();
       } catch {
         return [];
       }

@@ -8,6 +8,14 @@ const client = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 client.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -24,6 +32,15 @@ function safeRequest(promise) {
     return Promise.reject(err);
   });
 }
+
+// ── Public FAQ API ────────────────────────────────────────────
+
+// ── AI / Suggestion API ─────────────────────────────────────
+
+export const aiApi = {
+  suggestCategory: (title) =>
+    safeRequest(client.get('/ai/suggest-category', { params: { title } }).then((r) => r.data)),
+};
 
 // ── Public FAQ API ────────────────────────────────────────────
 
@@ -121,6 +138,7 @@ export const userApi = {
     );
   },
   list: () => safeRequest(client.get("/users").then((r) => r.data)),
+  leaderboard: () => safeRequest(client.get("/users/leaderboard").then((r) => r.data)),
   update: (id, data) => safeRequest(client.patch(`/users/${id}`, data).then((r) => r.data)),
   delete: (id) => safeRequest(client.delete(`/users/${id}`).then((r) => r.data)),
 };

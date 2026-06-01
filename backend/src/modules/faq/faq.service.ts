@@ -930,6 +930,18 @@ export class FaqService implements OnModuleInit {
 
   // ── User Methods ─────────────────────────────────────────────
 
+  async getLeaderboard() {
+    try {
+      return await this.userModel
+        .find({ role: 'student', reputation: { $gt: 0 } }, { name: 1, username: 1, reputation: 1 })
+        .sort({ reputation: -1 })
+        .limit(10)
+        .exec();
+    } catch {
+      return [];
+    }
+  }
+
   async getAllUsers() {
     try {
       return await this.userModel
