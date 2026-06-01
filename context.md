@@ -154,18 +154,18 @@ The API service is fully fleshed out with endpoints for:
 
 | Issue | Severity | Notes |
 |------|---------|-------|
-| Test Coverage | Low | Need comprehensive E2E and unit tests |
 | Missing `.env` validation | Low | No runtime check for VITE_API_URL presence |
 | Inline `<style>` tags in pages | Low | Keyframe animations in component files could be moved |
 
 ---
 
-## Build Status
+## Build & Test Status
 
-| Project | Command | Status |
-|---------|---------|--------|
-| Frontend | `npm run build` | ✅ Success |
-| Backend | `npm run build` | ✅ Success |
+| Scope | Command / Suite | Status | Notes |
+|---------|---------|--------|-------|
+| Frontend Build | `npm run build` | ✅ Success | Optimized production bundle generated cleanly |
+| Backend Build | `npm run build` | ✅ Success | TypeScript compiler completes with 0 strict errors |
+| E2E QA Audit | `node qa_audit.mjs` | ✅ Passed (10/10) | Headless MS Edge checks pass with 0 console errors |
 
 ---
 
@@ -179,6 +179,10 @@ npm run start:dev
 # Terminal 2 — Frontend
 cd frontend
 npm run dev
+
+# Terminal 3 — E2E Smoke & Crawl Test
+cd scratch_puppeteer
+node qa_audit.mjs
 ```
 
 Open `http://localhost:5173`
