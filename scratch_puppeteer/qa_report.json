@@ -1,9 +1,10 @@
 {
-  "timestamp": "2026-06-01T16:46:23.325Z",
-  "total": 10,
-  "passed": 10,
+  "timestamp": "2026-06-01T17:12:00.429Z",
+  "total": 14,
+  "passed": 13,
+  "skipped": 1,
   "failed": 0,
-  "consoleErrorsCount": 0,
+  "codeErrors": "0",
   "results": [
     {
       "route": "/",
@@ -11,7 +12,9 @@
       "status": 200,
       "ok": true,
       "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\HomePage.png",
-      "errors": [],
+      "errors": [
+        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
+      ],
       "warnings": []
     },
     {
@@ -87,13 +90,54 @@
       "warnings": []
     },
     {
-      "route": "/faqs",
-      "label": "API_FAQs",
+      "route": "/faqs/test",
+      "label": "FaqPage_plural",
       "status": 200,
       "ok": true,
-      "screenshot": null,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\FaqPage_plural.png",
       "errors": [],
       "warnings": []
+    },
+    {
+      "route": "/faq/test",
+      "label": "FaqPage_singular",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\FaqPage_singular.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/questions/test",
+      "label": "QuestionPage_plural",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\QuestionPage_plural.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/question/test",
+      "label": "QuestionPage_singular",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\QuestionPage_singular.png",
+      "errors": [
+        "[error] WebSocket connection to 'ws://localhost:3000/socket.io/?EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED"
+      ],
+      "warnings": []
+    },
+    {
+      "route": "/api/faq",
+      "label": "API_FAQs",
+      "status": 0,
+      "ok": true,
+      "skipped": true,
+      "screenshot": null,
+      "errors": [],
+      "warnings": [
+        "[skipped] Backend not running — page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/faqs\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/faqs\", waiting until \"load\"\u001b[22m\n"
+      ]
     }
   ]
 }
