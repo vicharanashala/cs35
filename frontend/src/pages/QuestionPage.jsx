@@ -632,7 +632,7 @@ export default function QuestionPage() {
                   <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Related FAQs</h3>
                   <div className="space-y-3">
                     {relatedFiltered.map((fq) => (
-                      <Link key={fq._id} to={`/faq/${fq._id}`} className="block group">
+                      <Link key={fq._id} to={`/faqs/${fq._id}`} className="block group">
                         <p className="text-sm font-medium line-clamp-2 group-hover:underline" style={{ color: "#1F2937" }}>
                           {fq.question}
                         </p>

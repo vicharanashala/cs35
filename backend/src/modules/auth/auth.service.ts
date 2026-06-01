@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
+// @ts-ignore
 import * as bcrypt from 'bcrypt';
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -78,7 +79,7 @@ export class AuthService {
         };
       }
 
-      const existingUsername = await this.userModel
+      const existingUsername = await this.userModel!
         .findOne({ username: data.username })
         .exec();
       if (existingUsername) {
@@ -90,7 +91,7 @@ export class AuthService {
 
       const hashedPassword = await bcrypt.hash(data.password, 10);
 
-      const lastUser = await this.userModel
+      const lastUser = await this.userModel!
         .findOne({ role: 'student', studentId: { $exists: true } })
         .sort({ studentId: -1 })
         .exec();
@@ -99,7 +100,7 @@ export class AuthService {
         : 0;
       const studentId = `STU-${String(lastNum + 1).padStart(5, '0')}`;
 
-      await this.userModel.create({
+      await this.userModel!.create({
         username: data.username,
         password: hashedPassword,
         name: data.fullName,
@@ -142,7 +143,7 @@ export class AuthService {
     }
 
     try {
-      const user = await this.userModel
+      const user = await this.userModel!
         .findOne({ username, role: 'student', isActive: true })
         .exec();
       if (!user) {
@@ -207,7 +208,7 @@ export class AuthService {
         return { success: false, message: 'Invalid or expired token' };
       }
 
-      const user = await this.userModel
+      const user = await this.userModel!
         .findOne({
           username: payload.sub,
           role: payload.role as 'student' | 'admin',
@@ -274,7 +275,7 @@ export class AuthService {
     }
 
     try {
-      const user = await this.userModel
+      const user = await this.userModel!
         .findOne({ email, role: 'admin', isActive: true })
         .exec();
       if (!user) {
@@ -331,7 +332,7 @@ export class AuthService {
         return { success: false, message: 'Passwords do not match' };
       }
 
-      const user = await this.userModel
+      const user = await this.userModel!
         .findOne({ username: data.username, role: 'student' })
         .exec();
       if (!user) {

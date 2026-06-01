@@ -114,7 +114,7 @@ Return ONLY a JSON object: {"category": "the best category"}`;
         const match = CATEGORIES.find(
           (c) => c.toLowerCase() === suggested.toLowerCase(),
         );
-        return { category: match, confidence: 0.85 };
+        return { category: match || 'General', confidence: 0.85 };
       }
       return { category: 'General', confidence: 0.5 };
     } catch (error) {
@@ -187,7 +187,7 @@ Respond ONLY with a valid JSON object matching this schema:
     masterQuestion: string;
     masterAnswer: string;
     category: string;
-  }> {
+  } | null> {
     if (!this.groq || questions.length === 0) {
       return null;
     }

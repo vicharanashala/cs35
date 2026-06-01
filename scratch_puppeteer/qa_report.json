@@ -1,10 +1,99 @@
 {
-  "consoleLogs": [
-    "[error] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
-    "[error] API Error: Request failed with status code 401",
-    "[error] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
-    "[error] API Error: Request failed with status code 401"
-  ],
-  "pageErrors": [],
-  "brokenLinks": []
+  "timestamp": "2026-06-01T16:46:23.325Z",
+  "total": 10,
+  "passed": 10,
+  "failed": 0,
+  "consoleErrorsCount": 0,
+  "results": [
+    {
+      "route": "/",
+      "label": "HomePage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\HomePage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/login",
+      "label": "LoginPage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\LoginPage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/faqs",
+      "label": "FaqsPage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\FaqsPage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/ask",
+      "label": "AskPage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\AskPage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/queue",
+      "label": "QueuePage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\QueuePage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/my-questions",
+      "label": "MyQuestionsPage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\MyQuestionsPage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/profile",
+      "label": "ProfilePage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\ProfilePage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/notifications",
+      "label": "NotificationsPage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\NotificationsPage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/admin",
+      "label": "AdminPage",
+      "status": 200,
+      "ok": true,
+      "screenshot": "C:\\Users\\manos\\OneDrive\\Desktop\\AskSam\\scratch_puppeteer\\screenshots\\AdminPage.png",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "route": "/faqs",
+      "label": "API_FAQs",
+      "status": 200,
+      "ok": true,
+      "screenshot": null,
+      "errors": [],
+      "warnings": []
+    }
+  ]
 }
