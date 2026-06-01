@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "../hooks/useDebounce";
 import { faqApi, questionApi, userApi } from "../services/api";
 import { getUserTitle } from "../utils/gamification";
+import hero from "../assets/hero.png";
 
 function timeAgo(d) {
   if (!d) return "";
@@ -256,7 +257,7 @@ export default function HomePage() {
             {/* Right — illustration */}
             <div className="hidden lg:flex items-center justify-center">
               <img
-                src="/hero.png"
+                src={hero}
                 alt="Students collaborating"
                 className="w-full max-w-sm object-contain"
                 style={{ borderRadius: "1rem" }}

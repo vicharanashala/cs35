@@ -7,6 +7,7 @@ import { userApi, faqApi, notificationApi } from "../services/api";
 import { useDebounce } from "../hooks/useDebounce";
 import { socket } from "../services/socket";
 import toast from 'react-hot-toast';
+import logo from "../assets/logo.png";
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -207,7 +208,7 @@ export default function MainLayout() {
         <div className="container-xl h-14 flex items-center gap-4 relative">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            <img src="/logo.png" alt="AskSam Logo" className="w-8 h-8 object-contain rounded-full shadow-sm" />
+            <img src={logo} alt="AskSam Logo" className="w-8 h-8 object-contain rounded-full shadow-sm" />
             <span className="text-base font-bold" style={{ color: "#1F2937" }}>AskSam</span>
           </Link>
 
