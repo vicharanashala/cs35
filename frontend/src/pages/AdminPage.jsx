@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import { adminApi, questionApi, faqApi, answerApi, faqAdminApi, categoryApi, userApi } from "../services/api";
 import { socket } from "../services/socket";
 import { useDebounce } from "../hooks/useDebounce";
+import logo from "../assets/logo.png";
 
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
@@ -696,7 +697,7 @@ export default function AdminPage() {
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r shrink-0 flex flex-col hidden md:flex" style={{ borderColor: "#E2E8DE" }}>
         <div className="h-16 flex items-center px-6 border-b bg-gradient-to-r from-[#f0f4ef]/60 to-white" style={{ borderColor: "#E2E8DE" }}>
-          <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain rounded-full shadow-sm mr-2.5 ring-2 ring-white" />
+          <img src={logo} alt="Logo" className="w-8 h-8 object-contain rounded-full shadow-sm mr-2.5 ring-2 ring-white" />
           <span className="font-extrabold text-base tracking-tight text-slate-800">AskSam <span className="text-[#5E7A5A]">Admin</span></span>
         </div>
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto bg-slate-50/20">

@@ -33,14 +33,35 @@ function ThemeSetter() {
   return null;
 }
 
+// Protected Route Wrapper
+function ProtectedRoute({ children, requireAdmin = false }) {
+  const { user } = useAuth() || {};
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (requireAdmin && user.role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+// Public Route Wrapper (Login Page)
+function PublicRoute({ children }) {
+  const { user } = useAuth() || {};
+  if (user) {
+    return <Navigate to={user.role === "admin" ? "/admin" : "/"} replace />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <>
       <AuthSetter />
       <ThemeSetter />
       <Routes>
-        <Route path="login" element={<LoginPage />} />
-        <Route path="/" element={<MainLayout />}>
+        <Route path="login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
           <Route index element={<HomePage />} />
           <Route path="ask" element={<AskPage />} />
           <Route path="faqs" element={<FaqsPage />} />
@@ -50,7 +71,7 @@ export default function App() {
           <Route path="my-questions" element={<MyQuestionsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="admin" element={<AdminPage />} />
+          <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
