@@ -123,7 +123,7 @@ export default function ProfilePage() {
                   {user?.name || "Student"}
                 </h1>
                 <p className="text-sm mt-1" style={{ color: "#9CA3AF" }}>
-                  @{profile?.username || ""}
+                  {profile?.username ? `@${profile.username}` : (profile?.email || "")}
                 </p>
                 <div className="mt-3 flex flex-col items-center gap-2">
                   <span

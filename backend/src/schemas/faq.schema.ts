@@ -13,6 +13,19 @@ export class Faq extends Document {
   @Prop({ default: false }) isPinned: boolean;
   @Prop({ default: 0 }) helpfulCount: number;
   @Prop({ default: 0 }) unhelpfulCount: number;
+
+  @Prop({
+    type: [
+      {
+        reason: { type: String, required: true },
+        userLabel: { type: String, required: false },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
+    default: [],
+  })
+  unhelpfulFeedbacks: { reason: string; userLabel?: string; createdAt?: Date }[];
+
   createdAt: Date;
   updatedAt: Date;
 }

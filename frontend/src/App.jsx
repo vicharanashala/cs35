@@ -26,10 +26,10 @@ function AuthSetter() {
 }
 
 function ThemeSetter() {
-  const { theme } = useDarkMode()
+  const { dark } = useDarkMode()
   useEffect(() => {
-    document.documentElement.style.colorScheme = theme
-  }, [theme])
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+  }, [dark])
   return null
 }
 
@@ -45,9 +45,11 @@ export default function App() {
           <Route path="ask" element={<AskPage />} />
           <Route path="faqs" element={<FaqsPage />} />
           <Route path="faqs/:id" element={<FaqPage />} />
+          <Route path="faq/:id" element={<FaqPage />} />
           <Route path="questions/:id" element={<QuestionPage />} />
+          <Route path="question/:id" element={<QuestionPage />} />
           <Route path="queue" element={<QueuePage />} />
-          <Route path="my-questions" element={<MyQuestionsPage />} />
+          <Route path="my-questions" element={<ProfilePage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="admin" element={<AdminPage />} />

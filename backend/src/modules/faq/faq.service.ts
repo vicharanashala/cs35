@@ -218,10 +218,93 @@ export class FaqService implements OnModuleInit {
       .exec();
   }
 
-  async submitFaqFeedback(id: string, isHelpful: boolean) {
+  async submitFaqFeedback(
+    id: string,
+    isHelpful: boolean,
+    previousVote?: 'up' | 'down' | null,
+    deselect?: boolean,
+    reason?: string,
+    userLabel?: string,
+  ) {
     if (!this.faqModel) return null;
-    const inc = isHelpful ? { helpfulCount: 1 } : { unhelpfulCount: 1 };
-    return this.faqModel.findByIdAndUpdate(id, { $inc: inc }, { new: true }).exec();
+
+    let helpfulDelta = 0;
+    let unhelpfulDelta = 0;
+
+    if (deselect) {
+      if (isHelpful) {
+        helpfulDelta = -1;
+      } else {
+        unhelpfulDelta = -1;
+      }
+    } else {
+      if (isHelpful) {
+        helpfulDelta = 1;
+        if (previousVote === 'down') {
+          unhelpfulDelta = -1;
+        }
+      } else {
+        unhelpfulDelta = 1;
+        if (previousVote === 'up') {
+          helpfulDelta = -1;
+        }
+      }
+    }
+
+    const update: any = {};
+    const inc: any = {};
+
+    if (helpfulDelta !== 0) {
+      inc.helpfulCount = helpfulDelta;
+    }
+    if (unhelpfulDelta !== 0) {
+      inc.unhelpfulCount = unhelpfulDelta;
+    }
+
+    if (Object.keys(inc).length > 0) {
+      update.$inc = inc;
+    }
+
+    if (!isHelpful && reason && reason.trim()) {
+      update.$push = {
+        unhelpfulFeedbacks: {
+          reason: reason.trim(),
+          userLabel: userLabel || 'Anonymous',
+          createdAt: new Date(),
+        },
+      };
+    }
+
+    return this.faqModel.findByIdAndUpdate(id, update, { new: true }).exec();
+  }
+
+  async getUnhelpfulFeedback() {
+    if (!this.faqModel) return [];
+    try {
+      const faqs = await this.faqModel
+        .find({ 'unhelpfulFeedbacks.0': { $exists: true } })
+        .select('question category unhelpfulFeedbacks')
+        .lean()
+        .exec();
+
+      const feedbackList = [];
+      for (const faq of faqs) {
+        for (const fb of faq.unhelpfulFeedbacks || []) {
+          feedbackList.push({
+            faqId: faq._id,
+            question: faq.question,
+            category: faq.category,
+            reason: fb.reason,
+            userLabel: fb.userLabel || 'Anonymous',
+            createdAt: fb.createdAt,
+          });
+        }
+      }
+      return feedbackList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (err) {
+      console.error('Error fetching unhelpful feedback in FAQ service:', err);
+      return [];
+    }
   }
 
   async getCategories() {
@@ -732,10 +815,57 @@ export class FaqService implements OnModuleInit {
       if (!user) return [];
       const ids = user.questionsBookmarked || [];
       if (ids.length === 0) return [];
-      return this.questionModel
+      
+      const questions = await this.questionModel
         .find({ _id: { $in: ids } })
-        .sort({ createdAt: -1 })
+        .lean()
         .exec();
+      
+      const faqs = await this.faqModel
+        .find({ _id: { $in: ids } })
+        .lean()
+        .exec();
+
+      const mappedFaqs = faqs.map((faq) => ({
+        _id: faq._id.toString(),
+        question: faq.question,
+        details: faq.answer,
+        category: faq.category,
+        status: 'verified',
+        createdAt: (faq as any).createdAt || new Date(),
+        answers: [],
+      }));
+
+      const combined = [...questions, ...mappedFaqs];
+      return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch {
+      return [];
+    }
+  }
+
+  async getUserAnswers(userId: string) {
+    if (!this.answerModel || !this.questionModel) return [];
+    try {
+      const answers = await this.answerModel
+        .find({ contributorId: new Types.ObjectId(userId) })
+        .lean()
+        .exec();
+      
+      const populated = [];
+      for (const answer of answers) {
+        const question = await this.questionModel
+          .findById(answer.questionId)
+          .select('question category status')
+          .lean()
+          .exec();
+        if (question) {
+          populated.push({
+            ...answer,
+            question,
+          });
+        }
+      }
+      return populated.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch {
       return [];
     }

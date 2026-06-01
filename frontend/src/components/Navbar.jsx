@@ -107,7 +107,7 @@ export default function Navbar() {
                     <p className="text-sm font-semibold text-charcoal-800">
                       {user?.name || 'Student'}
                     </p>
-                    <p className="text-xs text-charcoal-400">@{user?.username || user?.email || 'user'}</p>
+                    <p className="text-xs text-charcoal-400 truncate">{user?.username ? `@${user.username}` : (user?.email || 'user')}</p>
                     <p className="text-xs text-brown-600 font-medium mt-0.5 capitalize">{user?.role || 'student'}</p>
                   </div>
 

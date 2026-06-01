@@ -1,13 +1,13 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { questionApi, faqApi, answerApi } from "../services/api";
+import { questionApi, faqApi, answerApi, bookmarkApi } from "../services/api";
 import { socket } from "../services/socket";
 import { useAuth } from "../hooks/useAuth";
-import { useReputation } from "../hooks/useReputation";
+import toast from "react-hot-toast";
 import { useAchievements } from "../hooks/useAchievements";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
+import { useReputation } from "../hooks/useReputation";
+
 
 // Removed broken getContributorId
 
@@ -163,6 +163,31 @@ export default function QuestionPage() {
   const { user } = useAuth();
   const { can: canAcceptAnswer } = useReputation();
   const { toasts, checkAchievements, dismissToast } = useAchievements();
+
+  const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
+    queryKey: ["bookmarked-questions", user?._id],
+    queryFn: () => bookmarkApi.list(user?._id),
+    enabled: !!user?._id,
+  });
+
+  const isBookmarked = useMemo(() => {
+    return bookmarkedQuestions.some((bq) => bq._id === id);
+  }, [bookmarkedQuestions, id]);
+
+  const handleToggleBookmark = async () => {
+    if (!user?._id) return;
+    try {
+      await bookmarkApi.toggle(user._id, id);
+      refetchBookmarks();
+      queryClient.invalidateQueries({ queryKey: ["bookmarked-questions", user._id] });
+      queryClient.invalidateQueries({ queryKey: ["my-questions", user._id] });
+      toast.success(isBookmarked ? "Bookmark removed" : "Question bookmarked!");
+    } catch (err) {
+      console.error("Failed to toggle bookmark:", err);
+      toast.error("Failed to update bookmark");
+    }
+  };
+
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
@@ -414,12 +439,28 @@ export default function QuestionPage() {
             <div className="lg:col-span-2 space-y-8 min-w-0">
 
               {/* Question */}
-              <article>
-                <h1 className="text-2xl font-bold leading-snug mb-3" style={{ color: "#1F2937" }}>
+              <article className="relative">
+                {user && (
+                  <button
+                    onClick={handleToggleBookmark}
+                    title={isBookmarked ? "Remove Bookmark" : "Bookmark Question"}
+                    className="absolute top-0 right-0 p-2 rounded-full border transition-all cursor-pointer shadow-sm hover:scale-110 flex items-center justify-center bookmark-btn-top"
+                    style={
+                      isBookmarked
+                        ? { background: "#F0FDF4", color: "#059669", borderColor: "#6EE7B7" }
+                        : { background: "#ffffff", color: "#9CA3AF", borderColor: "#E2E8DE" }
+                    }
+                  >
+                    <svg className="w-5.5 h-5.5" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  </button>
+                )}
+                <h1 className="text-2xl font-bold leading-snug mb-3 pr-12" style={{ color: "#1F2937" }}>
                   {question.question}
                 </h1>
                 {question.details && (
-                  <div className="text-sm mb-4 leading-relaxed quill-content" style={{ color: "#4B5563" }} dangerouslySetInnerHTML={{ __html: question.details }} />
+                  <div className="text-sm mb-4 leading-relaxed quill-content pr-12" style={{ color: "#4B5563" }} dangerouslySetInnerHTML={{ __html: question.details }} />
                 )}
                 {question.screenshotUrl && (
                   <img
@@ -501,7 +542,7 @@ export default function QuestionPage() {
                       onVote={handleVote}
                       userVotes={userVotes}
                       onAccept={handleAcceptAnswer}
-                      canAccept={canAcceptAnswer("verifiedAnswer") && user?._id === question?.contributorId}
+                      canAccept={canAcceptAnswer("verifiedAnswer") && user?._id && question?.contributorId && user?._id === question?.contributorId}
                     />
                   ))}
 
@@ -513,8 +554,20 @@ export default function QuestionPage() {
                         </svg>
                       </div>
                       <h3 className="text-base font-semibold mb-2" style={{ color: "#1F2937" }}>No answers yet</h3>
-                      <p className="text-sm mb-5" style={{ color: "#9CA3AF" }}>Be the first to help your fellow student!</p>
-                      <a href="#answer-form" className="btn-primary">Write an Answer →</a>
+                      {user?._id && question?.contributorId && user?._id === question?.contributorId ? (
+                        <p className="text-sm mb-5" style={{ color: "#9CA3AF" }}>Community members will answer your question soon!</p>
+                      ) : (
+                        <>
+                          <p className="text-sm mb-5" style={{ color: "#9CA3AF" }}>Be the first to help your fellow student!</p>
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById('answer-form')?.scrollIntoView({ behavior: 'smooth' })}
+                            className="btn-primary cursor-pointer"
+                          >
+                            Write an Answer →
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -526,7 +579,7 @@ export default function QuestionPage() {
                 </div>
 
                 {/* Reply Form — hidden if user is the question owner */}
-                {user?._id !== question?.contributorId && (
+                {!(user?._id && question?.contributorId && user?._id === question?.contributorId) && (
                 <div id="answer-form" className="card p-5">
                   <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Add your Answer</h3>
                   {submitError && (
@@ -549,29 +602,45 @@ export default function QuestionPage() {
                       />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        {/* Speech to Text */}
-                        <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
-                          className="w-8 h-8 rounded transition-colors flex items-center justify-center relative border"
-                          style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent", borderColor: "#E2E8DE" }}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                            <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-                          </svg>
-                          {isListening && (
-                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                            </span>
-                          )}
-                        </button>
-                        <span className="text-xs" style={{ color: "#6B7280" }}>Click to dictate</span>
+                      <div className="flex items-center gap-4 mb-2">
+                        <div className="flex items-center gap-2">
+                          {/* Speech to Text */}
+                          <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
+                            className="w-8 h-8 rounded transition-colors flex items-center justify-center relative border"
+                            style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent", borderColor: "#E2E8DE" }}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                              <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                            </svg>
+                            {isListening && (
+                              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                              </span>
+                            )}
+                          </button>
+                          <span className="text-xs" style={{ color: "#6B7280" }}>Click to dictate</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="w-8 h-8 rounded transition-colors flex items-center justify-center border cursor-pointer hover:bg-gray-50 bg-white"
+                            style={{ color: "#374151", borderColor: "#E2E8DE" }} title="Upload Screenshot/Image">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                          </label>
+                          <span className="text-xs" style={{ color: "#6B7280" }}>Upload Image</span>
+                        </div>
                       </div>
-                      <ReactQuill 
-                        theme="snow" 
-                        value={answerContent} 
-                        onChange={setAnswerContent} 
+                      <textarea
+                        ref={textareaRef}
+                        className="input min-h-[150px] w-full font-mono text-sm p-3 border rounded-lg bg-white"
                         placeholder="Write your answer..."
-                        className="bg-white rounded-lg overflow-hidden" 
+                        value={answerContent}
+                        onChange={(e) => setAnswerContent(e.target.value)}
+                        style={{ color: "#374151", borderColor: "#E2E8DE" }}
                       />
                       <div className="flex justify-end mt-1">
                         <span className="text-xs" style={{ color: answerContent.length > 1800 ? "#DC2626" : "#9CA3AF" }}>
@@ -589,7 +658,7 @@ export default function QuestionPage() {
                   </form>
                 </div>
                 )}
-                {user?._id === question?.contributorId && (
+                {user?._id && question?.contributorId && user?._id === question?.contributorId && (
                   <div className="card p-5 text-center text-sm" style={{ color: "#9CA3AF" }}>
                     You cannot answer your own question.
                   </div>
@@ -624,6 +693,17 @@ export default function QuestionPage() {
                     <span className="font-medium" style={{ color: "#1F2937" }}>{(question.answers?.length || 0) + localAnswers.length}</span>
                   </div>
                 </div>
+                {user && (
+                  <button
+                    onClick={handleToggleBookmark}
+                    className={`bookmark-btn w-full justify-center mt-4 ${isBookmarked ? "bookmarked" : ""}`}
+                  >
+                    <svg className="w-4 h-4" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    {isBookmarked ? "Bookmarked" : "Bookmark Question"}
+                  </button>
+                )}
               </div>
 
               {/* Related Questions */}

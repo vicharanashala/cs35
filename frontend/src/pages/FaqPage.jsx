@@ -1,27 +1,61 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { faqApi } from "../services/api";
+import { faqApi, bookmarkApi } from "../services/api";
+import { useAuth } from "../hooks/useAuth";
+import { toast } from "react-hot-toast";
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(dateStr));
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    return new Intl.DateTimeFormat("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(d);
+  } catch (err) {
+    console.error("Invalid date string:", dateStr, err);
+    return "";
+  }
 }
 
 export default function FaqPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: faq, isLoading, isError } = useQuery({
     queryKey: ["faq", id],
     queryFn: () => faqApi.getById(id),
     enabled: !!id,
   });
+
+  const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
+    queryKey: ["bookmarked-questions", user?._id],
+    queryFn: () => bookmarkApi.list(user?._id),
+    enabled: !!user?._id,
+  });
+
+  const isBookmarked = useMemo(() => {
+    return bookmarkedQuestions.some((bq) => bq._id === id);
+  }, [bookmarkedQuestions, id]);
+
+  const handleToggleBookmark = async () => {
+    if (!user?._id) return;
+    try {
+      await bookmarkApi.toggle(user._id, id);
+      refetchBookmarks();
+      queryClient.invalidateQueries({ queryKey: ["bookmarked-questions", user._id] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile-bookmarks", user._id] });
+      toast.success(isBookmarked ? "Bookmark removed" : "FAQ bookmarked!");
+    } catch (err) {
+      console.error("Failed to toggle bookmark:", err);
+      toast.error("Failed to update bookmark");
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -64,8 +98,24 @@ export default function FaqPage() {
         )}
 
         {!isLoading && !isError && faq && (
-          <article>
-            <div className="flex flex-wrap items-center gap-2 mb-4">
+          <article className="relative">
+            {user && (
+              <button
+                onClick={handleToggleBookmark}
+                title={isBookmarked ? "Remove Bookmark" : "Bookmark FAQ"}
+                className="absolute top-0 right-0 p-2 rounded-full border transition-all cursor-pointer shadow-sm hover:scale-110 flex items-center justify-center bookmark-btn-top"
+                style={
+                  isBookmarked
+                    ? { background: "#F0FDF4", color: "#059669", borderColor: "#6EE7B7" }
+                    : { background: "#ffffff", color: "#9CA3AF", borderColor: "#E2E8DE" }
+                }
+              >
+                <svg className="w-5.5 h-5.5" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              </button>
+            )}
+            <div className="flex flex-wrap items-center gap-2 mb-4 pr-12">
               <span className="tag bg-gray-100 text-gray-600 text-xs">
                 {faq.category}
               </span>
@@ -83,7 +133,7 @@ export default function FaqPage() {
               )}
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug mb-2 pr-12">
               {faq.question}
             </h1>
             <p className="text-xs text-gray-400 mb-8">
