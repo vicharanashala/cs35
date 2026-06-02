@@ -57,7 +57,8 @@ export class AuthController {
   forgotPassword(
     @Body()
     body: {
-      username: string;
+      username?: string;
+      email?: string;
       newPassword: string;
       confirmNewPassword: string;
     },

@@ -8,13 +8,16 @@ const client = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-client.interceptors.request.use((config) => {
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+client.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 client.interceptors.response.use(
   (response) => response,
@@ -49,7 +52,8 @@ export const faqApi = {
   getById: (id) => safeRequest(client.get(`/faqs/${id}`).then((r) => r.data)),
   listCategories: () => safeRequest(client.get("/categories").then((r) => r.data)),
   incrementView: (id) => safeRequest(client.patch(`/faqs/${id}/view`).then((r) => r.data)),
-  feedback: (id, helpful) => safeRequest(client.patch(`/faqs/${id}/feedback`, { helpful }).then((r) => r.data)),
+  feedback: (id, body) => safeRequest(client.patch(`/faqs/${id}/feedback`, body).then((r) => r.data)),
+  listUnhelpfulFeedback: () => safeRequest(client.get("/admin/feedback/unhelpful").then((r) => r.data)),
   trending: () => safeRequest(client.get("/search/trending").then((r) => r.data)),
   failedSearches: () => safeRequest(client.get("/admin/search/failed").then((r) => r.data)),
   similar: (q) => safeRequest(client.get("/faqs/similar", { params: { q } }).then((r) => r.data)),
@@ -89,6 +93,7 @@ export const bookmarkApi = {
   toggle: (userId, questionId) =>
     safeRequest(client.patch(`/users/${userId}/bookmark/${questionId}`).then((r) => r.data)),
   list: (userId) => safeRequest(client.get(`/users/${userId}/bookmarks`).then((r) => r.data)),
+  listAnswers: (userId) => safeRequest(client.get(`/users/${userId}/answers`).then((r) => r.data)),
 };
 
 // ── Follow API ────────────────────────────────────────────────

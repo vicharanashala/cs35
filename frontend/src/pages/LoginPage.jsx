@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState("student");
   const [isRegister, setIsRegister] = useState(true);
 
-  const [form, setForm] = useState({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
+  const [form, setForm] = useState({ fullName: "", username: "", email: "", password: "" });
   const [forgotForm, setForgotForm] = useState({ username: "", newPassword: "", confirmNewPassword: "" });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
@@ -34,28 +34,20 @@ export default function LoginPage() {
         setError("Please enter your full name");
         return;
       }
-      if (!form.username.trim() || form.username.trim().length < 3) {
-        setError("Username must be at least 3 characters");
-        return;
-      }
-      if (!/^[a-zA-Z0-9_]+$/.test(form.username)) {
-        setError("Username can only contain letters, numbers, and underscores");
+      if (!form.username.trim() || !/^[a-zA-Z0-9_]{3,20}$/.test(form.username.trim())) {
+        setError("Username must be 3-20 characters long and contain only letters, numbers, or underscores");
         return;
       }
       if (form.password.length < 6) {
         setError("Password must be at least 6 characters");
         return;
       }
-      if (form.password !== form.confirmPassword) {
-        setError("Passwords do not match");
-        return;
-      }
 
       setIsLoading(true);
       try {
         const res = await authApi.signup({
-          fullName: form.fullName,
-          username: form.username,
+          fullName: form.fullName.trim(),
+          username: form.username.trim(),
           password: form.password,
         });
         if (!res.success) {
@@ -63,7 +55,7 @@ export default function LoginPage() {
           setIsLoading(false);
           return;
         }
-        login({ username: form.username, name: form.fullName, role: "student", token: res.token });
+        login({ username: form.username.trim(), name: form.fullName.trim(), role: "student", token: res.token });
         navigate("/");
       } catch (err) {
         console.error("Signup error:", err);
@@ -71,8 +63,8 @@ export default function LoginPage() {
       }
       setIsLoading(false);
     } else {
-      if (!form.username.trim()) {
-        setError("Please enter your username");
+      if (!form.username.trim() || !/^[a-zA-Z0-9_]{3,20}$/.test(form.username.trim())) {
+        setError("Please enter a valid username");
         return;
       }
       if (!form.password) {
@@ -82,13 +74,13 @@ export default function LoginPage() {
 
       setIsLoading(true);
       try {
-        const res = await authApi.login({ username: form.username, password: form.password, role: "student" });
+        const res = await authApi.login({ username: form.username.trim(), password: form.password, role: "student" });
         if (!res.success) {
           setError(res.message);
           setIsLoading(false);
           return;
         }
-        login({ username: form.username, name: res.name || "Student", role: "student", token: res.token });
+        login({ username: form.username.trim(), name: res.name || "Student", role: "student", token: res.token });
         navigate("/");
       } catch (err) {
         console.error("Login error:", err);
@@ -126,7 +118,7 @@ export default function LoginPage() {
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
     setError("");
-    setForm({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
+    setForm({ fullName: "", username: "", email: "", password: "" });
     setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" });
     setShowForgotPassword(false);
     setShowAdminPassword(false);
@@ -140,8 +132,8 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    if (!forgotForm.username.trim()) {
-      setError("Please enter your username");
+    if (!forgotForm.username.trim() || !/^[a-zA-Z0-9_]{3,20}$/.test(forgotForm.username.trim())) {
+      setError("Username must be 3-20 characters long and contain only letters, numbers, or underscores");
       return;
     }
     if (!forgotForm.newPassword || forgotForm.newPassword.length < 6) {
@@ -317,7 +309,6 @@ export default function LoginPage() {
                   <label className="label">Username</label>
                   <input type="text" className="input py-2.5" value={form.username} onChange={setField("username")}
                     placeholder="e.g. arjun_sharma" />
-                  <p className="input-hint">Letters, numbers, and underscores only</p>
                 </div>
                 <div>
                   <label className="label">Password</label>
@@ -327,26 +318,6 @@ export default function LoginPage() {
                     <button type="button" aria-label="Toggle password" onClick={() => setShowRegisterPassword(s => !s)} onMouseDown={(e) => e.preventDefault()}
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
                       {showRegisterPassword ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="label">Confirm Password</label>
-                  <div className="relative">
-                    <input type={showRegisterConfirm ? "text" : "password"} className="input py-2.5 pr-10" value={form.confirmPassword} onChange={setField("confirmPassword")}
-                      placeholder="Repeat password" />
-                    <button type="button" aria-label="Toggle confirm password" onClick={() => setShowRegisterConfirm(s => !s)} onMouseDown={(e) => e.preventDefault()}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
-                      {showRegisterConfirm ? (
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />

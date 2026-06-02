@@ -75,7 +75,7 @@ export default function App() {
           <Route path="questions/:id" element={<QuestionPage />} />
           <Route path="question/:id" element={<QuestionPage />} />
           <Route path="queue" element={<QueuePage />} />
-          <Route path="my-questions" element={<MyQuestionsPage />} />
+          <Route path="my-questions" element={<ProfilePage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="admin" element={<AdminPage />} />

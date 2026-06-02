@@ -505,6 +505,182 @@ select.input {
 .dark ::-webkit-scrollbar-thumb { background: #2e3e2c; }
 
 /* ============================================================
+   DARK MODE COMPATIBILITY & SPECIFICITY OVERRIDES
+   ============================================================ */
+
+/* 1. Global Layout & Container Override */
+.dark header,
+.dark footer,
+.dark .bg-white,
+.dark .bg-gradient-to-br,
+.dark [style*="background: #ffffff"],
+.dark [style*="background:#ffffff"],
+.dark [style*="background: #fff"],
+.dark [style*="background:#fff"],
+.dark [style*="background-color: #ffffff"],
+.dark [style*="background-color: #fff"] {
+  background-color: var(--color-sage-card) !important;
+  background: var(--color-sage-card) !important;
+}
+
+/* 2. Page & Layout Background Override */
+.dark .min-h-screen,
+.dark .bg-\[\#F9FAFB\],
+.dark .bg-gray-50,
+.dark [style*="background: #F5F7F2"],
+.dark [style*="background:#F5F7F2"],
+.dark [style*="background: #FAFAF5"],
+.dark [style*="background:#FAFAF5"],
+.dark [style*="background-color: #F5F7F2"],
+.dark [style*="background-color: #FAFAF5"] {
+  background-color: var(--color-sage-bg) !important;
+  background: var(--color-sage-bg) !important;
+}
+
+/* 3. Global Borders Override */
+.dark .border,
+.dark .border-b,
+.dark .border-t,
+.dark .border-gray-200,
+.dark [style*="border-color: #E2E8DE"],
+.dark [style*="border-color:#E2E8DE"],
+.dark [style*="border-color: #F5F7F2"],
+.dark [style*="border-color:#F5F7F2"],
+.dark [style*="border-color: #E5E7EB"],
+.dark [style*="border-color:#E5E7EB"],
+.dark [style*="border: 1px solid #E2E8DE"],
+.dark [style*="border:1px solid #E2E8DE"],
+.dark [style*="border-top: 1px solid #F5F7F2"],
+.dark [style*="border-top:1px solid #F5F7F2"],
+.dark [style*="border-top: 1px solid #f5f7f2"],
+.dark [style*="border-top:1px solid #f5f7f2"] {
+  border-color: var(--color-sage-border) !important;
+}
+
+/* 4. Text & Typography Specificity Overrides */
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark [style*="color: #1F2937"],
+.dark [style*="color: #1f2937"],
+.dark [style*="color:#1F2937"],
+.dark [style*="color:#1f2937"] {
+  color: var(--color-ink-900) !important;
+}
+
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark [style*="color: #374151"],
+.dark [style*="color: #374151"],
+.dark [style*="color:#374151"],
+.dark [style*="color:#374151"],
+.dark [style*="color: #4B5563"],
+.dark [style*="color:#4B5563"] {
+  color: var(--color-ink-700) !important;
+}
+
+.dark .text-gray-500,
+.dark [style*="color: #6B7280"],
+.dark [style*="color: #6b7280"],
+.dark [style*="color:#6B7280"],
+.dark [style*="color:#6b7280"] {
+  color: var(--color-ink-500) !important;
+}
+
+.dark .text-gray-400,
+.dark [style*="color: #9CA3AF"],
+.dark [style*="color: #9ca3af"],
+.dark [style*="color:#9CA3AF"],
+.dark [style*="color:#9ca3af"] {
+  color: var(--color-ink-400) !important;
+}
+
+.dark [style*="color: #D1D5DB"],
+.dark [style*="color: #d1d5db"],
+.dark [style*="color:#D1D5DB"],
+.dark [style*="color:#d1d5db"] {
+  color: var(--color-ink-300) !important;
+}
+
+.dark .text-\[\#5E7A5A\] {
+  color: var(--color-brand-400) !important;
+}
+.dark .border-\[\#5E7A5A\] {
+  border-color: var(--color-brand-400) !important;
+}
+
+/* 5. UI Elements & Hovers Overrides */
+.dark .hover\:bg-gray-50:hover,
+.dark .bg-gray-50:hover,
+.dark .bg-fafafa,
+.dark [style*="background: #fafafa"],
+.dark [style*="background:#fafafa"] {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.dark .bg-blue-50\/10 {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+
+.dark .bookmark-btn,
+.dark .follow-btn {
+  background-color: var(--color-sage-card) !important;
+  border-color: var(--color-sage-border) !important;
+  color: var(--color-ink-700) !important;
+}
+
+.dark .bookmark-btn:hover,
+.dark .follow-btn:hover {
+  background-color: var(--color-brand-100) !important;
+  color: var(--color-brand-700) !important;
+  border-color: var(--color-brand-300) !important;
+}
+
+.dark .bookmark-btn.bookmarked,
+.dark .follow-btn.following {
+  background-color: var(--color-status-green-bg) !important;
+  border-color: var(--color-status-green-txt) !important;
+  color: var(--color-status-green-txt) !important;
+}
+
+.dark .bookmark-btn-top {
+  background-color: var(--color-sage-card) !important;
+  border-color: var(--color-sage-border) !important;
+  color: var(--color-ink-400) !important;
+}
+
+.dark .bookmark-btn-top:hover {
+  background-color: var(--color-brand-100) !important;
+  border-color: var(--color-brand-300) !important;
+  color: var(--color-brand-700) !important;
+}
+
+/* 6. Quill Editor Dark Mode */
+.dark .ql-container,
+.dark .ql-container.bg-white,
+.dark .ql-editor {
+  background-color: var(--color-sage-card) !important;
+  color: var(--color-ink-900) !important;
+  border-color: var(--color-sage-border) !important;
+}
+.dark .ql-toolbar {
+  background-color: var(--color-sage-bg) !important;
+  border-color: var(--color-sage-border) !important;
+}
+.dark .ql-stroke {
+  stroke: var(--color-ink-700) !important;
+}
+.dark .ql-fill {
+  fill: var(--color-ink-700) !important;
+}
+.dark .ql-picker {
+  color: var(--color-ink-700) !important;
+}
+.dark .ql-picker-options {
+  background-color: var(--color-sage-card) !important;
+  border-color: var(--color-sage-border) !important;
+}
+
+/* ============================================================
    ACHIEVEMENT TOASTS
    ============================================================ */
 
@@ -877,3 +1053,122 @@ select.input {
   font-family: inherit !important;
   font-size: 14px !important;
 }
+
+/* ============================================================
+   DARK MODE CONTRAST OVERRIDES
+   ============================================================ */
+
+.dark {
+  background-color: #111827 !important;
+  color: #F3F4F6 !important;
+}
+
+.dark body {
+  background-color: #111827 !important;
+  color: #F9FAFB !important;
+}
+
+/* Override inline background color rgb serializations */
+.dark *[style*="background: rgb(245, 247, 242)"],
+.dark *[style*="background: #F5F7F2"],
+.dark *[style*="background:#F5F7F2"],
+.dark *[style*="background: rgb(250, 250, 245)"],
+.dark *[style*="background: #FAFAF5"],
+.dark *[style*="background:#FAFAF5"],
+.dark *[style*="background-color: rgb(245, 247, 242)"] {
+  background-color: #111827 !important;
+}
+
+.dark *[style*="background: rgb(255, 255, 255)"],
+.dark *[style*="background: #ffffff"],
+.dark *[style*="background:#ffffff"],
+.dark *[style*="background: rgb(254, 254, 254)"],
+.dark *[style*="background-color: rgb(255, 255, 255)"] {
+  background-color: #1F2937 !important;
+}
+
+/* Override inline text color rgb serializations */
+.dark *[style*="color: rgb(31, 41, 55)"],
+.dark *[style*="color: rgb(55, 65, 81)"],
+.dark *[style*="color: rgb(75, 85, 99)"],
+.dark *[style*="color: #1f2937"],
+.dark *[style*="color: #1F2937"],
+.dark *[style*="color:#1F2937"],
+.dark *[style*="color: #374151"],
+.dark *[style*="color:#374151"],
+.dark *[style*="color: #4b5563"],
+.dark *[style*="color: #4B5563"],
+.dark *[style*="color:#4B5563"] {
+  color: #E5E7EB !important;
+}
+
+.dark *[style*="color: rgb(107, 114, 128)"],
+.dark *[style*="color: #6b7280"],
+.dark *[style*="color: #6B7280"],
+.dark *[style*="color:#6B7280"] {
+  color: #9CA3AF !important;
+}
+
+/* Dark mode class selectors for cards and layout elements */
+.dark .card,
+.dark .card-hover,
+.dark header,
+.dark footer,
+.dark aside,
+.dark nav,
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1F2937 !important;
+  border-color: #374151 !important;
+  color: #F9FAFB !important;
+}
+
+.dark .card-hover:hover {
+  border-color: #4B5563 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .input,
+.dark select,
+.dark textarea {
+  background-color: #111827 !important;
+  border-color: #374151 !important;
+  color: #F9FAFB !important;
+}
+
+.dark .input::placeholder,
+.dark textarea::placeholder {
+  color: #6B7280 !important;
+}
+
+/* Text elements */
+.dark .page-title,
+.dark .section-title,
+.dark .label,
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark strong {
+  color: #F9FAFB !important;
+}
+
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  color: #E5E7EB !important;
+}
+
+.dark .text-slate-400,
+.dark .text-gray-400,
+.dark .text-gray-500 {
+  color: #9CA3AF !important;
+}
+
+.dark .divide-y > * {
+  border-color: #374151 !important;
+}
+

@@ -39,6 +39,7 @@ export class AuthService {
     email?: string;
     role: string;
     name: string;
+    id?: string;
   }): string {
     return this.jwtService.sign(payload);
   }
@@ -57,18 +58,10 @@ export class AuthService {
     }
 
     try {
-      if (!data.username || data.username.trim().length < 3) {
+      if (!data.username || !/^[a-zA-Z0-9_]{3,20}$/.test(data.username.trim())) {
         return {
           success: false,
-          message: 'Username must be at least 3 characters',
-        };
-      }
-
-      if (!/^[a-zA-Z0-9_]+$/.test(data.username)) {
-        return {
-          success: false,
-          message:
-            'Username can only contain letters, numbers, and underscores',
+          message: 'Username must be 3-20 characters long and contain only letters, numbers, or underscores',
         };
       }
 
@@ -79,10 +72,10 @@ export class AuthService {
         };
       }
 
-      const existingUsername = await this.userModel!
-        .findOne({ username: data.username })
+      const existingUser = await this.userModel!
+        .findOne({ username: data.username.trim() })
         .exec();
-      if (existingUsername) {
+      if (existingUser) {
         return {
           success: false,
           message: 'Username already taken. Please choose another.',
@@ -100,8 +93,8 @@ export class AuthService {
         : 0;
       const studentId = `STU-${String(lastNum + 1).padStart(5, '0')}`;
 
-      await this.userModel!.create({
-        username: data.username,
+      const createdUser = await this.userModel!.create({
+        username: data.username.trim(),
         password: hashedPassword,
         name: data.fullName,
         role: 'student',
@@ -113,9 +106,10 @@ export class AuthService {
       });
 
       const token = this.signToken({
-        sub: data.username,
+        sub: data.username.trim(),
         role: 'student',
         name: data.fullName,
+        id: createdUser._id.toString(),
       });
       return { success: true, message: 'Account created successfully', token };
     } catch (err) {
@@ -162,6 +156,7 @@ export class AuthService {
         sub: username,
         role: 'student',
         name: user.name || 'Student',
+        id: user._id.toString(),
       });
       return {
         success: true,
@@ -187,7 +182,6 @@ export class AuthService {
           success: true,
           user: {
             name: payload.name || 'Student',
-            username: payload.sub,
             role: payload.role || 'student',
             createdAt: new Date().toISOString(),
             questionsCount: 0,
@@ -210,7 +204,7 @@ export class AuthService {
 
       const user = await this.userModel!
         .findOne({
-          username: payload.sub,
+          $or: [{ username: payload.sub }, { email: payload.sub }],
           role: payload.role as 'student' | 'admin',
         })
         .select('-password')
@@ -292,6 +286,7 @@ export class AuthService {
         email,
         role: 'admin',
         name: user.name || 'Admin',
+        id: user._id.toString(),
       });
       return {
         success: true,
@@ -305,7 +300,8 @@ export class AuthService {
   }
 
   async forgotPassword(data: {
-    username: string;
+    username?: string;
+    email?: string;
     newPassword: string;
     confirmNewPassword: string;
   }): Promise<{ success: boolean; message: string }> {
@@ -317,8 +313,9 @@ export class AuthService {
     }
 
     try {
-      if (!data.username.trim()) {
-        return { success: false, message: 'Username is required' };
+      const identifier = data.username?.trim() || data.email?.trim();
+      if (!identifier) {
+        return { success: false, message: 'Username or Email is required' };
       }
 
       if (!data.newPassword || data.newPassword.length < 6) {
@@ -333,7 +330,10 @@ export class AuthService {
       }
 
       const user = await this.userModel!
-        .findOne({ username: data.username, role: 'student' })
+        .findOne({
+          $or: [{ username: identifier }, { email: identifier }],
+          role: 'student',
+        })
         .exec();
       if (!user) {
         return {

@@ -24,8 +24,28 @@ export function AuthProvider({ children }) {
 
   const login = useCallback((data) => {
     localStorage.setItem("authToken", data.token);
-    localStorage.setItem("authUser", JSON.stringify({ email: data.email || data.username || "", name: data.name, role: data.role }));
-    setUser({ email: data.email || data.username || "", name: data.name, role: data.role });
+    
+    // Decode user Mongoose ID from JWT token
+    let userId = "";
+    try {
+      const base64Url = data.token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64));
+      userId = payload.id || "";
+    } catch (e) {
+      console.error("Failed to decode token:", e);
+    }
+
+    const userData = {
+      _id: userId,
+      username: data.username || "",
+      email: data.email || "",
+      name: data.name,
+      role: data.role
+    };
+
+    localStorage.setItem("authUser", JSON.stringify(userData));
+    setUser(userData);
     queryClient.clear();
   }, [queryClient]);
 
@@ -41,10 +61,10 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem("authToken");
     if (!token) return;
     try {
-      const data = await userApi.me();
-      if (data) {
-        setUser(data);
-        localStorage.setItem("authUser", JSON.stringify(data));
+      const res = await userApi.me();
+      if (res && res.success && res.user) {
+        setUser(res.user);
+        localStorage.setItem("authUser", JSON.stringify(res.user));
       }
     } catch (err) {
       console.error("Failed to load user:", err);

@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { questionApi, faqApi } from "../services/api";
+import { questionApi, faqApi, bookmarkApi } from "../services/api";
 import { socket } from "../services/socket";
+import { useAuth } from "../hooks/useAuth";
+import { toast } from "react-hot-toast";
 
 const PRIORITIES  = ["All", "High", "Medium", "Low"];
 const STATUSES    = ["All", "Unanswered", "Answered"];
@@ -25,15 +27,17 @@ function PriorityBadge({ priority }) {
   return <span className={cls}>{priority}</span>;
 }
 
-function QuestionRow({ question }) {
+function QuestionRow({ question, isBookmarked, onToggleBookmark }) {
   const [expanded, setExpanded] = useState(false);
+  const { user } = useAuth();
 
   return (
     <div className={`card-hover overflow-hidden ${expanded ? "ring-2" : ""}`}
       style={expanded ? { ringColor: "#5E7A5A", borderColor: "#bdd4ba" } : {}}>
-      <button
+      <div
         onClick={() => setExpanded((o) => !o)}
-        className="w-full text-left p-4 flex items-start gap-3"
+        className="w-full text-left p-4 flex items-start gap-3 cursor-pointer"
+        role="button"
         aria-expanded={expanded}
       >
         <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-white"
@@ -58,6 +62,26 @@ function QuestionRow({ question }) {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {user && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleBookmark(question._id);
+              }}
+              title={isBookmarked ? "Remove Bookmark" : "Bookmark Question"}
+              className="p-1.5 rounded-full border transition-all cursor-pointer hover:scale-110 flex items-center justify-center animate-fade-in"
+              style={
+                isBookmarked
+                  ? { background: "#F0FDF4", color: "#059669", borderColor: "#6EE7B7" }
+                  : { background: "#ffffff", color: "#9CA3AF", borderColor: "#E2E8DE" }
+              }
+            >
+              <svg className="w-4 h-4" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+            </button>
+          )}
           <div className="text-right">
             <p className="text-lg font-bold leading-none" style={{ color: "#5E7A5A" }}>
               {question.answers?.length ?? 0}
@@ -72,7 +96,7 @@ function QuestionRow({ question }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="px-4 pb-4 animate-fade-in" style={{ borderTop: "1px solid #F5F7F2" }}>
@@ -82,7 +106,7 @@ function QuestionRow({ question }) {
             </div>
           )}
           <div className="mt-3 flex gap-2">
-            <Link to={`/questions/${question._id}`} className="btn-primary btn-sm">
+            <Link to={`/question/${question._id}`} className="btn-primary btn-sm">
               Answer this question
             </Link>
           </div>
@@ -107,6 +131,7 @@ function Skeleton() {
 
 export default function QueuePage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [search, setSearch]               = useState("");
   const [activeCategory, setActiveCategory] = useState("All Categories");
   const [priority, setPriority]           = useState("All");
@@ -119,6 +144,27 @@ export default function QueuePage() {
   const [sortBy, setSortBy]               = useState("newest");
   const [filterOpen, setFilterOpen]       = useState(false);
   const filterRef = useRef(null);
+
+  const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
+    queryKey: ["bookmarked-questions", user?._id],
+    queryFn: () => bookmarkApi.list(user?._id),
+    enabled: !!user?._id,
+  });
+
+  const handleToggleBookmark = async (qId) => {
+    if (!user?._id) return;
+    const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === qId);
+    try {
+      await bookmarkApi.toggle(user._id, qId);
+      refetchBookmarks();
+      queryClient.invalidateQueries({ queryKey: ["bookmarked-questions", user._id] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile-bookmarks", user._id] });
+      toast.success(isBookmarked ? "Bookmark removed" : "Question bookmarked!");
+    } catch (err) {
+      console.error("Failed to toggle bookmark:", err);
+      toast.error("Failed to update bookmark");
+    }
+  };
 
   // Close filter panel on click outside
   useEffect(() => {
@@ -196,142 +242,147 @@ export default function QueuePage() {
             <h1 className="page-title">Community Queue</h1>
             <p className="page-subtitle">Browse and help answer open questions from fellow students.</p>
           </div>
-          <Link to="/ask" className="btn-primary self-start">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Ask a Question
-          </Link>
+          {user?.role !== "admin" && (
+            <Link to="/ask" className="btn-primary self-start">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Ask a Question
+            </Link>
+          )}
         </div>
 
         <div className="space-y-4">
           <div className="card p-4">
-            <div className="flex flex-col sm:flex-row gap-3 items-center w-full min-w-0">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full min-w-0">
               <div className="search-wrap flex-1 min-w-0 w-full">
                 <svg className="search-icon w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
-                  className="search-input w-full text-sm"
+                  className="search-input w-full text-sm pl-10"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search by question title, keyword…"
                 />
               </div>
 
-              <div className="relative shrink-0" ref={filterRef}>
-                <button
-                  onClick={() => {
-                    if (!filterOpen) {
-                      setPendingCategory(activeCategory);
-                      setPendingPriority(priority);
-                      setPendingStatus(status);
-                    }
-                    setFilterOpen(!filterOpen);
-                  }}
-                  className="btn-secondary gap-2 flex items-center min-h-[44px]"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <span className="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white" style={{ background: "#5E7A5A" }}>
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-
-                {filterOpen && (
-                  <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 w-72 bg-white rounded-xl border shadow-xl z-50 p-4 animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold" style={{ color: "#1F2937" }}>Filters</h3>
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-none w-full" ref={filterRef}>
+                  <button
+                    onClick={() => {
+                      if (!filterOpen) {
+                        setPendingCategory(activeCategory);
+                        setPendingPriority(priority);
+                        setPendingStatus(status);
+                      }
+                      setFilterOpen(!filterOpen);
+                    }}
+                    className="btn-secondary gap-2 flex items-center justify-center min-h-[44px] w-full"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Filters
                     {activeFilterCount > 0 && (
-                      <button onClick={() => {
-                        setPendingCategory("All Categories");
-                        setPendingPriority("All");
-                        setPendingStatus("All");
-                      }} className="text-xs font-medium hover:underline" style={{ color: "#5E7A5A" }}>
-                        Reset all
-                      </button>
+                      <span className="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white" style={{ background: "#5E7A5A" }}>
+                        {activeFilterCount}
+                      </span>
                     )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>CATEGORY</p>
-                      <div className="space-y-1 max-h-40 overflow-y-auto">
-                      {areCategoriesLoading ? (
-                        <div className="px-3 py-2 text-sm text-gray-500">Loading categories…</div>
-                      ) : (
-                        ['All Categories', ...categories].map((cat) => (
-                          <button key={cat}
-                            onClick={() => setPendingCategory(cat)}
-                            className="w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors"
-                            style={pendingCategory === cat
-                              ? { background: "#dde8db", color: "#3a4f38", fontWeight: 600 }
-                              : { color: "#6B7280" }}>
-                            {cat}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                    <div className="divider" />
-
-                    <div>
-                      <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>PRIORITY</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {PRIORITIES.map((p) => (
-                          <button key={p}
-                            onClick={() => setPendingPriority(p)}
-                            className="px-3 py-1.5 text-xs rounded-full transition-colors min-h-[32px]"
-                            style={pendingPriority === p
-                              ? { background: "#5E7A5A", color: "#fff" }
-                              : { background: "#F5F7F2", color: "#6B7280" }}>
-                            {p}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="divider" />
-
-                    <div>
-                      <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>STATUS</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {STATUSES.map((s) => (
-                          <button key={s}
-                            onClick={() => setPendingStatus(s)}
-                            className="px-3 py-1.5 text-xs rounded-full transition-colors min-h-[32px]"
-                            style={pendingStatus === s
-                              ? { background: "#5E7A5A", color: "#fff" }
-                              : { background: "#F5F7F2", color: "#6B7280" }}>
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button onClick={() => {
-                    setActiveCategory(pendingCategory);
-                    setPriority(pendingPriority);
-                    setStatus(pendingStatus);
-                    setFilterOpen(false);
-                  }} className="btn-primary w-full mt-4 text-sm justify-center">
-                    Apply Filters
                   </button>
-                </div>
-              )}
-            </div>
 
-            <select className="input w-auto text-sm py-2 cursor-pointer shrink-0"
-              value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-            </select>
+                  {filterOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl border shadow-xl z-50 p-4 animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold" style={{ color: "#1F2937" }}>Filters</h3>
+                        {activeFilterCount > 0 && (
+                          <button onClick={() => {
+                            setPendingCategory("All Categories");
+                            setPendingPriority("All");
+                            setPendingStatus("All");
+                          }} className="text-xs font-medium hover:underline" style={{ color: "#5E7A5A" }}>
+                            Reset all
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>CATEGORY</p>
+                          <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {areCategoriesLoading ? (
+                              <div className="px-3 py-2 text-sm text-gray-500">Loading categories…</div>
+                            ) : (
+                              ['All Categories', ...categories].map((cat) => (
+                                <button key={cat}
+                                  onClick={() => setPendingCategory(cat)}
+                                  className="w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors"
+                                  style={pendingCategory === cat
+                                    ? { background: "#dde8db", color: "#3a4f38", fontWeight: 600 }
+                                    : { color: "#6B7280" }}>
+                                  {cat}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="divider" />
+
+                        <div>
+                          <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>PRIORITY</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {PRIORITIES.map((p) => (
+                              <button key={p}
+                                onClick={() => setPendingPriority(p)}
+                                className="px-3 py-1.5 text-xs rounded-full transition-colors min-h-[32px]"
+                                style={pendingPriority === p
+                                  ? { background: "#5E7A5A", color: "#fff" }
+                                  : { background: "#F5F7F2", color: "#6B7280" }}>
+                                {p}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="divider" />
+
+                        <div>
+                          <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>STATUS</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {STATUSES.map((s) => (
+                              <button key={s}
+                                onClick={() => setPendingStatus(s)}
+                                className="px-3 py-1.5 text-xs rounded-full transition-colors min-h-[32px]"
+                                style={pendingStatus === s
+                                  ? { background: "#5E7A5A", color: "#fff" }
+                                  : { background: "#F5F7F2", color: "#6B7280" }}>
+                                {s}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button onClick={() => {
+                        setActiveCategory(pendingCategory);
+                        setPriority(pendingPriority);
+                        setStatus(pendingStatus);
+                        setFilterOpen(false);
+                      }} className="btn-primary w-full mt-4 text-sm justify-center">
+                        Apply Filters
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <select className="input text-sm py-2 cursor-pointer shrink-0 min-h-[44px] flex-1 sm:flex-none"
+                  style={{ width: "auto", minWidth: "140px" }}
+                  value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -370,7 +421,14 @@ export default function QueuePage() {
                 <span className="badge badge-orange">{reopened.length}</span>
               </div>
               <div className="space-y-2">
-                {reopened.map((q) => <QuestionRow key={q._id} question={q} />)}
+                {reopened.map((q) => (
+                  <QuestionRow 
+                    key={q._id} 
+                    question={q} 
+                    isBookmarked={bookmarkedQuestions.some((bq) => bq._id === q._id)}
+                    onToggleBookmark={handleToggleBookmark}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -382,7 +440,14 @@ export default function QueuePage() {
                 <span className="badge badge-brand">{open.length}</span>
               </div>
               <div className="space-y-2">
-                {open.map((q) => <QuestionRow key={q._id} question={q} />)}
+                {open.map((q) => (
+                  <QuestionRow 
+                    key={q._id} 
+                    question={q} 
+                    isBookmarked={bookmarkedQuestions.some((bq) => bq._id === q._id)}
+                    onToggleBookmark={handleToggleBookmark}
+                  />
+                ))}
               </div>
             </div>
           )}

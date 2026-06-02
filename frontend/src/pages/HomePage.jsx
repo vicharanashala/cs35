@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "../hooks/useDebounce";
-import { faqApi, questionApi, userApi } from "../services/api";
+import { faqApi, questionApi, userApi, bookmarkApi } from "../services/api";
 import { getUserTitle } from "../utils/gamification";
 import hero from "../assets/hero.png";
+import { useAuth } from "../hooks/useAuth";
+import { toast } from "react-hot-toast";
 
 function timeAgo(d) {
   if (!d) return "";
@@ -69,10 +71,33 @@ function getCategoryIcon(name) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef(null);
+
+  const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
+    queryKey: ["bookmarked-questions", user?._id],
+    queryFn: () => bookmarkApi.list(user?._id),
+    enabled: !!user?._id,
+  });
+
+  const handleToggleBookmark = async (id) => {
+    if (!user?._id) return;
+    const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === id);
+    try {
+      await bookmarkApi.toggle(user._id, id);
+      refetchBookmarks();
+      queryClient.invalidateQueries({ queryKey: ["bookmarked-questions", user._id] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile-bookmarks", user._id] });
+      toast.success(isBookmarked ? "Bookmark removed" : "Question bookmarked!");
+    } catch (err) {
+      console.error("Failed to toggle bookmark:", err);
+      toast.error("Failed to update bookmark");
+    }
+  };
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -295,17 +320,48 @@ export default function HomePage() {
                 </div>
               ))
             ) : topFaqs.length > 0 ? (
-              topFaqs.map((faq) => (
-                <Link key={faq._id} to={`/faqs/${faq._id}`} className="card-hover p-5 flex flex-col h-full">
-                  <span className="tag tag-brand w-max mb-3">{faq.category}</span>
-                  <h3 className="text-base font-semibold leading-snug mb-2" style={{ color: "#1F2937" }}>
-                    {faq.question}
-                  </h3>
-                  <p className="text-sm line-clamp-2 mt-auto" style={{ color: "#6B7280" }}>
-                    {faq.answer}
-                  </p>
-                </Link>
-              ))
+              topFaqs.map((faq) => {
+                const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === faq._id);
+                return (
+                  <div
+                    key={faq._id}
+                    onClick={(e) => {
+                      if (e.target.closest('button')) return;
+                      navigate(`/faq/${faq._id}`);
+                    }}
+                    className="card-hover p-5 flex flex-col h-full relative group/homecard cursor-pointer"
+                  >
+                    {user && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToggleBookmark(faq._id);
+                        }}
+                        title={isBookmarked ? "Remove Bookmark" : "Bookmark FAQ"}
+                        className="absolute top-4 right-4 p-1.5 rounded-full border transition-all cursor-pointer hover:scale-110 flex items-center justify-center opacity-0 group-hover/homecard:opacity-100 focus:opacity-100 z-10 bg-white"
+                        style={
+                          isBookmarked
+                            ? { background: "#F0FDF4", color: "#059669", borderColor: "#6EE7B7", opacity: 1 }
+                            : { background: "#ffffff", color: "#9CA3AF", borderColor: "#E2E8DE" }
+                        }
+                      >
+                        <svg className="w-4 h-4" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      </button>
+                    )}
+                    <span className="tag tag-brand w-max mb-3 pr-8">{faq.category}</span>
+                    <h3 className="text-base font-semibold leading-snug mb-2 pr-8" style={{ color: "#1F2937" }}>
+                      {faq.question}
+                    </h3>
+                    <p className="text-sm line-clamp-2 mt-auto" style={{ color: "#6B7280" }}>
+                      {faq.answer}
+                    </p>
+                  </div>
+                );
+              })
             ) : (
               <div className="col-span-1 md:col-span-2 card p-8 text-center">
                  <p className="text-sm" style={{ color: "#9CA3AF" }}>No verified FAQs found.</p>
@@ -371,13 +427,43 @@ export default function HomePage() {
                   </div>
                 ))
               ) : recentDiscussions.length > 0 ? (
-                recentDiscussions.map((q) => (
-                  <Link key={q._id} to={`/questions/${q._id}`} className="card-hover p-5 block">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                recentDiscussions.map((q) => {
+                const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === q._id);
+                return (
+                  <div
+                    key={q._id}
+                    onClick={(e) => {
+                      if (e.target.closest('button')) return;
+                      navigate(`/question/${q._id}`);
+                    }}
+                    className="card-hover p-5 block relative group/homecard cursor-pointer"
+                  >
+                    {user && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToggleBookmark(q._id);
+                        }}
+                        title={isBookmarked ? "Remove Bookmark" : "Bookmark Question"}
+                        className="absolute top-4 right-4 p-1.5 rounded-full border transition-all cursor-pointer hover:scale-110 flex items-center justify-center opacity-0 group-hover/homecard:opacity-100 focus:opacity-100 z-10 bg-white"
+                        style={
+                          isBookmarked
+                            ? { background: "#F0FDF4", color: "#059669", borderColor: "#6EE7B7", opacity: 1 }
+                            : { background: "#ffffff", color: "#9CA3AF", borderColor: "#E2E8DE" }
+                        }
+                      >
+                        <svg className="w-4 h-4" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      </button>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2 mb-2 pr-8">
                       <span className="tag tag-neutral">{q.category}</span>
                       {q.isReopened && <span className="badge badge-orange">Reopened</span>}
                     </div>
-                    <h3 className="font-medium text-base mb-2" style={{ color: "#1F2937" }}>
+                    <h3 className="font-medium text-base mb-2 pr-8" style={{ color: "#1F2937" }}>
                       {q.question}
                     </h3>
                     <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: "#9CA3AF" }}>
@@ -387,8 +473,9 @@ export default function HomePage() {
                       <span>·</span>
                       <span className="font-medium" style={{ color: "#5E7A5A" }}>{q.answers?.length || 0} answers</span>
                     </div>
-                  </Link>
-                ))
+                  </div>
+                );
+              })
               ) : (
                  <div className="card p-8 text-center">
                    <p className="text-sm" style={{ color: "#9CA3AF" }}>No recent discussions found.</p>
@@ -427,7 +514,7 @@ export default function HomePage() {
                           #{idx + 1}
                         </div>
                         <div className="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xs" style={{ background: "#dde8db", color: "#3a4f38" }}>
-                          {(user.name || user.username)?.charAt(0)?.toUpperCase() || "?"}
+                          {user.name?.charAt(0)?.toUpperCase() || "?"}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate flex items-center gap-2" style={{ color: "#1F2937" }}>
@@ -452,20 +539,22 @@ export default function HomePage() {
         </div>
 
         {/* ── Footer CTA ── */}
-        <section className="card p-8 text-center bg-white">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: "#f0f4ef" }}>
-            <svg className="w-8 h-8" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold mb-2" style={{ color: "#1F2937" }}>Can't find what you're looking for?</h2>
-          <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
-            Ask your question and the community will help!
-          </p>
-          <Link to="/ask" className="btn-primary">
-            Ask a Question
-          </Link>
-        </section>
+        {user?.role !== "admin" && (
+          <section className="card p-8 text-center bg-white">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: "#f0f4ef" }}>
+              <svg className="w-8 h-8" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold mb-2" style={{ color: "#1F2937" }}>Can't find what you're looking for?</h2>
+            <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
+              Ask your question and the community will help!
+            </p>
+            <Link to="/ask" className="btn-primary">
+              Ask a Question
+            </Link>
+          </section>
+        )}
       </div>
     </div>
   );

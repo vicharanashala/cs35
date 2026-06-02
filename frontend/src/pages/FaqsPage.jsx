@@ -1,31 +1,81 @@
 import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { faqApi } from "../services/api";
+import { faqApi, bookmarkApi } from "../services/api";
 import { useDebounce } from "../hooks/useDebounce";
+import { useAuth } from "../hooks/useAuth";
+import { toast } from "react-hot-toast";
 
 
-function FAQCard({ faq }) {
+function FAQCard({ faq, isBookmarked, onToggleBookmark }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [voted, setVoted] = useState(null); // 'up' | 'down' | null
+  const [showReasonBox, setShowReasonBox] = useState(false);
+  const [reason, setReason] = useState("");
+  const [submittingReason, setSubmittingReason] = useState(false);
   const qc = useQueryClient();
 
   const feedbackMutation = useMutation({
-    mutationFn: (helpful) => faqApi.feedback(faq._id, helpful),
+    mutationFn: (body) => faqApi.feedback(faq._id, body),
     onSuccess: () => qc.invalidateQueries(["faqs"]),
   });
 
   const handleFeedback = (helpful) => {
-    if (voted) return;
-    setVoted(helpful ? "up" : "down");
-    feedbackMutation.mutate(helpful);
+    const isUp = helpful;
+    const clickedType = isUp ? "up" : "down";
+
+    if (voted === clickedType) {
+      // Deselect (Instagram toggle)
+      setVoted(null);
+      setShowReasonBox(false);
+      feedbackMutation.mutate({
+        helpful: isUp,
+        deselect: true,
+      });
+    } else {
+      const prev = voted;
+      setVoted(clickedType);
+
+      if (clickedType === "down") {
+        setShowReasonBox(true);
+      } else {
+        setShowReasonBox(false);
+        feedbackMutation.mutate({
+          helpful: true,
+          previousVote: prev,
+        });
+      }
+    }
+  };
+
+  const handleReasonSubmit = (e) => {
+    e.preventDefault();
+    if (!reason.trim()) return;
+    setSubmittingReason(true);
+    feedbackMutation.mutate({
+      helpful: false,
+      previousVote: voted === "up" ? "up" : null,
+      reason: reason.trim(),
+      userLabel: user?.email || user?.name || "Student",
+    }, {
+      onSuccess: () => {
+        setShowReasonBox(false);
+        setReason("");
+        setSubmittingReason(false);
+      },
+      onError: () => {
+        setSubmittingReason(false);
+      }
+    });
   };
 
   return (
     <div className={`card overflow-hidden transition-shadow duration-300 ${open ? "shadow-md ring-1" : "shadow-sm hover:shadow-md"}`} style={open ? { ringColor: "#5E7A5A", borderColor: "#bdd4ba" } : { borderColor: "#E2E8DE" }}>
-      <button
+      <div
         onClick={() => setOpen((o) => !o)}
-        className="w-full text-left px-6 py-5 flex items-start justify-between gap-4 bg-white hover:bg-gray-50 transition-colors"
+        className="w-full text-left px-6 py-5 flex items-start justify-between gap-4 bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+        role="button"
         aria-expanded={open}
       >
         <div className="flex-1 min-w-0 pr-4">
@@ -41,16 +91,38 @@ function FAQCard({ faq }) {
             {faq.question}
           </h3>
         </div>
-        <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 group-hover:bg-green-50 group-hover:text-green-600 transition-colors">
-          <svg
-            className="w-5 h-5 transition-transform duration-300"
-            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+        <div className="flex items-center gap-2 shrink-0">
+          {user && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleBookmark(faq._id);
+              }}
+              title={isBookmarked ? "Remove Bookmark" : "Bookmark FAQ"}
+              className="p-1.5 rounded-full border transition-all cursor-pointer hover:scale-110 flex items-center justify-center animate-fade-in"
+              style={
+                isBookmarked
+                  ? { background: "#F0FDF4", color: "#059669", borderColor: "#6EE7B7" }
+                  : { background: "#ffffff", color: "#9CA3AF", borderColor: "#E2E8DE" }
+              }
+            >
+              <svg className="w-4.5 h-4.5" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+            </button>
+          )}
+          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 group-hover:bg-green-50 group-hover:text-green-600 transition-colors">
+            <svg
+              className="w-5 h-5 transition-transform duration-300"
+              style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
-      </button>
+      </div>
 
       {open && (
         <div className="px-6 pb-6 pt-2 bg-white animate-fade-in">
@@ -59,37 +131,72 @@ function FAQCard({ faq }) {
             <p className="text-[0.95rem] leading-relaxed whitespace-pre-line text-gray-600">
               {faq.answer}
             </p>
-            <div className="flex items-center justify-between pt-2">
-              {/* Feedback */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-medium">Was this helpful?</span>
-                <button
-                  onClick={() => handleFeedback(true)}
-                  disabled={!!voted}
-                  className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all ${
-                    voted === "up"
-                      ? "bg-green-100 border-green-300 text-green-700"
-                      : "border-gray-200 text-gray-500 hover:bg-green-50 hover:border-green-300 hover:text-green-700"
-                  } disabled:cursor-default`}
-                >
-                  👍 {faq.helpfulCount > 0 && <span>{faq.helpfulCount}</span>}
-                </button>
-                <button
-                  onClick={() => handleFeedback(false)}
-                  disabled={!!voted}
-                  className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all ${
-                    voted === "down"
-                      ? "bg-red-100 border-red-300 text-red-600"
-                      : "border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-300 hover:text-red-500"
-                  } disabled:cursor-default`}
-                >
-                  👎 {faq.unhelpfulCount > 0 && <span>{faq.unhelpfulCount}</span>}
-                </button>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between pt-2">
+                {/* Feedback */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 font-medium">Was this helpful?</span>
+                  <button
+                    onClick={() => handleFeedback(true)}
+                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      voted === "up"
+                        ? "bg-green-100 border-green-300 text-green-700 font-bold"
+                        : "border-gray-200 text-gray-500 hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                    }`}
+                  >
+                    👍 {faq.helpfulCount > 0 && <span>{faq.helpfulCount}</span>}
+                  </button>
+                  <button
+                    onClick={() => handleFeedback(false)}
+                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      voted === "down"
+                        ? "bg-red-100 border-red-300 text-red-600 font-bold"
+                        : "border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-300 hover:text-red-500"
+                    }`}
+                  >
+                    👎 {faq.unhelpfulCount > 0 && <span>{faq.unhelpfulCount}</span>}
+                  </button>
+                </div>
+                <Link to={`/faq/${faq._id}`} className="text-sm font-semibold hover:underline flex items-center gap-1" style={{ color: "#5E7A5A" }}>
+                  Read full documentation
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </Link>
               </div>
-              <Link to={`/faqs/${faq._id}`} className="text-sm font-semibold hover:underline flex items-center gap-1" style={{ color: "#5E7A5A" }}>
-                Read full documentation
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </Link>
+              {showReasonBox && (
+                <form onSubmit={handleReasonSubmit} className="p-4 bg-gray-50 border rounded-xl animate-fade-in space-y-3" style={{ borderColor: "#E2E8DE" }}>
+                  <label htmlFor={`reason-${faq._id}`} className="block text-xs font-semibold text-gray-700">
+                    Please tell us why this was not helpful:
+                  </label>
+                  <textarea
+                    id={`reason-${faq._id}`}
+                    className="input text-xs w-full h-20 resize-none bg-white"
+                    placeholder="Tell us what is wrong, out of date, or missing..."
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    required
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVoted(null);
+                        setShowReasonBox(false);
+                        setReason("");
+                      }}
+                      className="btn-secondary btn-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingReason || !reason.trim()}
+                      className="btn-primary btn-sm bg-red-600 hover:bg-red-700"
+                    >
+                      {submittingReason ? "Submitting..." : "Submit Feedback"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>
@@ -115,6 +222,30 @@ export default function FaqsPage() {
   
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [search, setSearch] = useState(initialSearch);
+
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
+    queryKey: ["bookmarked-questions", user?._id],
+    queryFn: () => bookmarkApi.list(user?._id),
+    enabled: !!user?._id,
+  });
+
+  const handleToggleBookmark = async (faqId) => {
+    if (!user?._id) return;
+    const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === faqId);
+    try {
+      await bookmarkApi.toggle(user._id, faqId);
+      refetchBookmarks();
+      queryClient.invalidateQueries({ queryKey: ["bookmarked-questions", user._id] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile-bookmarks", user._id] });
+      toast.success(isBookmarked ? "Bookmark removed" : "FAQ bookmarked!");
+    } catch (err) {
+      console.error("Failed to toggle bookmark:", err);
+      toast.error("Failed to update bookmark");
+    }
+  };
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -286,7 +417,14 @@ export default function FaqsPage() {
                   <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                   Smart Search Results (sorted by relevance):
                 </div>
-                {filtered.map((faq) => <FAQCard key={faq._id} faq={faq} />)}
+                {filtered.map((faq) => (
+                  <FAQCard 
+                    key={faq._id} 
+                    faq={faq} 
+                    isBookmarked={bookmarkedQuestions.some((bq) => bq._id === faq._id)}
+                    onToggleBookmark={handleToggleBookmark}
+                  />
+                ))}
               </div>
             ) : (
               <div className="space-y-16">
@@ -306,7 +444,14 @@ export default function FaqsPage() {
                     
                     {/* Category Accordions */}
                     <div className="space-y-4">
-                      {group.faqs.map((faq) => <FAQCard key={faq._id} faq={faq} />)}
+                      {group.faqs.map((faq) => (
+                        <FAQCard 
+                          key={faq._id} 
+                          faq={faq} 
+                          isBookmarked={bookmarkedQuestions.some((bq) => bq._id === faq._id)}
+                          onToggleBookmark={handleToggleBookmark}
+                        />
+                      ))}
                     </div>
                     
                   </div>

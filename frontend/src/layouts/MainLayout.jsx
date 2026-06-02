@@ -45,6 +45,7 @@ export default function MainLayout() {
   const userName = user?.name || "Student";
   const userRole = user?.role || "student";
   const isAdmin = userRole === "admin";
+  const visibleLinks = NAV_LINKS.filter(({ to }) => !(isAdmin && to === "/ask"));
 
   // Fetch profile data for stats
   const { data: profileData } = useQuery({
@@ -71,7 +72,8 @@ export default function MainLayout() {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const username = profileData?.user?.username || user?.email || "";
+  const username = profileData?.user?.username || user?.username || "";
+  const email = profileData?.user?.email || user?.email || "";
   const joinDate = profileData?.user?.createdAt
     ? new Date(profileData.user.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
     : null;
@@ -80,6 +82,7 @@ export default function MainLayout() {
         questions: profileData.user.questionsCount ?? 0,
         answers: profileData.user.answersCount ?? 0,
         verified: profileData.user.verifiedCount ?? 0,
+        bookmarked: profileData.user.bookmarkedCount ?? 0,
       }
     : null;
   const hasActivity = stats && (stats.questions > 0 || stats.answers > 0 || stats.verified > 0);
@@ -199,7 +202,7 @@ export default function MainLayout() {
       socket.off("userUpdated", handleUserUpdate);
       socket.off("newNotification", handleNewNotification);
     };
-  }, [qc, isAuthenticated, user?._id]);
+  }, [qc, isAuthenticated, user?._id, user?.role, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F5F7F2" }}>
@@ -214,7 +217,7 @@ export default function MainLayout() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-0.5 ml-2" aria-label="Main">
-            {NAV_LINKS.map(({ to, label }) => (
+            {visibleLinks.map(({ to, label }) => (
               <Link key={to} to={to}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   isActive(to)
@@ -414,7 +417,12 @@ export default function MainLayout() {
                     style={{ borderColor: "#E2E8DE", transformOrigin: "top right", animationDuration: "0.2s" }}
                   >
                     {/* ── Header Section ── */}
-                    <div className="relative p-5 text-center bg-gradient-to-br from-[#f0f4ef] to-[#ffffff] border-b" style={{ borderColor: "#E2E8DE" }}>
+                    <Link
+                      to="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="relative p-5 text-center bg-gradient-to-br from-[#f0f4ef] to-[#ffffff] border-b block hover:opacity-90 transition-opacity"
+                      style={{ borderColor: "#E2E8DE" }}
+                    >
                       <div className="relative inline-block mb-3">
                         <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md ring-4 ring-white"
                              style={{ background: "#5E7A5A" }}>
@@ -425,7 +433,7 @@ export default function MainLayout() {
                       </div>
                       
                       <h3 className="text-base font-bold text-gray-900 leading-tight">{userName}</h3>
-                      {username && <p className="text-sm text-gray-500 mt-0.5">@{username}</p>}
+                      {(username || email) && <p className="text-sm text-gray-500 mt-0.5 truncate max-w-full">{username ? `@${username}` : email}</p>}
                       
                       <div className="flex items-center justify-center gap-2 mt-3">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
@@ -438,36 +446,42 @@ export default function MainLayout() {
                           <span className="text-xs text-gray-400 font-medium">Joined {joinDate}</span>
                         )}
                       </div>
-                    </div>
+                    </Link>
 
                     {/* ── Stats Grid ── */}
-                    <div className="px-5 py-4 border-b" style={{ borderColor: "#E2E8DE", background: "#fafafa" }}>
-                      {!stats ? (
-                        <div className="flex justify-between items-center px-4 animate-pulse">
-                          {[1, 2, 3].map(i => (
-                            <div key={i} className="flex flex-col items-center gap-2">
-                              <div className="w-6 h-6 bg-gray-200 rounded-full" />
-                              <div className="w-12 h-3 bg-gray-200 rounded" />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="flex flex-col items-center p-2 rounded-xl bg-white border border-gray-100 shadow-sm transition-transform hover:-translate-y-0.5">
-                            <span className="text-lg font-bold text-gray-900">{stats.questions}</span>
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wide mt-0.5">Questions</span>
+                    {!isAdmin && (
+                      <div className="px-5 py-4 border-b" style={{ borderColor: "#E2E8DE", background: "#fafafa" }}>
+                        {!stats ? (
+                          <div className="flex justify-between items-center px-4 animate-pulse">
+                            {[1, 2, 3].map(i => (
+                              <div key={i} className="flex flex-col items-center gap-2">
+                                <div className="w-6 h-6 bg-gray-200 rounded-full" />
+                                <div className="w-12 h-3 bg-gray-200 rounded" />
+                              </div>
+                            ))}
                           </div>
-                          <div className="flex flex-col items-center p-2 rounded-xl bg-white border border-gray-100 shadow-sm transition-transform hover:-translate-y-0.5">
-                            <span className="text-lg font-bold text-gray-900">{stats.answers}</span>
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wide mt-0.5">Answers</span>
-                          </div>
-                          <div className="flex flex-col items-center p-2 rounded-xl bg-white border border-gray-100 shadow-sm transition-transform hover:-translate-y-0.5">
-                            <span className="text-lg font-bold text-emerald-600">{stats.verified}</span>
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wide mt-0.5 text-center">Verified</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                        ) : (
+                          <div className="grid grid-cols-4 gap-1.5">
+                             <Link to="/profile?tab=questions" onClick={() => setDropdownOpen(false)} className="flex flex-col items-center p-1.5 rounded-xl bg-white border border-gray-100 shadow-sm transition-transform hover:-translate-y-0.5 cursor-pointer text-center select-none decoration-none">
+                               <span className="text-sm font-bold text-gray-900">{stats.questions}</span>
+                               <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wide mt-0.5">Questions</span>
+                             </Link>
+                             <Link to="/profile?tab=answers" onClick={() => setDropdownOpen(false)} className="flex flex-col items-center p-1.5 rounded-xl bg-white border border-gray-100 shadow-sm transition-transform hover:-translate-y-0.5 cursor-pointer text-center select-none decoration-none">
+                               <span className="text-sm font-bold text-gray-900">{stats.answers}</span>
+                               <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wide mt-0.5">Answers</span>
+                             </Link>
+                             <Link to="/profile?tab=verified" onClick={() => setDropdownOpen(false)} className="flex flex-col items-center p-1.5 rounded-xl bg-white border border-gray-100 shadow-sm transition-transform hover:-translate-y-0.5 cursor-pointer text-center select-none decoration-none">
+                               <span className="text-sm font-bold text-emerald-600">{stats.verified}</span>
+                               <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wide mt-0.5 text-center">Verified</span>
+                             </Link>
+                             <Link to="/profile?tab=bookmarked" onClick={() => setDropdownOpen(false)} className="flex flex-col items-center p-1.5 rounded-xl bg-white border border-gray-100 shadow-sm transition-transform hover:-translate-y-0.5 cursor-pointer text-center select-none decoration-none">
+                               <span className="text-sm font-bold text-indigo-600">{stats.bookmarked}</span>
+                               <span className="text-[9px] uppercase font-bold text-gray-400 tracking-wide mt-0.5 text-center">Bookmarked</span>
+                             </Link>
+                           </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* ── Quick Actions ── */}
                     <div className="p-2">
@@ -487,16 +501,16 @@ export default function MainLayout() {
                         </Link>
                       ) : (
                         <Link
-                          to="/my-questions"
+                          to="/profile"
                           onClick={() => setDropdownOpen(false)}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors hover:bg-gray-50 group"
                         >
                           <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center group-hover:bg-[#f0f4ef] group-hover:text-[#5E7A5A] transition-colors">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                           </div>
-                          <span className="text-sm font-medium text-gray-700 group-hover:text-[#5E7A5A] transition-colors">My Questions</span>
+                          <span className="text-sm font-medium text-gray-700 group-hover:text-[#5E7A5A] transition-colors">My Profile</span>
                         </Link>
                       )}
 
@@ -567,7 +581,7 @@ export default function MainLayout() {
         {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden border-t px-4 py-3 space-y-1 bg-white animate-fade-in" style={{ borderColor: "#E2E8DE" }}>
-            {NAV_LINKS.map(({ to, label }) => (
+            {visibleLinks.map(({ to, label }) => (
               <Link key={to} to={to} onClick={() => setMenuOpen(false)}
                 className="block px-3 py-2 text-sm font-medium rounded-md transition-colors"
                 style={isActive(to) ? { color: "#5E7A5A", background: "#f0f4ef" } : { color: "#6B7280" }}>

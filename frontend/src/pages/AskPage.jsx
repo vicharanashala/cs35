@@ -3,8 +3,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi, faqApi, aiApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
 
 const TIPS = [
   "Be specific and clear",
@@ -454,7 +452,7 @@ export default function AskPage() {
                   <div className="flex items-center gap-2 mb-2">
                     {/* Speech to Text */}
                     <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
-                      className="w-8 h-8 rounded transition-colors flex items-center justify-center relative border"
+                      className="w-8 h-8 rounded transition-colors flex items-center justify-center relative border cursor-pointer"
                       style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent", borderColor: "#E2E8DE" }}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                         <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
@@ -466,14 +464,26 @@ export default function AskPage() {
                         </span>
                       )}
                     </button>
-                    <span className="text-xs" style={{ color: "#6B7280" }}>Click to dictate</span>
+                    
+                    {/* Upload Media */}
+                    <button type="button" onClick={() => fileInputRef.current?.click()} title="Upload Screenshot/Image"
+                      className="w-8 h-8 rounded transition-colors flex items-center justify-center border bg-transparent cursor-pointer"
+                      style={{ color: "#374151", borderColor: "#E2E8DE" }}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+
+                    <span className="text-xs" style={{ color: "#6B7280" }}>Speech & media tools</span>
                   </div>
-                  <ReactQuill 
-                    theme="snow" 
-                    value={details} 
-                    onChange={setDetails} 
-                    placeholder="Write the details of your question…"
-                    className="bg-white rounded-lg overflow-hidden" 
+                  <textarea
+                    className="input w-full p-3 resize-y min-h-[150px] bg-white rounded-lg border"
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
+                    placeholder="Write the details of your question..."
+                    rows={6}
+                    style={{ color: "#1F2937", borderColor: "#E2E8DE" }}
                   />
                 </div>
 

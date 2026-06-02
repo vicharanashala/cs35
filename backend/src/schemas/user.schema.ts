@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: { createdAt: true, updatedAt: true } })
 export class User extends Document {
-  @Prop({ unique: true, sparse: true }) username: string;
+  @Prop({ unique: true, required: true }) username: string;
   @Prop({ unique: true, sparse: true }) email?: string;
   @Prop({ required: true }) password: string;
   @Prop({ required: true, enum: ['student', 'admin'] }) role:

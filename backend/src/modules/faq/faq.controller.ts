@@ -43,8 +43,26 @@ export class FaqController {
   }
 
   @Patch('faqs/:id/feedback')
-  feedback(@Param('id') id: string, @Body('helpful') helpful: boolean) {
-    return this.faqService.feedback(id, helpful);
+  @Public()
+  submitFaqFeedback(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      helpful: boolean;
+      previousVote?: 'up' | 'down' | null;
+      deselect?: boolean;
+      reason?: string;
+      userLabel?: string;
+    },
+  ) {
+    return this.faqService.submitFaqFeedback(
+      id,
+      body.helpful,
+      body.previousVote,
+      body.deselect,
+      body.reason,
+      body.userLabel,
+    );
   }
 
   @Get('search/trending')
@@ -52,14 +70,22 @@ export class FaqController {
     return this.faqService.getTrendingSearches();
   }
 
+  @Roles('admin')
+  @Get('admin/search/failed')
+  getFailedSearches() {
+    return this.faqService.getFailedSearches();
+  }
+
+  @Roles('admin')
+  @Get('admin/feedback/unhelpful')
+  getUnhelpfulFeedback() {
+    return this.faqService.getUnhelpfulFeedback();
+  }
+
+  @Public()
   @Get('search/full')
   fullTextSearch(@Query('q') q: string) {
     return this.faqService.fullTextSearch(q);
-  }
-
-  @Get('admin/search/failed')
-  getFailedSearches() {
-    return [];
   }
 
   @Get('faqs/similar')
@@ -196,6 +222,89 @@ export class FaqController {
     return { success: true, message: 'Password reset link sent' };
   }
 
+  @Patch('users/:userId/bookmark/:questionId')
+  toggleBookmark(
+    @Param('userId') userId: string,
+    @Param('questionId') questionId: string,
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
+    if (user.role !== 'admin' && user.id !== userId) {
+      throw new ForbiddenException('You can only manage your own bookmarks');
+    }
+    return this.faqService.toggleBookmark(userId, questionId);
+  }
+
+  @Get('users/:userId/bookmarks')
+  getBookmarkedQuestions(
+    @Param('userId') userId: string,
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
+    if (user.role !== 'admin' && user.id !== userId) {
+      throw new ForbiddenException('You can only view your own bookmarks');
+    }
+    return this.faqService.getBookmarkedQuestions(userId);
+  }
+
+  @Get('users/:userId/answers')
+  getUserAnswers(
+    @Param('userId') userId: string,
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
+    if (user.role !== 'admin' && user.id !== userId) {
+      throw new ForbiddenException('You can only view your own answers');
+    }
+    return this.faqService.getUserAnswers(userId);
+  }
+
+  // ── Follow Routes ───────────────────────────────────────────
+
+  @Patch('users/:followerId/follow/:followingId')
+  followUser(
+    @Param('followerId') followerId: string,
+    @Param('followingId') followingId: string,
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
+    if (user.role !== 'admin' && user.id !== followerId) {
+      throw new ForbiddenException('You can only manage your own follow list');
+    }
+    return this.faqService.followUser(followerId, followingId);
+  }
+
+  @Get('users/:userId/following')
+  getFollowing(
+    @Param('userId') userId: string,
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
+    if (user.role !== 'admin' && user.id !== userId) {
+      throw new ForbiddenException('You can only view your own following list');
+    }
+    return this.faqService.getFollowing(userId);
+  }
+
+  // ── User Stats / Activity ───────────────────────────────────
+
+  @Get('users/:userId/activity')
+  getActivityHeatmap(
+    @Param('userId') userId: string,
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
+    if (user.role !== 'admin' && user.id !== userId) {
+      throw new ForbiddenException('You can only view your own activity');
+    }
+    return this.faqService.getActivityHeatmap(userId);
+  }
+
+  @Get('users/:userId/stats')
+  getUserStats(
+    @Param('userId') userId: string,
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
+    if (user.role !== 'admin' && user.id !== userId) {
+      throw new ForbiddenException('You can only view your own stats');
+    }
+    return this.faqService.getUserStats(userId);
+  }
+
   @Get('auth/me')
   getMe(@Headers('authorization') auth: string) {
     const token = auth?.replace('Bearer ', '');
@@ -216,8 +325,20 @@ export class FaqController {
   }
 
   @Patch('users/:id')
-  updateUser(@Param('id') id: string, @Body() body: any) {
-    return { _id: id, ...body };
+  updateUser(
+    @Param('id') id: string,
+    @Body() body: { isActive?: boolean; role?: string; reputation?: number; notificationPreferences?: any },
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
+    if (user.role !== 'admin' && user.id !== id) {
+      throw new ForbiddenException('You can only update your own profile');
+    }
+    if (user.role !== 'admin') {
+      delete body.isActive;
+      delete body.role;
+      delete body.reputation;
+    }
+    return this.faqService.updateUser(id, body);
   }
 
   @Delete('users/:id')
@@ -258,12 +379,22 @@ export class FaqController {
   // ── Notifications ─────────────────────────────────────────
 
   @Get('notifications/:userId')
-  getNotifications(@Param('userId') userId: string, @Query('isAdmin') isAdmin?: string) {
+  getNotifications(
+    @Param('userId') userId: string,
+    @CurrentUser() user: { id?: string; role?: string },
+    @Query('isAdmin') isAdmin?: string,
+  ) {
+    if (user.role !== 'admin' && user.id !== userId) {
+      throw new ForbiddenException('You can only view your own notifications');
+    }
     return this.faqService.getNotifications(userId, isAdmin === 'true');
   }
 
   @Patch('notifications/:id/read')
-  markRead(@Param('id') id: string) {
+  markNotificationRead(
+    @Param('id') id: string,
+    @CurrentUser() user: { id?: string; role?: string },
+  ) {
     return this.faqService.markNotificationRead(id);
   }
 
