@@ -180,11 +180,10 @@ function DashboardTab() {
   return (
     <div className="space-y-8">
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "Open Questions", value: stats?.openQuestions ?? "—", icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.007 2.917-.546.086-.99.622-1.16 1.21 M12 17v.01", bg: "#FFFBEB", color: "#D97706" },
           { label: "Verified FAQs", value: stats?.totalFaqs ?? "—", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253", bg: "#FAF5FF", color: "#9333EA" },
-          { label: "Categories", value: stats?.totalCategories ?? "—", icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z", bg: "#F0FDFA", color: "#0D9488" },
           { label: "Total Users", value: stats?.totalUsers ?? "—", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", bg: "#F0F9FF", color: "#0284C7" },
         ].map(({ label, value, icon, bg, color }) => (
           <div key={label} className="card p-5 flex items-center gap-4 border border-[#E2E8DE]/80 hover:shadow-md transition-all">
