@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { Faq, FaqSchema } from '../../schemas/faq.schema';
 import { Question, QuestionSchema } from '../../schemas/question.schema';
 import { Answer, AnswerSchema } from '../../schemas/answer.schema';
+import { Category, CategorySchema } from '../../schemas/category.schema';
 import { User, UserSchema } from '../../schemas/user.schema';
 import { Notification, NotificationSchema } from '../../schemas/notification.schema';
 import { SearchAnalytics, SearchAnalyticsSchema } from '../../schemas/search-analytics.schema';
@@ -41,6 +42,10 @@ import { AiModule } from '../ai/ai.module';
     {
       provide: 'SEARCH_ANALYTICS_MODEL',
       useFactory: () => require('mongoose').model(SearchAnalytics.name, SearchAnalyticsSchema),
+    },
+    {
+      provide: 'CATEGORY_MODEL',
+      useFactory: () => require('mongoose').model(Category.name, CategorySchema),
     },
   ],
 })

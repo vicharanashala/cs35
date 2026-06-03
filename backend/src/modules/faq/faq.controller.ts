@@ -1,7 +1,10 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Headers, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Headers, ForbiddenException, UseGuards } from '@nestjs/common';
 import { FaqService } from './faq.service';
 import { CurrentUser, Public, Roles } from '../../common/decorators';
 
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+
+@UseGuards(JwtAuthGuard)
 @Controller()
 export class FaqController {
   constructor(private readonly faqService: FaqService) {}
@@ -202,25 +205,13 @@ export class FaqController {
   }
 
   @Post('categories')
-  createCategory(@Body() body: { name: string }) {
-    return { name: body.name };
+  createCategory(@Body() body: { name: string; confirmed?: boolean }) {
+    return this.faqService.createCategory(body.name, body.confirmed);
   }
 
-  // ── Auth ──────────────────────────────────────────────────
-
-  @Post('auth/login')
-  login(@Body() body: { username: string; password: string }) {
-    return this.faqService.login(body.username, body.password);
-  }
-
-  @Post('auth/signup')
-  signup(@Body() body: { fullName: string; username: string; password: string }) {
-    return this.faqService.signup(body);
-  }
-
-  @Post('auth/forgot-password')
-  forgotPassword(@Body() body: { username: string }) {
-    return { success: true, message: 'Password reset link sent' };
+  @Patch('categories/confirm')
+  confirmCategory(@Body() body: { name: string }) {
+    return this.faqService.confirmCategory(body.name);
   }
 
   @Patch('users/:userId/bookmark/:questionId')
@@ -304,13 +295,6 @@ export class FaqController {
       throw new ForbiddenException('You can only view your own stats');
     }
     return this.faqService.getUserStats(userId);
-  }
-
-  @Get('auth/me')
-  getMe(@Headers('authorization') auth: string) {
-    const token = auth?.replace('Bearer ', '');
-    const userId = token?.replace('token-', '');
-    return this.faqService.getMe(userId || 'user-1');
   }
 
   // ── Users ─────────────────────────────────────────────────

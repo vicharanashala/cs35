@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
@@ -10,12 +9,6 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 
 @Module({
   imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: User.name,
-        useFactory: () => UserSchema,
-      },
-    ]),
     JwtModule.registerAsync({
       global: true,
       inject: [],
@@ -39,7 +32,15 @@ import { RolesGuard } from '../../common/guards/roles.guard';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard, RolesGuard],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    RolesGuard,
+    {
+      provide: 'USER_MODEL',
+      useFactory: () => require('mongoose').model(User.name, UserSchema),
+    },
+  ],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

@@ -172,7 +172,7 @@ export default function HomePage() {
           <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-30" style={{ background: "#dde8db" }}></div>
           <div className="absolute top-24 -right-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-30" style={{ background: "#f8f0e0" }}></div>
         </div>
-        <div className="container-xl py-16 sm:py-24 relative z-10">
+        <div className="container-xl py-8 sm:py-12 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left */}
             <div className="max-w-2xl">
@@ -272,10 +272,165 @@ export default function HomePage() {
         </div>
       </section>
 
-        <div className="container-xl py-10 space-y-12" onClick={() => setShowDropdown(false)}>
-{/* ── 2. Explore Categories ── */}
+        <div className="container-xl py-6 space-y-8" onClick={() => setShowDropdown(false)}>
+        {/* ── 2. Verified FAQs + Recent Discussions (side by side) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Verified FAQs */}
+          <section>
+            <div className="flex items-end justify-between mb-4">
+              <div>
+                <h2 className="section-title flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Verified FAQs
+                </h2>
+                <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Official answers from admins.</p>
+              </div>
+              <Link to="/faqs" className="text-sm font-medium hover:underline" style={{ color: "#5E7A5A" }}>
+                View all →
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {loadingFaqs ? (
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className="card p-4">
+                    <div className="skeleton h-3 w-20 mb-2" />
+                    <div className="skeleton h-4 w-full mb-1" />
+                    <div className="skeleton h-3 w-2/3" />
+                  </div>
+                ))
+              ) : topFaqs.length > 0 ? (
+                topFaqs.map((faq) => (
+                  <div
+                    key={faq._id}
+                    onClick={() => navigate(`/faqs/${faq._id}`)}
+                    className="card-hover p-4 block cursor-pointer"
+                    style={{ background: "#ffffff", border: "1px solid #E2E8DE", borderRadius: "12px" }}
+                  >
+                    <span className="text-xs font-medium mb-1.5 block" style={{ color: "#5E7A5A" }}>{faq.category}</span>
+                    <h3 className="text-sm font-semibold leading-snug mb-1" style={{ color: "#1F2937" }}>{faq.question}</h3>
+                    <p className="text-xs line-clamp-1" style={{ color: "#6B7280" }}>{faq.answer}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm" style={{ color: "#9CA3AF" }}>No verified FAQs found.</p>
+              )}
+            </div>
+          </section>
+
+          {/* Recent Discussions */}
+          <section>
+            <div className="flex items-end justify-between mb-4">
+              <div>
+                <h2 className="section-title flex items-center gap-2">
+                  <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                  </svg>
+                  Recent Discussions
+                </h2>
+                <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Community questions waiting for answers.</p>
+              </div>
+              <Link to="/queue" className="text-sm font-medium hover:underline" style={{ color: "#5E7A5A" }}>
+                See All →
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {loadingQuestions ? (
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className="card p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="skeleton w-9 h-9 rounded-full" />
+                      <div className="flex-1">
+                        <div className="skeleton h-3 w-20 mb-1" />
+                        <div className="skeleton h-2 w-12" />
+                      </div>
+                    </div>
+                    <div className="skeleton h-4 w-full mb-2" />
+                    <div className="skeleton h-5 w-16 rounded-full" />
+                  </div>
+                ))
+              ) : recentDiscussions.length > 0 ? (
+                recentDiscussions.map((q) => {
+                  const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === q._id);
+                  const initial = (q.contributorName || "S")[0].toUpperCase();
+                  const avatarColors = ["#5E7A5A", "#7C9A6E", "#A4BE8B", "#D4E4C9", "#3D5A3A", "#6B8E6B"];
+                  const avatarColor = avatarColors[initial.charCodeAt(0) % avatarColors.length];
+                  return (
+                    <div
+                      key={q._id}
+                      onClick={() => navigate(`/questions/${q._id}`)}
+                      className="block cursor-pointer"
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #E2E8DE",
+                        borderRadius: "12px",
+                        padding: "16px",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = "none";
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-xs shrink-0" style={{ background: avatarColor }}>
+                          {initial}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm truncate" style={{ color: "#1F2937" }}>{q.contributorName || "Student"}</p>
+                          <p className="text-xs" style={{ color: "#9CA3AF" }}>{timeAgo(q.createdAt)}</p>
+                        </div>
+                        {user && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleBookmark(q._id); }}
+                            className="p-1.5 rounded-full flex items-center justify-center"
+                            style={isBookmarked ? { background: "#F0FDF4", color: "#059669" } : { background: "#F9FAFB", color: "#9CA3AF" }}
+                          >
+                            <svg className="w-3.5 h-3.5" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      <h3 className="font-semibold text-sm leading-snug mb-2" style={{ color: "#1F2937" }}>{q.question}</h3>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "#EEF4EA", color: "#5E7A5A" }}>{q.category}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                            {q.upvotes || 0}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            {q.answers?.length || 0}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm" style={{ color: "#9CA3AF" }}>No recent discussions found.</p>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* ── 3. Explore Categories ── */}
         <section>
-          <div className="mb-5">
+          <div className="mb-4">
             <h2 className="section-title">Explore Categories</h2>
             <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Browse knowledge by topic.</p>
           </div>
@@ -346,7 +501,7 @@ export default function HomePage() {
                 return (
                   <div
                     key={q._id}
-                    onClick={() => navigate(`/question/${q._id}`)}
+                    onClick={() => navigate(`/questions/${q._id}`)}
                     className="card-hover block cursor-pointer group/discussion"
                     style={{
                       background: "#ffffff",

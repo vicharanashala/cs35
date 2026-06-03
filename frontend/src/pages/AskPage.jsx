@@ -214,7 +214,18 @@ export default function AskPage() {
     setIsSubmitting(true);
     try {
       const contributorName = user?.name || "Student";
-      await questionApi.create({ question: title.trim(), category: finalCategory, details: details.trim(), tags, contributorName, contributorId: user?._id });
+      // If student picked 'Add New Category', store the new cat name in pendingCategory
+      // and set category to 'General' as a placeholder until admin confirms
+      const isNewCat = category === "new_category";
+      await questionApi.create({
+        question: title.trim(),
+        category: isNewCat ? "General" : finalCategory,
+        pendingCategory: isNewCat ? finalCategory : undefined,
+        details: details.trim(),
+        tags,
+        contributorName,
+        contributorId: user?._id,
+      });
       setSubmitted(title); setShowSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
       queryClient.invalidateQueries({ queryKey: ["my-questions"] });

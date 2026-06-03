@@ -74,15 +74,121 @@ function AdjustPointsModal({ user, onConfirm, onCancel }) {
       <div className="card p-6 max-w-sm w-full mx-4 animate-scale-in">
         <h3 className="font-bold text-lg mb-3" style={{ color: "#1F2937" }}>Adjust Reputation</h3>
         <p className="text-sm mb-5" style={{ color: "#6B7280" }}>Set total reputation points for <strong>{user?.name}</strong>.</p>
-        <input 
-          type="number" 
-          value={points} 
-          onChange={(e) => setPoints(Number(e.target.value))} 
-          className="input mb-5" 
+        <input
+          type="number"
+          value={points}
+          onChange={(e) => setPoints(Number(e.target.value))}
+          className="input mb-5"
         />
         <div className="flex gap-3 justify-end">
           <button onClick={onCancel} className="btn-secondary px-4 py-2">Cancel</button>
           <button onClick={() => onConfirm(points)} className="btn-primary px-4 py-2" style={{ background: "#059669" }}>Save Points</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Category Confirm Modal (shown when admin approves a question with new category) ───
+
+function CategoryConfirmModal({ pendingCategory, existingCategories, onConfirm, onCancel }) {
+  const [selected, setSelected] = useState("");
+  const [customName, setCustomName] = useState("");
+  const [mode, setMode] = useState("select"); // "select" | "create"
+
+  // Auto-fill with the student's pending category suggestion
+  useEffect(() => {
+    if (pendingCategory) {
+      setCustomName(pendingCategory);
+    }
+  }, [pendingCategory]);
+
+  const handleConfirm = () => {
+    if (mode === "create") {
+      onConfirm(customName.trim());
+    } else {
+      onConfirm(selected);
+    }
+  };
+
+  const displayName = mode === "create" ? customName : selected;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+      <div className="card p-6 max-w-md w-full mx-4 animate-scale-in">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-2xl">🏷️</span>
+          <div>
+            <h3 className="font-bold text-lg" style={{ color: "#1F2937" }}>New Category Detected</h3>
+            <p className="text-sm" style={{ color: "#6B7280" }}>Student suggested a category not in the list. Confirm or choose one.</p>
+          </div>
+        </div>
+
+        {pendingCategory && (
+          <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-xs font-bold text-amber-700 mb-1">Student suggested:</p>
+            <p className="text-sm font-semibold text-amber-800">"{pendingCategory}"</p>
+          </div>
+        )}
+
+        {/* Mode toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setMode("select")}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-all cursor-pointer ${mode === "select" ? "bg-[#5E7A5A] text-white border-[#5E7A5A]" : "bg-white text-slate-600 border-[#E2E8DE] hover:border-[#bdd4ba]"}`}
+          >
+            Choose existing
+          </button>
+          <button
+            onClick={() => setMode("create")}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-all cursor-pointer ${mode === "create" ? "bg-[#5E7A5A] text-white border-[#5E7A5A]" : "bg-white text-slate-600 border-[#E2E8DE] hover:border-[#bdd4ba]"}`}
+          >
+            + Create new
+          </button>
+        </div>
+
+        {mode === "select" ? (
+          <div className="mb-4 max-h-48 overflow-y-auto space-y-1.5">
+            {existingCategories.map(cat => {
+              const name = typeof cat === "string" ? cat : cat.name;
+              return (
+                <button
+                  key={name}
+                  onClick={() => setSelected(name)}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
+                    selected === name
+                      ? "bg-[#f0f4ef] border-[#5E7A5A] text-[#3a4f38]"
+                      : "bg-white border-[#E2E8DE] text-slate-600 hover:border-[#bdd4ba]"
+                  }`}
+                >
+                  <span className="mr-2">{typeof cat === "object" && cat.icon ? cat.icon : "📁"}</span>
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mb-4">
+            <input
+              type="text"
+              value={customName}
+              onChange={e => setCustomName(e.target.value)}
+              placeholder="New category name..."
+              className="input w-full"
+            />
+          </div>
+        )}
+
+        <div className="flex gap-3 justify-end mt-2">
+          <button onClick={onCancel} className="btn-secondary px-4 py-2">Skip (keep General)</button>
+          <button
+            onClick={handleConfirm}
+            disabled={!displayName.trim()}
+            className="btn-primary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: "#5E7A5A" }}
+          >
+            {mode === "create" ? "Create & Confirm" : "Confirm Category"}
+          </button>
         </div>
       </div>
     </div>
@@ -157,6 +263,7 @@ function QuestionsTab() {
   const [answerDraft, setAnswerDraft] = useState("");
   const [toast, setToast] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [categoryConfirmModal, setCategoryConfirmModal] = useState(null); // { pendingCategory, questionId }
   const detailPanelRef = useRef(null);
 
   useEffect(() => {
@@ -269,6 +376,26 @@ function QuestionsTab() {
     <div className="h-full flex flex-col">
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       {confirm && <ConfirmModal message={confirm.message} onConfirm={() => { confirm.action(); setConfirm(null); }} onCancel={() => setConfirm(null)} />}
+      {categoryConfirmModal && (
+        <CategoryConfirmModal
+          pendingCategory={categoryConfirmModal.pendingCategory}
+          existingCategories={categories}
+          onConfirm={async (confirmedName) => {
+            try {
+              await categoryApi.confirm(confirmedName);
+              await questionApi.update(categoryConfirmModal.questionId, { category: confirmedName, pendingCategory: undefined });
+              qc.invalidateQueries(["admin-questions"]);
+              qc.invalidateQueries(["categories"]);
+              setSelected(null);
+              setToast(`Category "${confirmedName}" confirmed!`);
+            } catch {
+              setToast("Failed to confirm category.");
+            }
+            setCategoryConfirmModal(null);
+          }}
+          onCancel={() => setCategoryConfirmModal(null)}
+        />
+      )}
 
       <div className="flex gap-3 mb-5 flex-wrap items-center">
         <select className="input py-2.5 text-sm bg-white border border-[#E2E8DE] rounded-xl hover:border-[#bdd4ba] focus:border-[#5E7A5A] transition-all cursor-pointer font-medium text-slate-700 shadow-xs" value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))} style={{ maxWidth: 160 }}>
@@ -310,8 +437,11 @@ function QuestionsTab() {
                   <span className="font-semibold text-sm line-clamp-1 pr-2 text-slate-800 hover:text-[#5E7A5A] transition-colors">{q.question}</span>
                   <StatusBadge status={q.status} />
                 </div>
-                <div className="flex items-center gap-2.5 text-[11px] text-slate-400 mt-1">
+                <div className="flex items-center gap-2.5 text-[11px] text-slate-400 mt-1 flex-wrap">
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38]"># {q.category}</span>
+                  {q.pendingCategory && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-700">✨ New: {q.pendingCategory}</span>
+                  )}
                   <span>· by <strong className="text-slate-600 font-semibold">{q.contributorName || "Student"}</strong></span>
                   <span>· {timeAgo(q.createdAt)}</span>
                 </div>
@@ -329,19 +459,30 @@ function QuestionsTab() {
               <div className="flex-1 min-w-0 pr-6">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <StatusBadge status={selected.status} />
-                  <select
-                    value={selected.category}
-                    onChange={(e) => {
-                      const newCategory = e.target.value;
-                      setSelected(prev => ({ ...prev, category: newCategory }));
-                      updateCategoryMut.mutate({ id: selected._id, category: newCategory });
-                    }}
-                    className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38] focus:outline-none cursor-pointer shadow-xs"
-                  >
-                    {categories.map(c => (
-                      <option key={c} value={c}># {c}</option>
-                    ))}
-                  </select>
+                  <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38]"># {selected.category}</span>
+                  {selected.pendingCategory && (
+                    <button
+                      onClick={() => setCategoryConfirmModal({ pendingCategory: selected.pendingCategory, questionId: selected._id })}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+                    >
+                      ✨ Confirm "{selected.pendingCategory}"
+                    </button>
+                  )}
+                  {!selected.pendingCategory && (
+                    <select
+                      value={selected.category}
+                      onChange={(e) => {
+                        const newCategory = e.target.value;
+                        setSelected(prev => ({ ...prev, category: newCategory }));
+                        updateCategoryMut.mutate({ id: selected._id, category: newCategory });
+                      }}
+                      className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38] focus:outline-none cursor-pointer shadow-xs"
+                    >
+                      {categories.map(c => (
+                        <option key={c} value={c}># {c}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <h2 className="text-lg font-bold leading-snug text-slate-800">{selected.question}</h2>
                 <p className="text-xs text-slate-400 mt-1.5 font-medium">

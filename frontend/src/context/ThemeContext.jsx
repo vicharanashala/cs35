@@ -1,2 +1,2 @@
-// Re-export DarkModeProvider from hooks for backward compatibility with main.jsx
-export { DarkModeProvider as ThemeProvider } from '../hooks/useDarkMode';
+// Re-export DarkModeProvider + useDarkMode as useTheme for backward compatibility
+export { DarkModeProvider as ThemeProvider, useDarkMode as useTheme } from '../hooks/useDarkMode';

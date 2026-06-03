@@ -7,6 +7,7 @@ export class Answer extends Document {
   @Prop({ required: true }) content: string;
   @Prop({ required: true }) contributorName: string;
   @Prop({ default: false }) isVerified: boolean;
+  @Prop() pendingCategory: string;   // set when answer adds a new category (auto-approved on verify)
   createdAt: Date;
 }
 

@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
 // @ts-ignore
 import * as bcrypt from 'bcrypt';
-import { Injectable, Optional } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { Injectable, Optional, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import { User } from '../../schemas/user.schema';
@@ -15,13 +14,13 @@ export class AuthService {
 
   constructor(
     @Optional()
-    @InjectModel(User.name)
+    @Inject('USER_MODEL')
     private userModel: Model<User> | undefined,
     @Optional()
-    @InjectModel(Question.name)
+    @Inject('QUESTION_MODEL')
     private questionModel: Model<Question> | undefined,
     @Optional()
-    @InjectModel(Answer.name)
+    @Inject('ANSWER_MODEL')
     private answerModel: Model<Answer> | undefined,
     private jwtService: JwtService,
   ) {

@@ -5,6 +5,7 @@ import { resolve } from 'path';
 import { Faq } from '../../schemas/faq.schema';
 import { Question } from '../../schemas/question.schema';
 import { Answer } from '../../schemas/answer.schema';
+import { Category } from '../../schemas/category.schema';
 import { User } from '../../schemas/user.schema';
 import { Notification } from '../../schemas/notification.schema';
 import { SearchAnalytics } from '../../schemas/search-analytics.schema';
@@ -26,6 +27,7 @@ export class FaqService implements OnModuleInit {
     @Inject('FAQ_MODEL') private faqModel: any,
     @Inject('QUESTION_MODEL') private questionModel: any,
     @Inject('ANSWER_MODEL') private answerModel: any,
+    @Inject('CATEGORY_MODEL') private categoryModel: any,
     @Inject('USER_MODEL') private userModel: any,
     @Inject('NOTIFICATION_MODEL') private notificationModel: any,
     @Inject('SEARCH_ANALYTICS_MODEL') private searchAnalyticsModel: any,
@@ -335,13 +337,18 @@ export class FaqService implements OnModuleInit {
 
   async getCategories() {
     if (!this.hasMongoDB || !this.faqModel) {
-      return this.localData.getCategories();
+      const cats = this.localData.getCategories();
+      return cats.map(name => ({ name, icon: this.generateCategoryIcon(name) }));
     }
     try {
-      const cats = await this.faqModel.distinct('category').exec();
-      return cats.filter(Boolean);
+      const cats = await this.categoryModel.find({ isActive: true }).select('name icon').lean().exec();
+      if (cats.length > 0) {
+        return cats.map((c: { name: string; icon?: string }) => ({ name: c.name, icon: c.icon || this.generateCategoryIcon(c.name) }));
+      }
+      const distinctCats = await this.faqModel.distinct('category').exec();
+      return (distinctCats.filter(Boolean) as string[]).map(name => ({ name, icon: this.generateCategoryIcon(name) }));
     } catch {
-      return this.localData.getCategories();
+      return this.localData.getCategories().map(name => ({ name, icon: this.generateCategoryIcon(name) }));
     }
   }
 
@@ -582,13 +589,22 @@ export class FaqService implements OnModuleInit {
     }
     try {
       const answer = await this.answerModel.findByIdAndUpdate(answerId, { isVerified: verified }, { new: true }).exec();
-      
+
       // Update reputation points for user if verified
       if (answer && answer.contributorId) {
         const reward = verified ? 15 : -15;
         await this.userModel.findByIdAndUpdate(answer.contributorId, { $inc: { reputation: reward } }).exec();
       }
 
+      // If verified, mark question as answered AND auto-add any pending category from the answer
+      if (verified) {
+        await this.questionModel.findByIdAndUpdate(questionId, { status: 'answered' }).exec();
+
+        // Auto-confirm category from answer if it has a pending one
+        if (answer?.pendingCategory) {
+          await this.confirmCategory(answer.pendingCategory);
+        }
+      }
       return answer;
     } catch {
       return this.localData.verifyAnswer(questionId, answerId, verified);
@@ -894,67 +910,128 @@ export class FaqService implements OnModuleInit {
 
   // ── Category Methods ─────────────────────────────────────────
 
-  async createCategory(name: string) {
-    if (!this.hasMongoDB || !this.faqModel) {
-      return { name, alreadyExists: false };
+  // ── Icon generation for categories ──────────────────────────────────────
+
+  private generateCategoryIcon(name: string): string {
+    const iconMap: Record<string, string> = {
+      'NOC': '📄', 'Offer Letter': '📝', 'ViBe': '🎵', 'Samagama': '💰',
+      'Selection Process': '🎯', 'Interviews': '🎤', 'Certificate': '🏆',
+      'Rosetta': '🔤', 'Phase 1': '1️⃣', 'Yaksha': '🔥', 'Team': '👥',
+      'Work & Mentorship': '💼', 'Code of Conduct': '📋', 'About the Internship': '💡',
+      'Timing & Schedule': '⏰', 'General': '💬', 'FAQ': '❓',
+    };
+    // Check exact match first
+    if (iconMap[name]) return iconMap[name];
+    // Keyword-based fallback
+    const lower = name.toLowerCase();
+    if (lower.includes('offer') || lower.includes('letter')) return '📝';
+    if (lower.includes('noc')) return '📄';
+    if (lower.includes('music') || lower.includes('vibe')) return '🎵';
+    if (lower.includes('payment') || lower.includes('stipend') || lower.includes('samagama')) return '💰';
+    if (lower.includes('select') || lower.includes('interview')) return '🎯';
+    if (lower.includes('certificate') || lower.includes('cert')) return '🏆';
+    if (lower.includes('team') || lower.includes('mentor')) return '👥';
+    if (lower.includes('time') || lower.includes('schedule') || lower.includes('timing')) return '⏰';
+    if (lower.includes('work') || lower.includes('project')) return '💼';
+    if (lower.includes('rules') || lower.includes('conduct') || lower.includes('policy')) return '📋';
+    if (lower.includes('about') || lower.includes('internship') || lower.includes('program')) return '💡';
+    // Default: pick from a pool based on name length
+    const pool = ['📁', '🏷️', '📌', '🗂️', '📦', '🔗', '🧩', '⭐', '🌟', '📪', '🔔', '🗝️', '🔑', '📎', '✏️', '🖊️'];
+    return pool[name.length % pool.length];
+  }
+
+  // ── Create / confirm categories ────────────────────────────────────────────
+
+  async createCategory(name: string, confirmed = false) {
+    if (!name || !name.trim()) return { name: '', alreadyExists: false, saved: false };
+    const trimmed = name.trim();
+    if (!this.hasMongoDB || !this.categoryModel) {
+      // Demo mode: add to local list if not present
+      if (!this.localData.getCategories().includes(trimmed)) {
+        (this.localData as any)._addCategory?.(trimmed); // hook for local mode
+      }
+      return { name: trimmed, alreadyExists: false, saved: true };
     }
     try {
-      const existing = await this.faqModel.findOne({ category: name }).exec();
-      if (existing) return { name, alreadyExists: true };
-      return { name, alreadyExists: false };
-    } catch {
-      return { name, alreadyExists: false };
+      // Check if already exists (active or pending)
+      const existing = await this.categoryModel.findOne({ name: { $regex: `^${trimmed}$`, $options: 'i' } }).exec();
+      if (existing) return { name: trimmed, alreadyExists: true, saved: false };
+      // Save new category with icon, inactive until confirmed
+      const icon = this.generateCategoryIcon(trimmed);
+      await this.categoryModel.create({ name: trimmed, icon, isActive: confirmed });
+      return { name: trimmed, alreadyExists: false, saved: true, icon };
+    } catch (err) {
+      console.error('createCategory error:', err);
+      return { name: trimmed, alreadyExists: false, saved: false };
+    }
+  }
+
+  async confirmCategory(name: string) {
+    // Admin confirms a pending category → activate it
+    if (!this.hasMongoDB || !this.categoryModel) {
+      return { success: true, name };
+    }
+    try {
+      const icon = this.generateCategoryIcon(name);
+      await this.categoryModel.findOneAndUpdate(
+        { name: { $regex: `^${name}$`, $options: 'i' } },
+        { isActive: true, icon },
+        { upsert: true, new: true },
+      ).exec();
+      return { success: true, name, icon };
+    } catch (err) {
+      console.error('confirmCategory error:', err);
+      return { success: false };
     }
   }
 
   async getCategoryStats() {
     if (!this.hasMongoDB || !this.faqModel || !this.questionModel) {
       const stats = this.localData.getCategoryStats();
-      return Object.keys(stats).map(name => ({
+      const cats = this.localData.getCategories();
+      return cats.map(name => ({
         name,
+        icon: this.generateCategoryIcon(name),
         faqCount: 0,
-        questionCount: stats[name],
+        questionCount: stats[name] || 0,
       }));
     }
     try {
-      const faqStats = (await this.faqModel
-        .aggregate([
-          { $match: { category: { $ne: null } } },
-          { $group: { _id: '$category', faqCount: { $sum: 1 } } },
-        ])
-        .exec()) as { _id: string; faqCount: number }[];
+      const [faqStats, questionStats, allCategories] = await Promise.all([
+        this.faqModel
+          .aggregate([
+            { $match: { category: { $ne: null } } },
+            { $group: { _id: '$category', faqCount: { $sum: 1 } } },
+          ])
+          .exec(),
+        this.questionModel
+          .aggregate([
+            { $match: { category: { $ne: null } } },
+            { $group: { _id: '$category', questionCount: { $sum: 1 } } },
+          ])
+          .exec(),
+        this.categoryModel.find({ isActive: true }).select('name icon').lean().exec(),
+      ]);
 
-      const questionStats = (await this.questionModel
-        .aggregate([
-          { $match: { category: { $ne: null }, status: { $ne: 'closed' } } },
-          { $group: { _id: '$category', questionCount: { $sum: 1 } } },
-        ])
-        .exec()) as { _id: string; questionCount: number }[];
+      const faqMap = Object.fromEntries((faqStats as { _id: string; faqCount: number }[]).map(s => [s._id, s.faqCount]));
+      const qMap = Object.fromEntries((questionStats as { _id: string; questionCount: number }[]).map(s => [s._id, s.questionCount]));
+      const catMap = Object.fromEntries((allCategories as { name: string; icon?: string }[]).map(c => [c.name, c.icon || this.generateCategoryIcon(c.name)]));
 
-      const statsMap = new Map<string, { faqCount: number; questionCount: number }>();
-
-      for (const item of faqStats) {
-        if (item._id) {
-          statsMap.set(item._id, { faqCount: item.faqCount, questionCount: 0 });
-        }
-      }
-
-      for (const item of questionStats) {
-        if (item._id) {
-          const existing = statsMap.get(item._id) || { faqCount: 0, questionCount: 0 };
-          existing.questionCount = item.questionCount;
-          statsMap.set(item._id, existing);
-        }
-      }
-
-      return Array.from(statsMap.entries()).map(([name, stats]) => ({
+      const allCatNames = [...new Set([...Object.keys(faqMap), ...Object.keys(qMap)])];
+      return allCatNames.map(name => ({
         name,
-        faqCount: stats.faqCount,
-        questionCount: stats.questionCount,
+        icon: catMap[name] || this.generateCategoryIcon(name),
+        faqCount: faqMap[name] || 0,
+        questionCount: qMap[name] || 0,
       }));
-    } catch (err) {
-      console.warn('[FaqService] Error gathering category stats:', err);
-      return [];
+    } catch {
+      const stats = this.localData.getCategoryStats();
+      return this.localData.getCategories().map(name => ({
+        name,
+        icon: this.generateCategoryIcon(name),
+        faqCount: 0,
+        questionCount: stats[name] || 0,
+      }));
     }
   }
 

@@ -3,11 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { FaqModule } from './modules/faq/faq.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { AuthModule } from './modules/auth/auth.module';
 
-// Stub for the Mongoose connection token.
-// NestJS's internal mongoose providers depend on this token.
-// Providing a no-op value prevents the "can't resolve dependencies of Mongoose"
-// error when FaqModule uses mongoose.model() at startup without a real connection.
 const STUB_MONGOOSE_CONNECTION = {
   provide: getConnectionToken(),
   useValue: {
@@ -19,8 +16,17 @@ const STUB_MONGOOSE_CONNECTION = {
   },
 };
 
+const STUB_DATABASE_CONNECTION = {
+  provide: 'DatabaseConnection',
+  useValue: {
+    model: () => null,
+    collection: null,
+    readyState: 0,
+  },
+};
+
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), FaqModule, NotificationModule],
-  providers: [STUB_MONGOOSE_CONNECTION],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), FaqModule, NotificationModule, AuthModule],
+  providers: [STUB_MONGOOSE_CONNECTION, STUB_DATABASE_CONNECTION],
 })
 export class AppModule {}

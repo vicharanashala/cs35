@@ -51,12 +51,20 @@ export const faqApi = {
   list: (params = {}) => safeRequest(client.get("/faqs", { params }).then((r) => r.data)),
   getById: (id) => safeRequest(client.get(`/faqs/${id}`).then((r) => r.data)),
   listCategories: () => safeRequest(client.get("/categories").then((r) => r.data)),
+  createCategory: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
   incrementView: (id) => safeRequest(client.patch(`/faqs/${id}/view`).then((r) => r.data)),
   feedback: (id, body) => safeRequest(client.patch(`/faqs/${id}/feedback`, body).then((r) => r.data)),
   listUnhelpfulFeedback: () => safeRequest(client.get("/admin/feedback/unhelpful").then((r) => r.data)),
   trending: () => safeRequest(client.get("/search/trending").then((r) => r.data)),
   failedSearches: () => safeRequest(client.get("/admin/search/failed").then((r) => r.data)),
   similar: (q) => safeRequest(client.get("/faqs/similar", { params: { q } }).then((r) => r.data)),
+};
+
+// ── Category API (admin) ─────────────────────────────────────
+
+export const categoryApi = {
+  create: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
+  confirm: (name) => safeRequest(client.patch("/categories/confirm", { name }).then((r) => r.data)),
 };
 
 // ── Question API ─────────────────────────────────────────────

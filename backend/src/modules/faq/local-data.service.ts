@@ -17,6 +17,7 @@ export interface Answer {
   isAccepted?: boolean;
   upvotes: number;
   downvotes: number;
+  pendingCategory?: string;   // set when answer adds a new category
   createdAt: string;
 }
 
@@ -24,6 +25,7 @@ export interface Question {
   _id: string;
   question: string;
   category: string;
+  pendingCategory?: string;   // student's custom category awaiting admin approval
   tags: string[];
   screenshotUrl?: string;
   status: 'open' | 'answered' | 'closed' | 'reopened';
@@ -416,11 +418,12 @@ export class LocalDataService {
     return inMemoryQuestions.find(q => q._id === id) ?? null;
   }
 
-  createQuestion(data: { question: string; category: string; tags?: string[]; screenshotUrl?: string; contributorName?: string }): Question {
+  createQuestion(data: { question: string; category: string; pendingCategory?: string; tags?: string[]; screenshotUrl?: string; contributorName?: string }): Question {
     const newQ: Question = {
       _id: `local-q-${Date.now()}`,
       question: data.question,
       category: data.category || 'General',
+      pendingCategory: data.pendingCategory,   // undefined for existing cats, set for new cats
       tags: data.tags || [],
       screenshotUrl: data.screenshotUrl,
       status: 'open',
@@ -536,6 +539,13 @@ export class LocalDataService {
 
   getCategories(): string[] {
     return inMemoryCategories;
+  }
+
+  // Internal helper to add a new category at runtime (demo mode)
+  _addCategory(name: string) {
+    if (!inMemoryCategories.includes(name)) {
+      inMemoryCategories.push(name);
+    }
   }
 
   getCategoryStats(): Record<string, number> {

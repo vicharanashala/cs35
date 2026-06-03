@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
-import { useDarkMode } from './hooks/useDarkMode'
 
 // Layouts
 import MainLayout from './layouts/MainLayout'
@@ -25,13 +24,6 @@ function AuthSetter() {
   return null;
 }
 
-function ThemeSetter() {
-  const { dark } = useDarkMode() || { dark: false };
-  useEffect(() => {
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-  }, [dark]);
-  return null;
-}
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth() || { isAuthenticated: false, loading: false };
@@ -49,7 +41,6 @@ export default function App() {
   return (
     <>
       <AuthSetter />
-      <ThemeSetter />
       <Routes>
         <Route
           path="login"
