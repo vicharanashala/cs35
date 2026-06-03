@@ -1285,14 +1285,24 @@ export class FaqService implements OnModuleInit {
       return this.localData.getAdminStats();
     }
     try {
-      const [questions, open, answered, users, totalAnswers] = await Promise.all([
+      const [questions, open, answered, verified, faqs, categories, users] = await Promise.all([
         this.questionModel.countDocuments().exec(),
         this.questionModel.countDocuments({ status: { $in: ['open', 'reopened'] } }).exec(),
         this.questionModel.countDocuments({ status: 'answered' }).exec(),
+        this.answerModel.countDocuments({ isVerified: true }).exec(),
+        this.faqModel.countDocuments().exec(),
+        this.categoryModel.countDocuments().exec(),
         this.userModel.countDocuments({ role: 'student' }).exec(),
-        this.answerModel.countDocuments().exec(),
       ]);
-      return { questions, open, answered, users, totalAnswers };
+      return {
+        totalQuestions: questions,
+        openQuestions: open,
+        answeredQuestions: answered,
+        verifiedQuestions: verified,
+        totalFaqs: faqs,
+        totalCategories: categories,
+        totalUsers: users
+      };
     } catch {
       return this.localData.getAdminStats();
     }

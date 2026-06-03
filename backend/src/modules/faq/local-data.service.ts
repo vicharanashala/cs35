@@ -653,8 +653,19 @@ export class LocalDataService {
     const questions = inMemoryQuestions.length;
     const open = inMemoryQuestions.filter(q => q.status === 'open' || q.status === 'reopened').length;
     const answered = inMemoryQuestions.filter(q => q.status === 'answered').length;
+    const verified = inMemoryQuestions.reduce((sum, q) => sum + q.answers.filter(a => a.isVerified).length, 0);
+    const faqs = inMemoryFAQs.length;
+    const categories = new Set(inMemoryQuestions.map(q => q.category).concat(inMemoryFAQs.map(f => f.category))).size;
     const users = inMemoryUsers.length;
-    return { questions, open, answered, users, totalAnswers: inMemoryQuestions.reduce((s, q) => s + q.answers.length, 0) };
+    return {
+      totalQuestions: questions,
+      openQuestions: open,
+      answeredQuestions: answered,
+      verifiedQuestions: verified,
+      totalFaqs: faqs,
+      totalCategories: categories,
+      totalUsers: users
+    };
   }
 
   // ─── Search ─────────────────────────────────────────────────

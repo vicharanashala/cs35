@@ -182,16 +182,16 @@ function DashboardTab() {
     <div className="space-y-8">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Questions", value: stats?.totalQuestions ?? "—", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
-          { label: "Open Questions", value: stats?.openQuestions ?? "—", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" },
-          { label: "Answered", value: stats?.answeredQuestions ?? "—", icon: "M5 13l4 4L19 7" },
-          { label: "Verified Answers", value: stats?.verifiedQuestions ?? "—", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-          { label: "Total FAQs", value: stats?.totalFaqs ?? "—", icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.007 2.917-.546.086-.99.622-1.16 1.21a2.85 2.85 0 01-2.917 0A2.85 2.85 0 008.228 9z" },
-          { label: "Categories", value: stats?.totalCategories ?? "—", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
-          { label: "Total Users", value: stats?.totalUsers ?? "—", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
-        ].map(({ label, value, icon }) => (
-          <div key={label} className="card p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#f0f4ef", color: "#5E7A5A" }}>
+          { label: "Total Questions", value: stats?.totalQuestions ?? "—", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", bg: "#EEF2FF", color: "#4F46E5" },
+          { label: "Open Questions", value: stats?.openQuestions ?? "—", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z", bg: "#FFFBEB", color: "#D97706" },
+          { label: "Answered", value: stats?.answeredQuestions ?? "—", icon: "M5 13l4 4L19 7", bg: "#F0FDF4", color: "#16A34A" },
+          { label: "Verified Answers", value: stats?.verifiedQuestions ?? "—", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z", bg: "#ECFDF5", color: "#059669" },
+          { label: "Total FAQs", value: stats?.totalFaqs ?? "—", icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.007 2.917-.546.086-.99.622-1.16 1.21a2.85 2.85 0 01-2.917 0A2.85 2.85 0 008.228 9z", bg: "#FAF5FF", color: "#9333EA" },
+          { label: "Categories", value: stats?.totalCategories ?? "—", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10", bg: "#F0FDFA", color: "#0D9488" },
+          { label: "Total Users", value: stats?.totalUsers ?? "—", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z", bg: "#F0F9FF", color: "#0284C7" },
+        ].map(({ label, value, icon, bg, color }) => (
+          <div key={label} className="card p-5 flex items-center gap-4 border border-[#E2E8DE]/80 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg, color: color }}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
               </svg>
