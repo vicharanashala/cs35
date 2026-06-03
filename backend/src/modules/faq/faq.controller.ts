@@ -176,9 +176,10 @@ export class FaqController {
   voteQuestion(
     @Param('questionId') questionId: string,
     @Body() body: { answerId?: string; direction: any },
+    @CurrentUser() user: { id?: string },
   ) {
     if (body.answerId) {
-      return this.faqService.voteAnswer(questionId, body.answerId, body.direction);
+      return this.faqService.voteAnswer(questionId, body.answerId, body.direction, user?.id || 'anonymous');
     }
     return this.faqService.voteQuestion(questionId, body.direction);
   }

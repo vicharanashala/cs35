@@ -286,10 +286,22 @@ export default function QuestionPage() {
     } else if (sortBy === "newest") {
       list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     } else {
-      list.sort((a, b) => ((b.upvotes || 0) + (userVotes[b._id] || 0)) - ((a.upvotes || 0) + (userVotes[a._id] || 0)));
+      list.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
     }
     return list;
-  }, [communityAnswers, sortBy, userVotes]);
+  }, [communityAnswers, sortBy]);
+
+  // Initialise userVotes from voters array so buttons highlight correctly on load
+  useEffect(() => {
+    if (!question?.answers || !user?._id) return;
+    const votes = {};
+    question.answers.forEach((ans) => {
+      if (!ans.voters) return;
+      const myVote = ans.voters.find((v) => v.userId === user._id || v.userId === String(user._id));
+      if (myVote) votes[ans._id] = myVote.direction;
+    });
+    setUserVotes(votes);
+  }, [question?.answers, user?._id]);
 
   // Deep linking scroll
   useEffect(() => {
@@ -309,20 +321,21 @@ export default function QuestionPage() {
   }, [isLoading, question]);
 
   const handleVote = async (answerId, dir) => {
-    const cur = userVotes[answerId] || 0;
-    const newDir = cur === dir ? 0 : dir;
-    // Optimistically mark button as active
+    // Optimistically update the button highlight
     setUserVotes((prev) => {
-      if (newDir === 0) {
+      const cur = prev[answerId] || 0;
+      if (cur === dir) {
+        // Toggle off
         const next = { ...prev };
         delete next[answerId];
         return next;
       }
-      return { ...prev, [answerId]: newDir };
+      return { ...prev, [answerId]: dir };
     });
     try {
-      await questionApi.vote(id, answerId, newDir);
-      // Refetch so the real DB count (from all users) is shown
+      // Always send the clicked direction — backend handles toggle/switch logic per user
+      await questionApi.vote(id, answerId, dir);
+      // Refetch so real DB counts (shared across all users) are shown
       queryClient.invalidateQueries({ queryKey: ["question", id] });
       setVoteError("");
     } catch (err) {

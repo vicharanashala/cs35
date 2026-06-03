@@ -689,21 +689,48 @@ export class FaqService implements OnModuleInit {
     }
   }
 
-  async voteAnswer(questionId: string, answerId: string, direction: 'up' | 'down' | 0) {
+  async voteAnswer(questionId: string, answerId: string, direction: number, userId: string) {
     if (!this.hasMongoDB || !this.answerModel) {
       return this.localData.voteAnswer(questionId, answerId, direction as any);
     }
     try {
-      let inc: any;
-      if (direction === 1 || direction === 'up') inc = { upvotes: 1 };
-      else if (direction === -1 || direction === 'down') inc = { downvotes: 1 };
-      else {
-        // direction === 0 means unvote — decrement whichever was previously voted
-        // We can't easily know which without per-user tracking, so just return current
-        return await this.answerModel.findById(answerId).exec();
+      const answer = await this.answerModel.findById(answerId).exec();
+      if (!answer) return null;
+
+      const voters: Array<{ userId: string; direction: number }> = (answer as any).voters || [];
+      const existing = voters.find((v) => v.userId === userId);
+
+      let update: any;
+
+      if (!existing) {
+        // ── New vote ──────────────────────────────────────────
+        const inc = direction === 1 ? { upvotes: 1 } : { downvotes: 1 };
+        update = {
+          $inc: inc,
+          $push: { voters: { userId, direction } },
+        };
+      } else if (existing.direction === direction) {
+        // ── Same button clicked again → un-vote ───────────────
+        const inc = direction === 1 ? { upvotes: -1 } : { downvotes: -1 };
+        update = {
+          $inc: inc,
+          $pull: { voters: { userId } },
+        };
+      } else {
+        // ── Switched vote (like → dislike or vice-versa) ──────
+        const inc = direction === 1
+          ? { upvotes: 1, downvotes: -1 }
+          : { upvotes: -1, downvotes: 1 };
+        return await this.answerModel.findByIdAndUpdate(
+          answerId,
+          { $inc: inc, $set: { 'voters.$[elem].direction': direction } },
+          { new: true, arrayFilters: [{ 'elem.userId': userId }] },
+        ).exec();
       }
-      return await this.answerModel.findByIdAndUpdate(answerId, { $inc: inc }, { new: true }).exec();
-    } catch {
+
+      return await this.answerModel.findByIdAndUpdate(answerId, update, { new: true }).exec();
+    } catch (err) {
+      console.error('voteAnswer error:', err);
       return this.localData.voteAnswer(questionId, answerId, direction as any);
     }
   }

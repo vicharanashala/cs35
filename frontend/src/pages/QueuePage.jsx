@@ -40,20 +40,36 @@ function QuestionRow({ question, isBookmarked, onToggleBookmark }) {
 
   const handleVote = async (e, answerId, dir) => {
     e.stopPropagation();
-    const cur = userVotes[answerId] || 0;
-    const newDir = cur === dir ? 0 : dir;
+    // Optimistically highlight button
     setUserVotes((prev) => {
-      if (newDir === 0) { const next = { ...prev }; delete next[answerId]; return next; }
-      return { ...prev, [answerId]: newDir };
+      const cur = prev[answerId] || 0;
+      if (cur === dir) {
+        const next = { ...prev }; delete next[answerId]; return next;
+      }
+      return { ...prev, [answerId]: dir };
     });
     try {
-      await questionApi.vote(question._id, answerId, newDir);
+      // Send clicked direction — backend handles toggle/switch/new vote per user
+      await questionApi.vote(question._id, answerId, dir);
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
+      queryClient.invalidateQueries({ queryKey: ["my-questions"] });
     } catch (err) {
       console.error("Vote failed:", err);
       toast.error("Failed to record vote");
     }
   };
+
+  // Initialise vote highlights from voters array when expanded
+  useEffect(() => {
+    if (!expanded || !question?.answers || !user?._id) return;
+    const votes = {};
+    question.answers.forEach((ans) => {
+      if (!ans.voters) return;
+      const myVote = ans.voters.find((v) => v.userId === user._id || v.userId === String(user._id));
+      if (myVote) votes[ans._id] = myVote.direction;
+    });
+    setUserVotes(votes);
+  }, [expanded, question?.answers, user?._id]);
 
 
 
