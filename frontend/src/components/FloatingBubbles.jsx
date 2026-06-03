@@ -1,79 +1,85 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
-const TYPE_DURATION = 1200;
-const DISPLAY_DURATION = 2500;
-const CYCLE_DELAY = 300;
+const CHAR_SPEED = 45;
+const HOLD_DURATION = 2800;
 
 export default function FloatingBubbles({ questions = [] }) {
-  const [visibleIdx, setVisibleIdx] = useState(0);
-  const [phase, setPhase] = useState("idle");
-  const timerRef = useRef(null);
+  const [idx, setIdx] = useState(0);
+  const [charCount, setCharCount] = useState(0);
+  const [visible, setVisible] = useState(false);
 
   const total = questions.length;
-  const current = questions[visibleIdx] || {};
+  const current = questions[idx] || {};
+  const text = current.question || "";
 
   useEffect(() => {
     if (total === 0) return;
 
-    setPhase("idle");
-    timerRef.current = setTimeout(() => setPhase("pop"), 50);
+    setCharCount(0);
+    setVisible(true);
 
-    const cycleTimeout = TYPE_DURATION + DISPLAY_DURATION + 400;
-    const nextIdx = (visibleIdx + 1) % total;
+    const typeInterval = setInterval(() => {
+      setCharCount((c) => {
+        if (c >= text.length) {
+          clearInterval(typeInterval);
+          return text.length;
+        }
+        return c + 1;
+      });
+    }, CHAR_SPEED);
 
-    const cycleTimer = setTimeout(() => {
-      setVisibleIdx(nextIdx);
-    }, cycleTimeout);
+    const holdTimer = setTimeout(() => {
+      setVisible(false);
+    }, text.length * CHAR_SPEED + HOLD_DURATION);
+
+    const nextTimer = setTimeout(() => {
+      setIdx((i) => (i + 1) % total);
+    }, text.length * CHAR_SPEED + HOLD_DURATION + 400);
 
     return () => {
-      clearTimeout(timerRef.current);
-      clearTimeout(cycleTimer);
+      clearInterval(typeInterval);
+      clearTimeout(holdTimer);
+      clearTimeout(nextTimer);
     };
-  }, [visibleIdx, total]);
+  }, [idx, total]);
 
   if (total === 0) return null;
 
   const positions = [
-    { top: "5%", left: "-2%", textAlign: "left" },
-    { top: "45%", left: "58%", textAlign: "right" },
-    { top: "72%", left: "0%", textAlign: "left" },
+    { top: "6%", left: "-2%" },
+    { top: "44%", left: "56%" },
+    { top: "70%", left: "0%" },
   ];
-  const pos = positions[visibleIdx % 3];
+  const pos = positions[idx % 3];
+
+  const typedText = text.slice(0, charCount);
 
   return (
     <div
-      className="hidden lg:flex items-center justify-center relative"
-      style={{ width: "100%", height: "100%" }}
+      className="absolute inset-0 pointer-events-none"
+      style={{ borderRadius: "1rem" }}
     >
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute bubble-anim"
-          style={{
-            opacity: 0,
-            ...pos,
-            background: "rgba(255,255,255,0.92)",
-            borderRadius: "16px",
-            padding: "8px 14px",
-            fontSize: "11px",
-            fontWeight: 500,
-            lineHeight: 1.45,
-            maxWidth: "165px",
-            color: "#286321",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.07)",
-            transition: "none",
-            animationDuration: `${TYPE_DURATION + DISPLAY_DURATION + 400}ms`,
-          }}
-        >
-          <span
-            className="typewriter"
-            style={{
-              "--type-dur": `${TYPE_DURATION}ms`,
-              display: "inline-block",
-            }}
-          >
-            {current.question || ""}
-          </span>
-        </div>
+      <div
+        className="absolute"
+        style={{
+          ...pos,
+          opacity: visible ? 1 : 0,
+          transition: "opacity 0.3s ease",
+          background: "rgba(255,255,255,0.92)",
+          borderRadius: "18px",
+          padding: "10px 16px",
+          fontSize: "12px",
+          fontWeight: 500,
+          lineHeight: 1.5,
+          maxWidth: "175px",
+          color: "#286321",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+        }}
+      >
+        {typedText}
+        {charCount < text.length && (
+          <span style={{ display: "inline-block", width: "1.5px", height: "12px", background: "#286321", marginLeft: "1px", verticalAlign: "middle", animation: "blink-caret 0.8s step-end infinite" }} />
+        )}
       </div>
     </div>
   );

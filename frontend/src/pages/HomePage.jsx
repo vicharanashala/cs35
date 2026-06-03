@@ -259,7 +259,15 @@ export default function HomePage() {
             </div>
 
 {/* Right — illustration with floating questions */}
-            <FloatingBubbles questions={faqList} />
+            <div className="hidden lg:flex items-center justify-center relative">
+              <img
+                src={hero}
+                alt="Students collaborating"
+                className="w-full max-w-sm object-contain"
+                style={{ borderRadius: "1rem" }}
+              />
+              <FloatingBubbles questions={faqList} />
+            </div>
           </div>
         </div>
       </section>
