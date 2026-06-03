@@ -10,10 +10,10 @@ import { FaqService } from './faq.service';
 import { FaqController } from './faq.controller';
 import { LocalDataService } from './local-data.service';
 import { EventsGateway } from './events.gateway';
-import { AiModule } from '../ai/ai.module';
+
 
 @Module({
-  imports: [AiModule],
+  imports: [],
   controllers: [FaqController],
   providers: [
     FaqService,

@@ -11,6 +11,7 @@ export class FaqController {
 
   // ── FAQs ─────────────────────────────────────────────────
 
+  @Public()
   @Get('faqs')
   getAllFAQs(
     @Query('category') category?: string,
@@ -21,6 +22,7 @@ export class FaqController {
     return this.faqService.getAllFAQs(category, search, parseInt(page), parseInt(limit));
   }
 
+  @Public()
   @Get('faqs/:id')
   getFaqById(@Param('id') id: string) {
     return this.faqService.getFaqById(id);

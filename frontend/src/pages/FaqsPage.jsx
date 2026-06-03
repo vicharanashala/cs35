@@ -150,12 +150,11 @@ function FAQCard({ faq, isBookmarked, onToggleBookmark }) {
                 onToggleBookmark(faq._id);
               }}
               title={isBookmarked ? "Remove Bookmark" : "Bookmark FAQ"}
-              className="p-1.5 rounded-full border transition-all cursor-pointer hover:scale-110 flex items-center justify-center animate-fade-in"
-              style={
+              className={`p-1.5 rounded-full border transition-all cursor-pointer hover:scale-110 flex items-center justify-center animate-fade-in ${
                 isBookmarked
-                  ? { background: "#F0FDF4", color: "#059669", borderColor: "#6EE7B7" }
-                  : { background: "#ffffff", color: "#9CA3AF", borderColor: "#E2E8DE" }
-              }
+                  ? "bg-green-50 text-green-600 border-green-300"
+                  : "bg-white text-gray-400 border-gray-200 hover:text-green-600 hover:border-green-300 hover:bg-green-50"
+              }`}
             >
               <svg className="w-4.5 h-4.5" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -280,22 +279,41 @@ export default function FaqsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
+  const { data: rawBookmarks = [], refetch: refetchBookmarks } = useQuery({
     queryKey: ["bookmarked-questions", user?._id],
     queryFn: () => bookmarkApi.list(user?._id),
     enabled: !!user?._id,
   });
 
+  // Normalize: API may return plain array or { data: [] }
+  const bookmarkedQuestions = Array.isArray(rawBookmarks)
+    ? rawBookmarks
+    : Array.isArray(rawBookmarks?.data)
+    ? rawBookmarks.data
+    : [];
+
   const handleToggleBookmark = async (faqId) => {
     if (!user?._id) return;
     const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === faqId);
+
+    // Optimistic update — flip the bookmark immediately in cache
+    queryClient.setQueryData(["bookmarked-questions", user._id], (old) => {
+      const list = Array.isArray(old) ? old : Array.isArray(old?.data) ? old.data : [];
+      if (isBookmarked) {
+        return list.filter((bq) => bq._id !== faqId);
+      } else {
+        return [...list, { _id: faqId }];
+      }
+    });
+
     try {
       await bookmarkApi.toggle(user._id, faqId);
       refetchBookmarks();
-      queryClient.invalidateQueries({ queryKey: ["bookmarked-questions", user._id] });
       queryClient.invalidateQueries({ queryKey: ["user-profile-bookmarks", user._id] });
-      toast.success(isBookmarked ? "Bookmark removed" : "FAQ bookmarked!");
+      toast.success(isBookmarked ? "Bookmark removed" : "FAQ bookmarked! ✓");
     } catch (err) {
+      // Rollback optimistic update on failure
+      refetchBookmarks();
       console.error("Failed to toggle bookmark:", err);
       toast.error("Failed to update bookmark");
     }

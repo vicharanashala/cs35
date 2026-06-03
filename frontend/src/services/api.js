@@ -38,14 +38,6 @@ function safeRequest(promise) {
 
 // ── Public FAQ API ────────────────────────────────────────────
 
-// ── AI / Suggestion API ─────────────────────────────────────
-
-export const aiApi = {
-  suggestCategory: (title) =>
-    safeRequest(client.get('/ai/suggest-category', { params: { title } }).then((r) => r.data)),
-};
-
-// ── Public FAQ API ────────────────────────────────────────────
 
 export const faqApi = {
   list: (params = {}) => safeRequest(client.get("/faqs", { params }).then((r) => r.data)),

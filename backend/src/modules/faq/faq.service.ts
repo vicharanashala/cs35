@@ -11,7 +11,7 @@ import { Notification } from '../../schemas/notification.schema';
 import { SearchAnalytics } from '../../schemas/search-analytics.schema';
 import { LocalDataService } from './local-data.service';
 import { EventsGateway } from './events.gateway';
-import { AiService } from '../ai/ai.service';
+
 
 @Injectable()
 export class FaqService implements OnModuleInit {
@@ -33,70 +33,32 @@ export class FaqService implements OnModuleInit {
     @Inject('SEARCH_ANALYTICS_MODEL') private searchAnalyticsModel: any,
     private localData: LocalDataService,
     private eventsGateway: EventsGateway,
-    private aiService: AiService,
   ) {}
 
   async onModuleInit() {
     if (this.hasMongoDB) {
       await this.seedFromJson();
-      void this.backfillEmbeddings();
     }
   }
 
-  async backfillEmbeddings() {
-    if (!this.hasMongoDB || !this.faqModel) return;
-    try {
-      const faqsWithoutEmbedding = await this.faqModel.find({
-        $or: [
-          { embedding: { $exists: false } },
-          { embedding: { $size: 0 } }
-        ]
-      }).exec();
-
-      if (faqsWithoutEmbedding.length > 0) {
-        console.log(`[FaqService] Backfilling embeddings for ${faqsWithoutEmbedding.length} FAQs...`);
-        let count = 0;
-        for (const faq of faqsWithoutEmbedding) {
-          const embedding = await this.aiService.generateEmbedding(faq.question);
-          if (embedding && embedding.length > 0) {
-            await this.faqModel.findByIdAndUpdate(faq._id, { $set: { embedding } }).exec();
-            count++;
-          }
-        }
-        console.log(`[FaqService] Successfully backfilled embeddings for ${count}/${faqsWithoutEmbedding.length} FAQs.`);
-      }
-    } catch (err) {
-      console.error('[FaqService] Failed to backfill embeddings:', err);
-    }
-  }
-
-  async getSimilarFAQs(query: string, threshold = 0.5, limit = 4) {
+  async getSimilarFAQs(query: string, _threshold = 0.5, limit = 4) {
     if (!this.hasMongoDB || !this.faqModel) {
       return this.localData.getAllFAQs(undefined, query).slice(0, limit);
     }
     if (!query || query.trim().length < 3) return [];
-
     try {
-      const queryEmbedding = await this.aiService.generateEmbedding(query);
-      if (!queryEmbedding || queryEmbedding.length === 0) return [];
-
+      const q = query.toLowerCase();
       const allFaqs = await this.faqModel.find().lean().exec();
-
-      const scoredFaqs = allFaqs
-        .map((faq: any) => {
-          const similarity = faq.embedding && faq.embedding.length > 0
-            ? this.aiService.cosineSimilarity(queryEmbedding, faq.embedding)
-            : 0;
-          return { ...faq, similarity };
-        })
-        .filter((faq: any) => faq.similarity >= threshold)
-        .sort((a: any, b: any) => b.similarity - a.similarity)
-        .slice(0, limit);
-
-      return scoredFaqs;
+      return allFaqs
+        .filter((faq: any) =>
+          (faq.question || '').toLowerCase().includes(q) ||
+          (faq.answer || '').toLowerCase().includes(q)
+        )
+        .slice(0, limit)
+        .map((faq: any) => ({ ...faq, similarity: 0.6 }));
     } catch (err) {
       console.error('[FaqService] Error finding similar FAQs:', err);
-      return this.localData.getAllFAQs(undefined, query).slice(0, limit);
+      return [];
     }
   }
 
@@ -153,16 +115,8 @@ export class FaqService implements OnModuleInit {
       let allFaqs: any[] = await this.faqModel.find(filter).lean().exec();
 
       if (search) {
-        const queryEmbedding = await this.aiService.generateEmbedding(search);
-        
-        if (queryEmbedding && queryEmbedding.length > 0) {
-          // Semantic Search
-          allFaqs = allFaqs.map(faq => {
-            const similarity = faq.embedding ? this.aiService.cosineSimilarity(queryEmbedding, faq.embedding) : 0;
-            return { ...faq, similarity };
-          }).sort((a: any, b: any) => b.similarity - a.similarity);
-        } else {
-          // Fallback to text search
+        {
+          // Text search
           allFaqs = allFaqs.filter(faq => {
             const q = search.toLowerCase();
             return (faq.question || '').toLowerCase().includes(q) ||
