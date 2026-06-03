@@ -389,8 +389,81 @@ export class FaqService implements OnModuleInit {
       if (params.search) {
         filter.question = { $regex: params.search, $options: 'i' };
       }
-      return await this.questionModel.find(filter).sort({ createdAt: -1 }).exec();
-    } catch {
+      if (params.contributorId) {
+        let oid: any = params.contributorId;
+        try { oid = new Types.ObjectId(params.contributorId); } catch {}
+        filter.contributorId = { $in: [oid, params.contributorId] };
+      }
+      
+      const pipeline: any[] = [
+        { $match: filter },
+        { $sort: { createdAt: -1 } },
+        {
+          $lookup: {
+            from: 'answers',
+            localField: '_id',
+            foreignField: 'questionId',
+            as: 'answers',
+          },
+        }
+      ];
+
+      if (params.answeredBy) {
+        let oidBy: any = params.answeredBy;
+        try { oidBy = new Types.ObjectId(params.answeredBy); } catch {}
+        pipeline.push({
+          $match: {
+            'answers.contributorId': { $in: [oidBy, params.answeredBy] }
+          }
+        });
+      }
+
+      pipeline.push(
+        {
+          $lookup: {
+            from: 'users',
+            let: { cId: "$contributorId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ["$_id", "$$cId"] },
+                      {
+                        $eq: [
+                          { $toString: "$_id" },
+                          { $cond: [{ $eq: [{ $type: "$$cId" }, "string"] }, "$$cId", { $toString: "$$cId" }] }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ],
+            as: 'userDocs',
+          },
+        },
+        {
+          $addFields: {
+            contributorName: {
+              $cond: {
+                if: { $gt: [{ $size: "$userDocs" }, 0] },
+                then: { $arrayElemAt: ["$userDocs.username", 0] },
+                else: "$contributorName"
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            userDocs: 0
+          }
+        }
+      );
+
+      return await this.questionModel.aggregate(pipeline).exec();
+    } catch (err) {
+      console.error('getAllQuestions error:', err);
       return this.localData.getAllQuestions(params);
     }
   }
@@ -400,10 +473,50 @@ export class FaqService implements OnModuleInit {
       return this.localData.getOpenQuestions();
     }
     try {
-      return await this.questionModel
-        .find({ status: { $in: ['open', 'reopened'] } })
-        .sort({ createdAt: -1 })
-        .exec();
+      return await this.questionModel.aggregate([
+        { $match: { status: { $in: ['open', 'reopened', 'answered'] } } },
+        { $sort: { createdAt: -1 } },
+        {
+          $lookup: {
+            from: 'answers',
+            localField: '_id',
+            foreignField: 'questionId',
+            as: 'answers',
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            let: { cId: "$contributorId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$_id", { $toObjectId: "$$cId" }]
+                  }
+                }
+              }
+            ],
+            as: 'userDocs',
+          },
+        },
+        {
+          $addFields: {
+            contributorName: {
+              $cond: {
+                if: { $gt: [{ $size: "$userDocs" }, 0] },
+                then: { $arrayElemAt: ["$userDocs.username", 0] },
+                else: "$contributorName"
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            userDocs: 0
+          }
+        }
+      ]).exec();
     } catch {
       return this.localData.getOpenQuestions();
     }
@@ -415,8 +528,14 @@ export class FaqService implements OnModuleInit {
     }
     try {
       // Return question with answers populated
-      const question = await this.questionModel.findById(id).lean().exec();
+      const question = await this.questionModel.findById(id).populate('contributorId', 'username name').lean().exec();
       if (!question) return null;
+      
+      // Override contributorName if populated user exists
+      if (question.contributorId && typeof question.contributorId === 'object' && 'username' in question.contributorId) {
+        question.contributorName = (question.contributorId as any).username;
+      }
+      
       const answers = await this.answerModel
         .find({ questionId: new Types.ObjectId(id) })
         .sort({ createdAt: -1 })
@@ -478,6 +597,37 @@ export class FaqService implements OnModuleInit {
     return this.updateQuestion(id, { status: 'closed' });
   }
 
+  async convertToFaq(questionId: string, answerId?: string, category?: string) {
+    if (!this.hasMongoDB || !this.faqModel) return null;
+    try {
+      const question = await this.questionModel.findById(questionId).exec();
+      if (!question) throw new Error('Question not found');
+      
+      let answer;
+      if (answerId) {
+        answer = await this.answerModel.findById(answerId).exec();
+      } else {
+        answer = await this.answerModel.findOne({ questionId: new Types.ObjectId(questionId), isVerified: true }).exec();
+      }
+      
+      if (!answer) throw new Error('No verified answer found for this question');
+
+      const faq = await this.faqModel.create({
+        question: question.question,
+        answer: answer.content,
+        category: category || question.category,
+        tags: question.tags,
+        originalQuestionId: new Types.ObjectId(questionId),
+        isAnswered: true
+      });
+
+      return faq;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
+
   async reopenQuestion(id: string, reason?: string) {
     return this.updateQuestion(id, { status: 'reopened', isReopened: true, reopenReason: reason });
   }
@@ -498,12 +648,23 @@ export class FaqService implements OnModuleInit {
         downvotes: 0,
       });
 
-      // Update question status to answered if open
+      // Notify the question owner
       const question = await this.questionModel.findById(questionId).exec();
-      if (question && question.status === 'open') {
-        question.status = 'answered';
-        await question.save();
-        this.eventsGateway.emitStatusUpdated(questionId, 'answered');
+      if (question) {
+        if (question.contributorId && question.contributorId.toString() !== data.contributorId) {
+          if (this.notificationModel) {
+            await this.notificationModel.create({
+              userId: question.contributorId.toString(),
+              type: 'answer_added',
+              title: 'New Answer',
+              message: `${data.contributorName} answered your question: "${question.question.substring(0, 50)}${question.question.length > 50 ? '...' : ''}"`,
+              link: `/questions/${questionId}`,
+              senderId: data.contributorId,
+              senderName: data.contributorName,
+              isRead: false
+            });
+          }
+        }
       }
 
       this.eventsGateway.emitAnswerAdded(answer);
@@ -513,27 +674,37 @@ export class FaqService implements OnModuleInit {
     }
   }
 
-  async voteQuestion(questionId: string, direction: 'up' | 'down') {
+  async voteQuestion(questionId: string, direction: 'up' | 'down' | 0) {
     if (!this.hasMongoDB || !this.questionModel) {
-      return this.localData.voteQuestion(questionId, direction);
+      return this.localData.voteQuestion(questionId, direction as any);
     }
     try {
-      const inc = direction === 'up' ? { upvotes: 1 } : { downvotes: 1 };
+      let inc: any;
+      if (direction === 'up') inc = { upvotes: 1 };
+      else if (direction === 'down') inc = { downvotes: 1 };
+      else inc = {}; // unvote — nothing to change without tracking per-user state
       return await this.questionModel.findByIdAndUpdate(questionId, { $inc: inc }, { new: true }).exec();
     } catch {
-      return this.localData.voteQuestion(questionId, direction);
+      return this.localData.voteQuestion(questionId, direction as any);
     }
   }
 
-  async voteAnswer(questionId: string, answerId: string, direction: 'up' | 'down') {
+  async voteAnswer(questionId: string, answerId: string, direction: 'up' | 'down' | 0) {
     if (!this.hasMongoDB || !this.answerModel) {
-      return this.localData.voteAnswer(questionId, answerId, direction);
+      return this.localData.voteAnswer(questionId, answerId, direction as any);
     }
     try {
-      const inc = direction === 'up' ? { upvotes: 1 } : { downvotes: 1 };
+      let inc: any;
+      if (direction === 1 || direction === 'up') inc = { upvotes: 1 };
+      else if (direction === -1 || direction === 'down') inc = { downvotes: 1 };
+      else {
+        // direction === 0 means unvote — decrement whichever was previously voted
+        // We can't easily know which without per-user tracking, so just return current
+        return await this.answerModel.findById(answerId).exec();
+      }
       return await this.answerModel.findByIdAndUpdate(answerId, { $inc: inc }, { new: true }).exec();
     } catch {
-      return this.localData.voteAnswer(questionId, answerId, direction);
+      return this.localData.voteAnswer(questionId, answerId, direction as any);
     }
   }
 
@@ -548,9 +719,19 @@ export class FaqService implements OnModuleInit {
       if (verified) {
         await this.questionModel.findByIdAndUpdate(questionId, { status: 'answered' }).exec();
 
+        // Auto-convert to FAQ when verified
+        await this.convertToFaq(questionId, answerId);
+
         // Auto-confirm category from answer if it has a pending one
         if (answer?.pendingCategory) {
           await this.confirmCategory(answer.pendingCategory);
+        }
+      } else {
+        // If un-verified, revert question to open
+        await this.questionModel.findByIdAndUpdate(questionId, { status: 'open' }).exec();
+        // Remove the auto-created FAQ for this question
+        if (this.faqModel) {
+          await this.faqModel.deleteMany({ originalQuestionId: new Types.ObjectId(questionId) }).exec();
         }
       }
       return answer;

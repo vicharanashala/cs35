@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from 'react-hot-toast';
 import { Link } from "react-router-dom";
-import { userApi, questionApi, userStatsApi } from "../services/api";
+import { userApi, questionApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
-import { heatmapColor } from "../utils/gamification";
+
 
 function timeAgo(d) {
   if (!d) return "";
@@ -18,6 +19,8 @@ function timeAgo(d) {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+  const [expandedId, setExpandedId] = useState(null);
 
   const { data: profileData, isLoading: profileLoading } = useQuery({
     queryKey: ['user-profile'],
@@ -26,7 +29,6 @@ export default function ProfilePage() {
   });
 
   const profile = profileData?.user || profileData || null;
-  const qc = useQueryClient();
 
   const updateMut = useMutation({
     mutationFn: (data) => userApi.update(profile?._id, data),
@@ -44,24 +46,26 @@ export default function ProfilePage() {
   };
 
   const { data: questionsData, isLoading: questionsLoading } = useQuery({
-    queryKey: ['user-profile-questions'],
+    queryKey: ['user-profile-questions-asked', profile?._id],
     queryFn: () => questionApi.list({ contributorId: profile?._id }),
     enabled: !!profile?._id,
   });
 
-  const { data: activityData } = useQuery({
-    queryKey: ['user-activity', profile?._id],
-    queryFn: () => userStatsApi.activity(profile._id),
+  const { data: answersData, isLoading: answersLoading } = useQuery({
+    queryKey: ['user-profile-questions-answered', profile?._id],
+    queryFn: () => questionApi.list({ answeredBy: profile?._id }),
     enabled: !!profile?._id,
   });
 
-  const questions = questionsData || [];
-  const activityMap = activityData || {};
+
+
+  const questionsAsked = Array.isArray(questionsData) ? questionsData : [];
+  const questionsAnswered = Array.isArray(answersData) ? answersData : [];
 
   const stats = [
     {
       label: "Questions Asked",
-      value: profile?.questionsCount ?? 0,
+      value: questionsAsked.length ?? 0,
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -72,7 +76,7 @@ export default function ProfilePage() {
     },
     {
       label: "Answers Given",
-      value: profile?.answersCount ?? 0,
+      value: questionsAnswered.length ?? 0,
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -98,6 +102,7 @@ export default function ProfilePage() {
     <div className="min-h-screen" style={{ background: "#FAFAF5" }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* ── Sidebar ── */}
           <div className="lg:col-span-1 space-y-6">
             <div className="card p-6">
               <div className="flex flex-col items-center text-center">
@@ -121,11 +126,7 @@ export default function ProfilePage() {
                     {profile?.role || user?.role}
                   </span>
                 </div>
-                {profile?.studentId && (
-                  <p className="mt-2 text-xs" style={{ color: "#9CA3AF" }}>
-                    ID: {profile.studentId}
-                  </p>
-                )}
+
                 {profile?.createdAt && (
                   <p className="mt-1 text-xs" style={{ color: "#9CA3AF" }}>
                     Joined {new Date(profile.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
@@ -154,7 +155,7 @@ export default function ProfilePage() {
                   style={{ borderColor: "#E5E7EB", color: "#374151" }}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                   Browse FAQs
                 </Link>
@@ -188,7 +189,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* ── Main Content ── */}
           <div className="lg:col-span-3 space-y-6">
+            {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map((stat) => (
                 <div
@@ -211,114 +214,180 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            {/* Activity Heatmap */}
-            <div className="card p-5">
-              <h2 className="font-semibold mb-4" style={{ color: "#1F2937" }}>
-                Activity Heatmap
-              </h2>
-              <div className="heatmap-grid">
-                {Array.from({ length: 365 }, (_, i) => {
-                  const d = new Date();
-                  d.setDate(d.getDate() - (364 - i));
-                  const key = d.toISOString().split("T")[0];
-                  const count = activityMap[key] || 0;
-                  return (
-                    <div
-                      key={key}
-                      className="heatmap-cell"
-                      style={{ background: heatmapColor(count) }}
-                      title={`${key}: ${count} contribution${count !== 1 ? "s" : ""}`}
-                    />
-                  );
-                })}
-              </div>
-              <div className="flex items-center justify-end gap-1.5 mt-3">
-                <span className="text-xs" style={{ color: "#9CA3AF" }}>Less</span>
-                {[0, 1, 2, 3, 4, 5].map((level) => (
-                  <div
-                    key={level}
-                    className="w-3 h-3 rounded-sm"
-                    style={{ background: heatmapColor(level === 0 ? 0 : level * 3) }}
-                  />
-                ))}
-                <span className="text-xs" style={{ color: "#9CA3AF" }}>More</span>
-              </div>
-            </div>
 
-            <div className="card">
-              <div className="px-5 py-4 border-b" style={{ borderColor: "#F5F7F2" }}>
-                <h2 className="font-semibold" style={{ color: "#1F2937" }}>
-                  My Questions
-                </h2>
+
+            {/* Questions I Asked */}
+            <div className="card overflow-hidden">
+              <div className="p-5 border-b" style={{ borderColor: "#E2E8DE" }}>
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  Questions I Asked
+                  {questionsAsked.length > 0 && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "#EEF4EA", color: "#5E7A5A" }}>
+                      {questionsAsked.length}
+                    </span>
+                  )}
+                </h3>
               </div>
-              <div className="divide-y" style={{ borderColor: "#F5F7F2" }}>
+              <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
                 {questionsLoading ? (
-                  <div className="p-8 text-center">
-                    <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto" style={{ borderColor: "#5E7A5A", borderTopColor: "transparent" }} />
-                  </div>
-                ) : questions.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <div className="relative w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-                      <div className="absolute inset-0 rounded-full opacity-60 blur-xl" style={{ background: "#dde8db" }}></div>
-                      <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm border" style={{ background: "#F5F7F2", borderColor: "#E2E8DE" }}>
-                        <svg className="w-8 h-8" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                    </div>
-                    <p className="text-base font-semibold" style={{ color: "#1F2937" }}>
-                      No questions yet
-                    </p>
-                    <p className="text-sm mt-1 mb-4" style={{ color: "#6B7280" }}>You haven't asked any questions. Need help?</p>
-                    <Link to="/ask" className="btn-primary inline-flex">
-                      Ask your first question
-                    </Link>
-                  </div>
+                  <div className="p-8 text-center text-sm text-gray-500">Loading your questions...</div>
+                ) : questionsAsked.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-gray-500">You haven't asked any questions yet.</div>
                 ) : (
-                  questions.slice(0, 10).map((q) => (
+                  questionsAsked.slice(0, 10).map((q) => (
                     <div key={q._id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
-                      <Link to={`/questions/${q._id}`} className="block">
-                        <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>
-                          {q.question}
-                        </p>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <span
-                            className="text-xs px-1.5 py-0.5 rounded font-medium"
-                            style={{ background: "#F3F4F6", color: "#6B7280" }}
+                      <div
+                        onClick={() => setExpandedId(expandedId === q._id ? null : q._id)}
+                        className="block cursor-pointer"
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <p className="text-sm font-medium line-clamp-1 flex-1" style={{ color: "#1F2937" }}>
+                            {q.question}
+                          </p>
+                          <svg
+                            className="w-4 h-4 shrink-0 transition-transform duration-200"
+                            style={{ color: "#9CA3AF", transform: expandedId === q._id ? "rotate(180deg)" : "rotate(0deg)" }}
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
                           >
-                            {q.category}
-                          </span>
-                          <span
-                            className="text-xs font-medium px-1.5 py-0.5 rounded"
-                            style={{
-                              background: q.status === "answered" ? "#ECFDF5" : q.status === "reopened" ? "#FFF7ED" : "#FEF3C7",
-                              color: q.status === "answered" ? "#059669" : q.status === "reopened" ? "#C2410C" : "#D97706",
-                            }}
-                          >
-                            {q.status}
-                          </span>
-                          <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                            {timeAgo(q.createdAt)}
-                          </span>
-                          {q.answers?.length > 0 && (
-                            <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                              {q.answers.length} answer{q.answers.length !== 1 ? "s" : ""}
-                            </span>
-                          )}
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
                         </div>
-                      </Link>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "#F3F4F6", color: "#6B7280" }}>{q.category}</span>
+                          <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{
+                            background: q.status === "answered" ? "#ECFDF5" : q.status === "reopened" ? "#FFF7ED" : "#FEF3C7",
+                            color: q.status === "answered" ? "#059669" : q.status === "reopened" ? "#C2410C" : "#D97706"
+                          }}>{q.status}</span>
+                          <span className="text-xs" style={{ color: "#9CA3AF" }}>{timeAgo(q.createdAt)}</span>
+                        </div>
+                      </div>
+
+                      {expandedId === q._id && (
+                        <div className="mt-4 pt-4 animate-fade-in border-t" style={{ borderColor: "#F3F4F6" }}>
+                          {(!q.answers || q.answers.length === 0) ? (
+                            <p className="text-sm italic" style={{ color: "#6B7280" }}>No answers available.</p>
+                          ) : (
+                            <div className="space-y-3 mb-4">
+                              {q.answers.map((ans) => {
+                                const isOwnAnswer = profile?._id && ans.contributorId && profile._id === (ans.contributorId._id || ans.contributorId);
+                                const ansDisplayName = isOwnAnswer ? "You" : (ans.contributorName || "Student");
+                                return (
+                                  <div key={ans._id} className="p-3 bg-gray-50 rounded-lg">
+                                    <p className="text-xs font-semibold mb-1" style={{ color: "#4B5563" }}>
+                                      {ansDisplayName} answered:
+                                    </p>
+                                    <p className="text-sm whitespace-pre-line" style={{ color: "#1F2937" }}>
+                                      {ans.content}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <div className="mt-3 flex items-center gap-2">
+                            <Link to={`/ask?edit=${q._id}`} className="btn-secondary btn-sm">
+                              Edit Question
+                            </Link>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (window.confirm("Are you sure you want to delete this question?")) {
+                                  try {
+                                    await questionApi.delete(q._id);
+                                    qc.invalidateQueries({ queryKey: ['user-profile-questions-asked'] });
+                                    toast.success("Question deleted");
+                                  } catch (err) {
+                                    toast.error("Failed to delete question");
+                                  }
+                                }
+                              }}
+                              className="btn-sm border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer rounded"
+                              style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", fontWeight: 500 }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
               </div>
-              {questions.length > 10 && (
-                <div className="px-5 py-3 border-t text-center" style={{ borderColor: "#F5F7F2" }}>
-                  <Link to="/my-questions" className="text-sm font-medium" style={{ color: "#3B82F6" }}>
-                    View all {questions.length} questions →
-                  </Link>
-                </div>
-              )}
             </div>
+
+            {/* Questions I Answered */}
+            <div className="card overflow-hidden">
+              <div className="p-5 border-b" style={{ borderColor: "#E2E8DE" }}>
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  Questions I Answered
+                  {questionsAnswered.length > 0 && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "#EEF4EA", color: "#5E7A5A" }}>
+                      {questionsAnswered.length}
+                    </span>
+                  )}
+                </h3>
+              </div>
+              <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
+                {answersLoading ? (
+                  <div className="p-8 text-center text-sm text-gray-500">Loading your answers...</div>
+                ) : questionsAnswered.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-gray-500">You haven't answered any questions yet.</div>
+                ) : (
+                  questionsAnswered.slice(0, 10).map((q) => (
+                    <div key={q._id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                      <div
+                        onClick={() => setExpandedId(expandedId === `ans-${q._id}` ? null : `ans-${q._id}`)}
+                        className="block cursor-pointer"
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <p className="text-sm font-medium line-clamp-1 flex-1" style={{ color: "#1F2937" }}>
+                            {q.question}
+                          </p>
+                          <svg
+                            className="w-4 h-4 shrink-0 transition-transform duration-200"
+                            style={{ color: "#9CA3AF", transform: expandedId === `ans-${q._id}` ? "rotate(180deg)" : "rotate(0deg)" }}
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "#F3F4F6", color: "#6B7280" }}>{q.category}</span>
+                          <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{
+                            background: q.status === "answered" ? "#ECFDF5" : q.status === "reopened" ? "#FFF7ED" : "#FEF3C7",
+                            color: q.status === "answered" ? "#059669" : q.status === "reopened" ? "#C2410C" : "#D97706"
+                          }}>{q.status}</span>
+                          <span className="text-xs" style={{ color: "#9CA3AF" }}>Asked {timeAgo(q.createdAt)}</span>
+                        </div>
+                      </div>
+
+                      {expandedId === `ans-${q._id}` && (
+                        <div className="mt-4 pt-4 animate-fade-in border-t" style={{ borderColor: "#F3F4F6" }}>
+                          <div className="space-y-3 mb-4">
+                            {q.answers?.map((ans) => {
+                              const isOwnAnswer = profile?._id && ans.contributorId && profile._id === (ans.contributorId._id || ans.contributorId);
+                              if (!isOwnAnswer) return null;
+                              return (
+                                <div key={ans._id} className="p-3 bg-gray-50 rounded-lg">
+                                  <p className="text-xs font-semibold mb-1" style={{ color: "#4B5563" }}>You answered:</p>
+                                  <p className="text-sm whitespace-pre-line" style={{ color: "#1F2937" }}>{ans.content}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-3 flex items-center gap-2">
+                            <Link to={`/questions/${q._id}`} className="btn-primary btn-sm">
+                              View Question
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
       </div>

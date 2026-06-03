@@ -40,6 +40,20 @@ import { RolesGuard } from '../../common/guards/roles.guard';
       provide: 'USER_MODEL',
       useFactory: () => require('mongoose').model(User.name, UserSchema),
     },
+    {
+      provide: 'QUESTION_MODEL',
+      useFactory: () => {
+        const { Question, QuestionSchema } = require('../../schemas/question.schema');
+        return require('mongoose').model(Question.name, QuestionSchema);
+      },
+    },
+    {
+      provide: 'ANSWER_MODEL',
+      useFactory: () => {
+        const { Answer, AnswerSchema } = require('../../schemas/answer.schema');
+        return require('mongoose').model(Answer.name, AnswerSchema);
+      },
+    },
   ],
   exports: [AuthService, JwtModule],
 })

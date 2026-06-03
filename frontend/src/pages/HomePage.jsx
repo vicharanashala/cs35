@@ -334,7 +334,9 @@ export default function HomePage() {
                 ))
               ) : recentDiscussions.length > 0 ? (
                 recentDiscussions.map((q) => {
-                  const initial = (q.contributorName || "S")[0].toUpperCase();
+                  const isOwnQuestion = user?._id && q?.contributorId && user._id === (q.contributorId._id || q.contributorId);
+                  const displayName = isOwnQuestion ? "You" : (q.contributorName || "Student");
+                  const initial = displayName[0].toUpperCase();
                   const avatarColors = ["#5E7A5A", "#7C9A6E", "#A4BE8B", "#D4E4C9", "#3D5A3A", "#6B8E6B"];
                   const avatarColor = avatarColors[initial.charCodeAt(0) % avatarColors.length];
                   return (
@@ -363,7 +365,7 @@ export default function HomePage() {
                           {initial}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-sm truncate" style={{ color: "#1F2937" }}>{q.contributorName || "Student"}</p>
+                          <p className="font-semibold text-sm truncate" style={{ color: "#1F2937" }}>{displayName}</p>
                           <p className="text-xs" style={{ color: "#9CA3AF" }}>{timeAgo(q.createdAt)}</p>
                         </div>
                       </div>
@@ -373,7 +375,7 @@ export default function HomePage() {
                         <div className="flex items-center gap-3">
                           <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.514" />
                             </svg>
                             {q.upvotes || 0}
                           </span>

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi, faqApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
@@ -55,16 +55,35 @@ export default function AskPage() {
   const queryClient  = useQueryClient();
   const { user } = useAuth();
 
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+
+  const { data: editData } = useQuery({
+    queryKey: ['question', editId],
+    queryFn: () => questionApi.getById(editId),
+    enabled: !!editId,
+  });
+
   const [title, setTitle]               = useState("");
   const [category, setCategory]         = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [details, setDetails]           = useState("");
+  const [tags, setTags]                 = useState([]);
+
+  // Populate form if edit data loads
+  useEffect(() => {
+    if (editData && editId) {
+      setTitle(editData.question || "");
+      setCategory(editData.category || "");
+      setDetails(editData.details || "");
+      setTags(editData.tags || []);
+    }
+  }, [editData, editId]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess]   = useState(false);
   const [submitted, setSubmitted]       = useState("");
   const [touched, setTouched]           = useState({});
   const [error, setError]               = useState("");
-  const [tags, setTags]                 = useState([]);
   const [tagInput, setTagInput]         = useState("");
 
   const recognitionRef = useRef(null);
@@ -186,17 +205,25 @@ export default function AskPage() {
     try {
       const contributorName = user?.name || "Student";
       // If student picked 'Add New Category', store the new cat name in pendingCategory
-      // and set category to 'General' as a placeholder until admin confirms
       const isNewCat = category === "new_category";
-      await questionApi.create({
+      const payload = {
         question: title.trim(),
         category: isNewCat ? "General" : finalCategory,
         pendingCategory: isNewCat ? finalCategory : undefined,
         details: details.trim(),
         tags,
-        contributorName,
-        contributorId: user?._id,
-      });
+      };
+
+      if (editId) {
+        await questionApi.update(editId, payload);
+      } else {
+        await questionApi.create({
+          ...payload,
+          contributorName,
+          contributorId: user?._id,
+        });
+      }
+
       setSubmitted(title); setShowSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
       queryClient.invalidateQueries({ queryKey: ["my-questions"] });
@@ -236,9 +263,9 @@ export default function AskPage() {
           {/* ── Form ── */}
           <div className="lg:col-span-2">
             <div className="card p-6">
-              <h1 className="text-xl font-bold mb-1" style={{ color: "#1F2937" }}>Ask a Question</h1>
+              <h1 className="text-xl font-bold mb-1" style={{ color: "#1F2937" }}>{editId ? "Edit Question" : "Ask a Question"}</h1>
               <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
-                Be specific and clear. It helps others provide better answers.
+                {editId ? "Update your question details below." : "Be specific and clear. It helps others provide better answers."}
               </p>
 
               <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -334,39 +361,7 @@ export default function AskPage() {
                   </div>
                 )}
 
-                {/* Tags */}
-                <div>
-                  <label className="label">Tags <span className="text-xs font-normal" style={{ color: "#9CA3AF" }}>(optional, up to 5)</span></label>
-                  <div
-                    className="tag-input-wrap"
-                    onClick={() => document.getElementById("tag-input-field")?.focus()}
-                  >
-                    {tags.map((tag) => (
-                      <span key={tag} className="tag-chip">
-                        #{tag}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); removeTag(tag); }}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                    {tags.length < 5 && (
-                      <input
-                        id="tag-input-field"
-                        type="text"
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        onKeyDown={handleTagKeyDown}
-                        onBlur={() => addTag(tagInput)}
-                        placeholder={tags.length === 0 ? "e.g. ai, admission, noc" : "Add tag..."}
-                        className="tag-input-field"
-                      />
-                    )}
-                  </div>
-                  <p className="input-hint">Press Enter, comma or space to add a tag. Backspace to remove last tag.</p>
-                </div>
+
 
                 {/* Category */}
                 <div className="space-y-3">
@@ -421,17 +416,7 @@ export default function AskPage() {
                       )}
                     </button>
                     
-                    {/* Upload Media */}
-                    <button type="button" onClick={() => fileInputRef.current?.click()} title="Upload Screenshot/Image"
-                      className="w-8 h-8 rounded transition-colors flex items-center justify-center border bg-transparent cursor-pointer"
-                      style={{ color: "#374151", borderColor: "#E2E8DE" }}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-
-                    <span className="text-xs" style={{ color: "#6B7280" }}>Speech & media tools</span>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>Click to dictate</span>
                   </div>
                   <textarea
                     className="input w-full p-3 resize-y min-h-[150px] bg-white rounded-lg border"
@@ -452,14 +437,14 @@ export default function AskPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Posting…
+                      {editId ? "Updating..." : "Posting..."}
                     </>
                   ) : (
                     <>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      Post Question
+                      {editId ? "Update Question" : "Post Question"}
                     </>
                   )}
                 </button>

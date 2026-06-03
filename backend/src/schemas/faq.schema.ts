@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: { createdAt: true, updatedAt: true } })
 export class Faq extends Document {
@@ -14,6 +14,7 @@ export class Faq extends Document {
   @Prop({ default: false }) isPinned: boolean;
   @Prop({ default: 0 }) helpfulCount: number;
   @Prop({ default: 0 }) unhelpfulCount: number;
+  @Prop({ type: Types.ObjectId, ref: 'Question', required: false }) originalQuestionId?: Types.ObjectId;
 
   @Prop({
     type: [

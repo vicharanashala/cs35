@@ -31,24 +31,49 @@ function PriorityBadge({ priority }) {
 
 function QuestionRow({ question, isBookmarked, onToggleBookmark }) {
   const [expanded, setExpanded] = useState(false);
+  const [userVotes, setUserVotes] = useState({});
+  const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  const isOwnQuestion = user?._id && question?.contributorId && user._id === (question.contributorId._id || question.contributorId);
+  const displayName = isOwnQuestion ? "You" : (question.contributorName || question.contributorId?.name || "Student");
+
+  const handleVote = async (e, answerId, dir) => {
+    e.stopPropagation();
+    const cur = userVotes[answerId] || 0;
+    const newDir = cur === dir ? 0 : dir;
+    setUserVotes((prev) => {
+      if (newDir === 0) { const next = { ...prev }; delete next[answerId]; return next; }
+      return { ...prev, [answerId]: newDir };
+    });
+    try {
+      await questionApi.vote(question._id, answerId, newDir);
+      queryClient.invalidateQueries({ queryKey: ["questions-open"] });
+    } catch (err) {
+      console.error("Vote failed:", err);
+      toast.error("Failed to record vote");
+    }
+  };
+
+
 
   return (
     <div className={`card-hover overflow-hidden ${expanded ? "ring-2" : ""}`}
       style={expanded ? { ringColor: "#5E7A5A", borderColor: "#bdd4ba" } : {}}>
       <div
         onClick={() => setExpanded((o) => !o)}
-        className="w-full text-left p-4 flex items-start gap-3 cursor-pointer"
+        className="p-4 flex gap-3 cursor-pointer group"
         role="button"
         aria-expanded={expanded}
       >
-        <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-white"
-          style={{ background: "#5E7A5A" }}>
-          {initials(question.contributorName)}
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "#5E7A5A" }}>
+          {isOwnQuestion ? "Y" : (question.contributorName?.charAt(0) || "U")}
         </div>
-
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
+          <h3 className="font-semibold" style={{ color: "#1F2937", lineHeight: 1.2 }}>
+            {isOwnQuestion ? "You" : (question.contributorName || "Student")}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2 mb-1 mt-1">
             <span className="tag tag-brand">{question.category}</span>
             {question.status === "reopened" && <span className="badge badge-orange">Reopened</span>}
             <PriorityBadge priority={question.priority} />
@@ -57,7 +82,7 @@ function QuestionRow({ question, isBookmarked, onToggleBookmark }) {
             <HighlightText text={question.question} matches={question.matches?.find(m => m.key === 'question')?.indices} />
           </p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 text-xs" style={{ color: "#9CA3AF" }}>
-            <span>Asked by <span style={{ color: "#6B7280", fontWeight: 500 }}>{question.contributorName || "Student"}</span></span>
+            <span>Asked by <span style={{ color: "#6B7280", fontWeight: 500 }}>{displayName}</span></span>
             <span>·</span>
             <span>{timeAgo(question.createdAt)}</span>
           </div>
@@ -107,10 +132,88 @@ function QuestionRow({ question, isBookmarked, onToggleBookmark }) {
               <strong>Reopened reason:</strong> {question.reopenReason}
             </div>
           )}
-          <div className="mt-3 flex gap-2">
-            <Link to={`/question/${question._id}`} className="btn-primary btn-sm">
-              Answer this question
-            </Link>
+          
+          <div className="mt-3 w-full">
+            {(!question.answers || question.answers.length === 0) ? (
+              <p className="text-sm italic mb-4" style={{ color: "#6B7280" }}>No answers available.</p>
+            ) : (
+              <div className="space-y-3 mb-4">
+                {question.answers.map((ans) => {
+                  const isOwnAnswer = user?._id && ans.contributorId && user._id === (ans.contributorId._id || ans.contributorId);
+                  const ansDisplayName = isOwnAnswer ? "You" : (ans.contributorName || "Student");
+                  const vote = userVotes[ans._id] || 0;
+                  const upvotes = ans.upvotes || 0;
+                  const downvotes = ans.downvotes || 0;
+                  return (
+                    <div key={ans._id} className="p-3 rounded-lg" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: "#4B5563" }}>
+                        {ansDisplayName} answered:
+                      </p>
+                      <p className="text-sm whitespace-pre-line mb-3" style={{ color: "#1F2937" }}>
+                        {ans.content}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => handleVote(e, ans._id, 1)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer"
+                          style={vote > 0 ? { background: "#5E7A5A", color: "#fff" } : { background: "#F3F4F6", color: "#6B7280" }}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.514" />
+                          </svg>
+                          {upvotes > 0 ? upvotes : ""}
+                        </button>
+                        <button
+                          onClick={(e) => handleVote(e, ans._id, -1)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer"
+                          style={vote < 0 ? { background: "#5E7A5A", color: "#fff" } : { background: "#F3F4F6", color: "#6B7280" }}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.514" />
+                          </svg>
+                          {downvotes > 0 ? downvotes : ""}
+                        </button>
+                        {upvotes > 0 && (
+                          <span className="text-xs" style={{ color: "#6B7280" }}>{upvotes} found helpful</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            <div className="flex items-center gap-2">
+              {question.contributorId === user?._id ? (
+                <>
+                  <Link to={`/ask?edit=${question._id}`} className="btn-secondary btn-sm">
+                    Edit Question
+                  </Link>
+                  <button 
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if(window.confirm("Are you sure you want to delete this question?")) {
+                        try {
+                          const { questionApi } = await import("../services/api");
+                          await questionApi.delete(question._id);
+                          window.location.reload();
+                        } catch (err) {
+                          alert("Failed to delete question");
+                        }
+                      }
+                    }} 
+                    className="btn-sm border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer rounded"
+                    style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", fontWeight: 500 }}
+                  >
+                    Delete
+                  </button>
+                </>
+              ) : (
+                <Link to={`/questions/${question._id}`} className="btn-primary btn-sm">
+                  Answer this question
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -262,9 +365,18 @@ export default function QueuePage() {
     return r;
   }, [questions, search, activeCategory, priority, status, sortBy]);
 
-  const reopened = filtered.filter((q) => q.status === "reopened");
-  const open     = filtered.filter((q) => q.status === "open");
-
+  const myQuestions = filtered.filter((q) => {
+    const cId = q.contributorId?._id || q.contributorId;
+    return cId === user?._id;
+  });
+  const othersReopened = filtered.filter((q) => {
+    const cId = q.contributorId?._id || q.contributorId;
+    return cId !== user?._id && q.status === "reopened";
+  });
+  const othersOpen = filtered.filter((q) => {
+    const cId = q.contributorId?._id || q.contributorId;
+    return cId !== user?._id && q.status === "open";
+  });
   return (
     <div style={{ background: "#F5F7F2" }}>
       <div className="container-xl py-6">
@@ -455,14 +567,14 @@ export default function QueuePage() {
             </div>
           )}
 
-          {!isLoading && reopened.length > 0 && (
-            <div>
+          {!isLoading && myQuestions.length > 0 && (
+            <div className="mb-8">
               <div className="flex items-center gap-3 mb-3">
-                <h2 className="text-sm font-semibold" style={{ color: "#6B7280" }}>Reopened</h2>
-                <span className="badge badge-orange">{reopened.length}</span>
+                <h2 className="text-sm font-semibold" style={{ color: "#6B7280" }}>Your Questions</h2>
+                <span className="badge badge-brand">{myQuestions.length}</span>
               </div>
               <div className="space-y-2">
-                {reopened.map((q) => (
+                {myQuestions.map((q) => (
                   <QuestionRow 
                     key={q._id} 
                     question={q} 
@@ -474,14 +586,33 @@ export default function QueuePage() {
             </div>
           )}
 
-          {!isLoading && open.length > 0 && (
+          {!isLoading && othersReopened.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-3">
+                <h2 className="text-sm font-semibold" style={{ color: "#6B7280" }}>Reopened</h2>
+                <span className="badge badge-orange">{othersReopened.length}</span>
+              </div>
+              <div className="space-y-2">
+                {othersReopened.map((q) => (
+                  <QuestionRow 
+                    key={q._id} 
+                    question={q} 
+                    isBookmarked={bookmarkedQuestions.some((bq) => bq._id === q._id)}
+                    onToggleBookmark={handleToggleBookmark}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isLoading && othersOpen.length > 0 && (
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <h2 className="text-sm font-semibold" style={{ color: "#6B7280" }}>Open Questions</h2>
-                <span className="badge badge-brand">{open.length}</span>
+                <span className="badge badge-brand">{othersOpen.length}</span>
               </div>
               <div className="space-y-2">
-                {open.map((q) => (
+                {othersOpen.map((q) => (
                   <QuestionRow 
                     key={q._id} 
                     question={q} 

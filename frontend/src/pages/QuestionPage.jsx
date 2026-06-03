@@ -31,42 +31,42 @@ function VoteBtn({ count, active, onClick, direction }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all`}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer`}
       style={active ? { background: "#5E7A5A", color: "#fff" } : { background: "#F5F7F2", color: "#6B7280" }}
     >
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d={direction === "up" ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+        {direction === "up" ? (
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.514" />
+        ) : (
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.514" />
+        )}
       </svg>
       {direction === "up" ? (count || "") : (Math.abs(count) || "")}
     </button>
   );
 }
 
-function AnswerCard({ answer, onVote, userVotes, onAccept, canAccept }) {
+function AnswerCard({ answer, onVote, userVotes, currentUser }) {
   const vote = userVotes[answer._id] || 0;
-  const votes = (answer.upvotes || 0) + vote;
+  // Use real DB upvotes as base — don't add local offset so all users see same count
+  const upvotes = answer.upvotes || 0;
+  const downvotes = answer.downvotes || 0;
+
+  const isOwnAnswer = currentUser?._id && answer?.contributorId && currentUser._id === (answer.contributorId._id || answer.contributorId);
+  const displayName = isOwnAnswer ? "You" : (answer.contributorName || "Student");
 
   return (
-    <article id={`answer-${answer._id}`} className={`card p-5 ${answer.isAccepted ? 'accepted-answer' : ''}`}>
-      {answer.isAccepted && (
-        <div className="flex items-center gap-1.5 mb-3">
-          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-          <span className="accepted-badge">Accepted Answer</span>
-        </div>
-      )}
+    <article id={`answer-${answer._id}`} className={`card p-5`}>
       <AnswerContent content={answer.content} />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 pt-4 border-t" style={{ borderColor: "#E2E8DE" }}>
         <div className="flex items-center gap-2 text-sm">
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
             style={{ background: answer.isVerified ? "#5E7A5A" : "#D8C7A1" }}>
-            {answer.contributorName?.charAt(0) || "?"}
+            {displayName.charAt(0)}
           </div>
           <span className="font-medium" style={{ color: "#1F2937" }}>
-            {answer.contributorName || "Student"}
+            {displayName}
           </span>
           {answer.isVerified && (
             <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: "#ECFDF5", color: "#059669" }}>
@@ -78,37 +78,26 @@ function AnswerCard({ answer, onVote, userVotes, onAccept, canAccept }) {
         </div>
 
         <div className="flex items-center gap-2">
-          {votes > 0 && (
+          {upvotes > 0 && (
             <span className="text-xs px-2 py-1 rounded" style={{ background: "#F0FDF4", color: "#15803D" }}>
-              {votes} found helpful
+              {upvotes} found helpful
             </span>
           )}
-          <VoteBtn count={votes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
-          <VoteBtn count={Math.abs(votes)} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
-          {canAccept && !answer.isAccepted && (
-            <button
-              onClick={() => onAccept(answer._id)}
-              className="text-xs px-2 py-1 rounded border cursor-pointer"
-              style={{ borderColor: "#E2E8DE", color: "#6B7280", background: "transparent" }}
-              title="Mark as accepted answer"
-            >
-              ✓ Accept
-            </button>
-          )}
-          {answer.isAccepted && (
-            <span className="text-xs px-2 py-1 rounded" style={{ background: "#ECFDF5", color: "#059669" }}>
-              ✓ Accepted
-            </span>
-          )}
+          <VoteBtn count={upvotes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
+          <VoteBtn count={downvotes} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
         </div>
       </div>
     </article>
   );
 }
 
-function VerifiedHero({ answer, onVote, userVotes }) {
+function VerifiedHero({ answer, onVote, userVotes, currentUser }) {
   const vote = userVotes[answer._id] || 0;
-  const votes = (answer.upvotes || 0) + vote;
+  const upvotes = answer.upvotes || 0;
+  const downvotes = answer.downvotes || 0;
+
+  const isOwnAnswer = currentUser?._id && answer?.contributorId && currentUser._id === (answer.contributorId._id || answer.contributorId);
+  const displayName = isOwnAnswer ? "You" : (answer.contributorName || "Admin");
 
   return (
     <div id={`answer-${answer._id}`} className="rounded-xl border-2 p-6 mb-6 animate-fade-in" style={{ background: "#F0FDF4", borderColor: "#6EE7B7" }}>
@@ -130,23 +119,23 @@ function VerifiedHero({ answer, onVote, userVotes }) {
         <div className="flex items-center gap-2 text-sm">
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
             style={{ background: "#059669" }}>
-            {answer.contributorName?.charAt(0) || "?"}
+            {displayName.charAt(0)}
           </div>
           <span className="font-semibold" style={{ color: "#065F46" }}>
-            {answer.contributorName || "Admin"}
+            {displayName}
           </span>
           <span style={{ color: "#A7F3D0" }}>·</span>
           <time className="text-xs" style={{ color: "#6EE7B7" }}>{timeAgo(answer.createdAt)}</time>
-          {votes > 0 && (
+          {upvotes > 0 && (
             <>
               <span style={{ color: "#A7F3D0" }}>·</span>
-              <span className="text-xs font-medium" style={{ color: "#6EE7B7" }}>{votes} found this helpful</span>
+              <span className="text-xs font-medium" style={{ color: "#6EE7B7" }}>{upvotes} found this helpful</span>
             </>
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <VoteBtn count={votes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
-          <VoteBtn count={Math.abs(votes)} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
+          <VoteBtn count={upvotes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
+          <VoteBtn count={downvotes} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
         </div>
       </div>
     </div>
@@ -160,7 +149,6 @@ export default function QuestionPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const canAcceptAnswer = () => true;
   const { toasts, checkAchievements, dismissToast } = useAchievements();
 
   const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
@@ -224,27 +212,13 @@ export default function QuestionPage() {
     };
   }, [handleUpdate]);
 
-  // Accept answer handler
-  const handleAcceptAnswer = useCallback(
-    async (answerId) => {
-      if (!canAcceptAnswer("verifiedAnswer")) return;
-      try {
-        await answerApi.accept(answerId, true, id);
-        queryClient.invalidateQueries({ queryKey: ["question", id] });
-        checkAchievements();
-      } catch (err) {
-        console.error("Failed to accept answer:", err);
-      }
-    },
-    [id, canAcceptAnswer, queryClient, checkAchievements]
-  );
+  // Accept answer handler removed
 
   const [localAnswers, setLocalAnswers] = useState([]);
   const [userVotes, setUserVotes]       = useState({});
   const [sortBy, setSortBy]             = useState("verified");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [answerContent, setAnswerContent] = useState("");
-  const [answerName, setAnswerName] = useState(user?.name || localStorage.getItem("authUser") ? JSON.parse(localStorage.getItem("authUser") || "{}").name || "Anonymous" : "Anonymous");
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [voteError, setVoteError] = useState("");
@@ -276,19 +250,6 @@ export default function QuestionPage() {
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target.result;
-      const imageMarkdown = `\n![Image](${base64})\n`;
-      setAnswerContent((prev) => prev + imageMarkdown);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
   };
 
   const { data: question, isLoading, isError } = useQuery({
@@ -350,6 +311,7 @@ export default function QuestionPage() {
   const handleVote = async (answerId, dir) => {
     const cur = userVotes[answerId] || 0;
     const newDir = cur === dir ? 0 : dir;
+    // Optimistically mark button as active
     setUserVotes((prev) => {
       if (newDir === 0) {
         const next = { ...prev };
@@ -360,6 +322,8 @@ export default function QuestionPage() {
     });
     try {
       await questionApi.vote(id, answerId, newDir);
+      // Refetch so the real DB count (from all users) is shown
+      queryClient.invalidateQueries({ queryKey: ["question", id] });
       setVoteError("");
     } catch (err) {
       console.error("Failed to vote:", err);
@@ -370,14 +334,16 @@ export default function QuestionPage() {
 
   const submitAnswer = async (e) => {
     e.preventDefault();
-    if (!answerContent.trim() || !answerName.trim()) return;
+    if (!answerContent.trim()) return;
     setIsSubmitting(true);
     setSubmitError("");
 
+    const currentUserName = user?.name || user?.username || "Student";
     const newAnswer = {
       _id: `local-${Date.now()}`,
       content: answerContent,
-      contributorName: answerName,
+      contributorName: currentUserName,
+      contributorId: user?._id,
       isVerified: false,
       isAccepted: false,
       createdAt: new Date().toISOString(),
@@ -385,7 +351,7 @@ export default function QuestionPage() {
     };
 
     try {
-      await questionApi.addAnswer(id, { contributorName: answerName, content: answerContent, contributorId: user?._id });
+      await questionApi.addAnswer(id, { contributorName: currentUserName, content: answerContent, contributorId: user?._id });
       setLocalAnswers((prev) => [newAnswer, ...prev]);
       setAnswerContent("");
       setSubmitSuccess(true); setTimeout(() => { setSubmitSuccess(false); navigate("/queue"); }, 2000);
@@ -431,10 +397,10 @@ export default function QuestionPage() {
         )}
 
         {!isLoading && !isError && question && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="max-w-3xl mx-auto">
 
             {/* Main Thread */}
-            <div className="lg:col-span-2 space-y-8 min-w-0">
+            <div className="space-y-8 min-w-0">
 
               {/* Question */}
               <article className="relative">
@@ -454,6 +420,24 @@ export default function QuestionPage() {
                     </svg>
                   </button>
                 )}
+                <div className="flex items-center gap-3 mb-5">
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
+                    style={{ background: "#EEF4EA", color: "#5E7A5A" }}>
+                    {question.category}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#5E7A5A" }}>
+                      {(user?._id && question?.contributorId && user._id === (question.contributorId._id || question.contributorId) ? "You" : (question.contributorName || "Student")).charAt(0)}
+                    </div>
+                    <span className="text-sm font-medium" style={{ color: "#374151" }}>
+                      Asked by <span style={{ color: "#5E7A5A" }}>{user?._id && question?.contributorId && user._id === (question.contributorId._id || question.contributorId) ? "You" : (question.contributorName || "Student")}</span>
+                    </span>
+                    <span style={{ color: "#D1D5DB" }}>·</span>
+                    <time className="text-sm" style={{ color: "#9CA3AF" }}>{timeAgo(question.createdAt)}</time>
+                    <span style={{ color: "#D1D5DB" }}>·</span>
+                    <span className="text-sm" style={{ color: "#9CA3AF" }}>{question.views || 0} views</span>
+                  </div>
+                </div>
                 <h1 className="text-2xl font-bold leading-snug mb-3 pr-12" style={{ color: "#1F2937" }}>
                   {question.question}
                 </h1>
@@ -468,20 +452,6 @@ export default function QuestionPage() {
                     style={{ borderColor: "#E2E8DE" }}
                   />
                 )}
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 text-sm" style={{ color: "#6B7280" }}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#5E7A5A" }}>
-                      {question.contributor?.charAt(0) || "S"}
-                    </div>
-                    <span>Asked by <span className="font-medium" style={{ color: "#1F2937" }}>{question.contributor || "Student"}</span></span>
-                  </div>
-                  <span style={{ color: "#D1D5DB" }}>·</span>
-                  <span>{timeAgo(question.createdAt)}</span>
-                  <span style={{ color: "#D1D5DB" }}>·</span>
-                  <span>{question.views || 0} views</span>
-                  <span className="tag tag-neutral">{question.category}</span>
-                </div>
 
                 {question.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -528,7 +498,7 @@ export default function QuestionPage() {
 
                 {/* Verified Hero Answer */}
                 {verifiedAnswer && (
-                  <VerifiedHero answer={verifiedAnswer} onVote={handleVote} userVotes={userVotes} />
+                  <VerifiedHero answer={verifiedAnswer} onVote={handleVote} userVotes={userVotes} currentUser={user} />
                 )}
 
                 {/* Community Answers */}
@@ -539,45 +509,35 @@ export default function QuestionPage() {
                       answer={a}
                       onVote={handleVote}
                       userVotes={userVotes}
-                      onAccept={handleAcceptAnswer}
-                      canAccept={canAcceptAnswer("verifiedAnswer") && user?._id && question?.contributorId && user?._id === question?.contributorId}
+                      currentUser={user}
                     />
                   ))}
 
                   {sorted.length === 0 && !verifiedAnswer && (
-                    <div className="card p-10 text-center">
-                      <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#F5F7F2" }}>
-                        <svg className="w-7 h-7" style={{ color: "#9CA3AF" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="card p-6 text-center max-w-sm mx-auto shadow-sm">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ background: "#F5F7F2" }}>
+                        <svg className="w-5 h-5" style={{ color: "#9CA3AF" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      <h3 className="text-base font-semibold mb-2" style={{ color: "#1F2937" }}>No answers yet</h3>
-                      {user?._id && question?.contributorId && user?._id === question?.contributorId ? (
-                        <p className="text-sm mb-5" style={{ color: "#9CA3AF" }}>Community members will answer your question soon!</p>
+                      <h3 className="text-sm font-semibold mb-1" style={{ color: "#1F2937" }}>No answers yet</h3>
+                      {user?._id && question?.contributorId && user?._id === (question?.contributorId?._id || question?.contributorId) ? (
+                        <p className="text-xs" style={{ color: "#9CA3AF" }}>Community members will answer your question soon!</p>
                       ) : (
-                        <>
-                          <p className="text-sm mb-5" style={{ color: "#9CA3AF" }}>Be the first to help your fellow student!</p>
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById('answer-form')?.scrollIntoView({ behavior: 'smooth' })}
-                            className="btn-primary cursor-pointer"
-                          >
-                            Write an Answer →
-                          </button>
-                        </>
+                        <p className="text-xs" style={{ color: "#9CA3AF" }}>Be the first to help your fellow student!</p>
                       )}
                     </div>
                   )}
 
                   {sorted.length === 0 && verifiedAnswer && (
-                    <div className="card p-8 text-center">
-                      <p className="text-sm" style={{ color: "#9CA3AF" }}>Community answers appear here — be the first to contribute!</p>
+                    <div className="card p-6 text-center max-w-sm mx-auto shadow-sm">
+                      <p className="text-xs" style={{ color: "#9CA3AF" }}>Community answers appear here — be the first to contribute!</p>
                     </div>
                   )}
                 </div>
 
                 {/* Reply Form — hidden if user is the question owner */}
-                {!(user?._id && question?.contributorId && user?._id === question?.contributorId) && (
+                {!(user?._id && question?.contributorId && user?._id === (question?.contributorId?._id || question?.contributorId)) && (
                 <div id="answer-form" className="card p-5">
                   <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Add your Answer</h3>
                   {submitError && (
@@ -591,14 +551,6 @@ export default function QuestionPage() {
                     </div>
                   )}
                   <form onSubmit={submitAnswer} className="space-y-4">
-                    <div>
-                      <input
-                        className="input"
-                        placeholder="Your Name (e.g. Mentor Arjun)"
-                        value={answerName}
-                        onChange={(e) => setAnswerName(e.target.value)}
-                      />
-                    </div>
                     <div>
                       <div className="flex items-center gap-4 mb-2">
                         <div className="flex items-center gap-2">
@@ -618,19 +570,6 @@ export default function QuestionPage() {
                           </button>
                           <span className="text-xs" style={{ color: "#6B7280" }}>Click to dictate</span>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <label className="w-8 h-8 rounded transition-colors flex items-center justify-center border cursor-pointer hover:bg-gray-50 bg-white"
-                            style={{ color: "#374151", borderColor: "#E2E8DE" }} title="Upload Screenshot/Image">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                              <circle cx="8.5" cy="8.5" r="1.5" />
-                              <polyline points="21 15 16 10 5 21" />
-                            </svg>
-                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                          </label>
-                          <span className="text-xs" style={{ color: "#6B7280" }}>Upload Image</span>
-                        </div>
                       </div>
                       <textarea
                         ref={textareaRef}
@@ -648,7 +587,7 @@ export default function QuestionPage() {
                     </div>
                     <button
                       type="submit"
-                      disabled={isSubmitting || !answerName.trim() || !answerContent.trim() || answerContent.length > 2000}
+                      disabled={isSubmitting || !answerContent.trim() || answerContent.length > 2000}
                       className="btn-primary w-full sm:w-auto"
                     >
                       {isSubmitting ? "Posting..." : "Post Answer"}
@@ -664,63 +603,6 @@ export default function QuestionPage() {
               </section>
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Question Info — ordered first on mobile via order */}
-              <div className="card p-5 order-1 lg:order-2">
-                <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Question Info</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span style={{ color: "#6B7280" }}>Category</span>
-                    <span className="font-medium" style={{ color: "#1F2937" }}>{question.category}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span style={{ color: "#6B7280" }}>Priority</span>
-                    <span className="font-medium" style={{ color: "#1F2937" }}>{question.priority || "Medium"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span style={{ color: "#6B7280" }}>Status</span>
-                    <span className="badge badge-brand">{question.status === "open" ? "Unanswered" : question.status}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span style={{ color: "#6B7280" }}>Asked</span>
-                    <span className="font-medium" style={{ color: "#1F2937" }}>{timeAgo(question.createdAt)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span style={{ color: "#6B7280" }}>Answers</span>
-                    <span className="font-medium" style={{ color: "#1F2937" }}>{(question.answers?.length || 0) + localAnswers.length}</span>
-                  </div>
-                </div>
-                {user && (
-                  <button
-                    onClick={handleToggleBookmark}
-                    className={`bookmark-btn w-full justify-center mt-4 ${isBookmarked ? "bookmarked" : ""}`}
-                  >
-                    <svg className="w-4 h-4" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
-                    {isBookmarked ? "Bookmarked" : "Bookmark Question"}
-                  </button>
-                )}
-              </div>
-
-              {/* Related Questions */}
-              {relatedFiltered.length > 0 && (
-                <div className="card p-5 order-2 lg:order-1">
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Related FAQs</h3>
-                  <div className="space-y-3">
-                    {relatedFiltered.map((fq) => (
-                      <Link key={fq._id} to={`/faqs/${fq._id}`} className="block group">
-                        <p className="text-sm font-medium line-clamp-2 group-hover:underline" style={{ color: "#1F2937" }}>
-                          {fq.question}
-                        </p>
-                        <span className="text-xs" style={{ color: "#9CA3AF" }}>{fq.category}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
 
           </div>
         )}

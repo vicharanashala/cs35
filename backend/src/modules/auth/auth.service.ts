@@ -107,7 +107,7 @@ export class AuthService {
       const token = this.signToken({
         sub: data.username.trim(),
         role: 'student',
-        name: data.fullName,
+        name: data.username.trim(),
         id: createdUser._id.toString(),
       });
       return { success: true, message: 'Account created successfully', token };
@@ -154,14 +154,14 @@ export class AuthService {
       const token = this.signToken({
         sub: username,
         role: 'student',
-        name: user.name || 'Student',
+        name: user.username,
         id: user._id.toString(),
       });
       return {
         success: true,
         message: 'Login successful',
         token,
-        name: user.name || 'Student',
+        name: user.username,
       };
     } catch (err) {
       return { success: false, message: 'Login failed. Please try again.' };
@@ -210,18 +210,28 @@ export class AuthService {
         .exec();
       if (!user) return { success: false, message: 'User not found' };
 
-      const questionsCount = await this.questionModel
-        .countDocuments({ contributorId: user._id })
-        .exec();
-      const answersCount = await this.answerModel
-        .countDocuments({ contributorId: user._id })
-        .exec();
-      const verifiedCount = await this.answerModel
+      const questionsCount = await this.questionModel.collection
         .countDocuments({
-          contributorId: user._id,
+          $or: [
+            { contributorId: user._id },
+            { contributorId: user._id.toString() }
+          ]
+        });
+      const answersCount = await this.answerModel.collection
+        .countDocuments({
+          $or: [
+            { contributorId: user._id },
+            { contributorId: user._id.toString() }
+          ]
+        });
+      const verifiedCount = await this.answerModel.collection
+        .countDocuments({
+          $or: [
+            { contributorId: user._id },
+            { contributorId: user._id.toString() }
+          ],
           isVerified: true,
-        })
-        .exec();
+        });
 
       return {
         success: true,
@@ -233,6 +243,7 @@ export class AuthService {
           role: user.role,
           studentId: user.studentId,
           createdAt: (user as any).createdAt,
+          notificationPreferences: (user as any).notificationPreferences || { notifyOnAnswer: true, notifyOnVerification: true },
           questionsCount,
           answersCount,
           verifiedCount,

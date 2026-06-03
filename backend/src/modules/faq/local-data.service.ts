@@ -405,9 +405,17 @@ export class LocalDataService {
     return result;
   }
 
+  getUserQuestions(userId: string) {
+    const user = inMemoryUsers.find(u => u._id === userId);
+    const name = user ? user.name : 'Student';
+    return inMemoryQuestions
+      .filter((q) => q.contributorName === name)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
   getOpenQuestions(): Question[] {
     return inMemoryQuestions
-      .filter(q => q.status === 'open' || q.status === 'reopened')
+      .filter(q => q.status === 'open' || q.status === 'reopened' || q.status === 'answered')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
@@ -613,16 +621,7 @@ export class LocalDataService {
     };
   }
 
-  getUserQuestions(_userId: string) {
-    return inMemoryQuestions.map(q => ({
-      _id: q._id,
-      title: q.question,
-      category: q.category,
-      status: q.status,
-      createdAt: q.createdAt,
-      answerCount: q.answers.length,
-    }));
-  }
+
 
   getUserActivity(_userId: string) {
     return {

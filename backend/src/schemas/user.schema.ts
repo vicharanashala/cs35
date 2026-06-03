@@ -13,12 +13,7 @@ export class User extends Document {
   @Prop() name: string;
   @Prop({ unique: true, sparse: true }) studentId: string;
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Question' }], default: [] })
-  questionsAsked: Types.ObjectId[];
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Question' }], default: [] })
-  questionsAnswered: Types.ObjectId[];
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Question' }], default: [] })
   questionsBookmarked: Types.ObjectId[];
-
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   following: Types.ObjectId[];
 

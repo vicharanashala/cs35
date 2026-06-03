@@ -111,8 +111,10 @@ export class FaqController {
     @Query('search') search?: string,
     @Query('category') category?: string,
     @Query('status') status?: string,
+    @Query('contributorId') contributorId?: string,
+    @Query('answeredBy') answeredBy?: string,
   ) {
-    return this.faqService.getAllQuestions({ search, category, status });
+    return this.faqService.getAllQuestions({ search, category, status, contributorId, answeredBy });
   }
 
   @Get('questions/open')
@@ -126,8 +128,15 @@ export class FaqController {
   }
 
   @Post('questions')
-  createQuestion(@Body() body: { question: string; category: string; tags?: string[]; screenshotUrl?: string }) {
-    return this.faqService.createQuestion({ ...body, contributorName: 'Mahi Patel' });
+  createQuestion(
+    @Body() body: { question: string; category: string; tags?: string[]; screenshotUrl?: string; pendingCategory?: string },
+    @CurrentUser() user: { id?: string; name?: string }
+  ) {
+    return this.faqService.createQuestion({ 
+      ...body, 
+      contributorId: user.id,
+      contributorName: user.name || 'Student' 
+    });
   }
 
   @Patch('questions/:id')
@@ -153,15 +162,20 @@ export class FaqController {
   @Patch('questions/:id/answer')
   addAnswer(
     @Param('id') id: string,
-    @Body() body: { content: string; contributorName: string },
+    @Body() body: { content: string; contributorName?: string; pendingCategory?: string },
+    @CurrentUser() user: { id?: string; name?: string }
   ) {
-    return this.faqService.addAnswer(id, body);
+    return this.faqService.addAnswer(id, {
+      ...body,
+      contributorId: user.id,
+      contributorName: user.name || body.contributorName || 'Student'
+    });
   }
 
   @Patch('questions/:questionId/vote')
   voteQuestion(
     @Param('questionId') questionId: string,
-    @Body() body: { answerId?: string; direction: 'up' | 'down' },
+    @Body() body: { answerId?: string; direction: any },
   ) {
     if (body.answerId) {
       return this.faqService.voteAnswer(questionId, body.answerId, body.direction);
@@ -172,9 +186,9 @@ export class FaqController {
   @Post('questions/:id/convert-to-faq')
   convertToFaq(
     @Param('id') id: string,
-    @Body() body: { answerId?: string; category: string; isNewCategory?: boolean },
+    @Body() body: { answerId?: string; category?: string; isNewCategory?: boolean },
   ) {
-    return this.faqService.getQuestionById(id);
+    return this.faqService.convertToFaq(id, body.answerId, body.category);
   }
 
   // ── Answers ───────────────────────────────────────────────

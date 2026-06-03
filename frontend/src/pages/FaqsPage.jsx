@@ -187,23 +187,29 @@ function FAQCard({ faq, isBookmarked, onToggleBookmark }) {
                   <span className="text-xs text-gray-400 font-medium">Was this helpful?</span>
                   <button
                     onClick={() => handleFeedback(true)}
-                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
                       voted === "up"
                         ? "bg-green-100 border-green-300 text-green-700 font-bold"
                         : "border-gray-200 text-gray-500 hover:bg-green-50 hover:border-green-300 hover:text-green-700"
                     }`}
                   >
-                    👍 {faq.helpfulCount > 0 && <span>{faq.helpfulCount}</span>}
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.514" />
+                    </svg>
+                    {faq.helpfulCount > 0 && <span>{faq.helpfulCount}</span>}
                   </button>
                   <button
                     onClick={() => handleFeedback(false)}
-                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
                       voted === "down"
                         ? "bg-red-100 border-red-300 text-red-600 font-bold"
                         : "border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-300 hover:text-red-500"
                     }`}
                   >
-                    👎 {faq.unhelpfulCount > 0 && <span>{faq.unhelpfulCount}</span>}
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.514" />
+                    </svg>
+                    {faq.unhelpfulCount > 0 && <span>{faq.unhelpfulCount}</span>}
                   </button>
                 </div>
                 <Link to={`/faq/${faq._id}`} className="text-sm font-semibold hover:underline flex items-center gap-1" style={{ color: "#5E7A5A" }}>
