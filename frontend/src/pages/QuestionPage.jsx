@@ -6,7 +6,6 @@ import { socket } from "../services/socket";
 import { useAuth } from "../hooks/useAuth";
 import toast from "react-hot-toast";
 import { useAchievements } from "../hooks/useAchievements";
-import { useReputation } from "../hooks/useReputation";
 
 
 // Removed broken getContributorId
@@ -161,7 +160,7 @@ export default function QuestionPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { can: canAcceptAnswer } = useReputation();
+  const canAcceptAnswer = () => true;
   const { toasts, checkAchievements, dismissToast } = useAchievements();
 
   const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
@@ -393,7 +392,6 @@ export default function QuestionPage() {
       queryClient.invalidateQueries({ queryKey: ["question", id] });
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
       queryClient.invalidateQueries({ queryKey: ["user-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["users-leaderboard"] });
       checkAchievements({ bookmarkCount: 0 });
     } catch (err) {
       console.error("Failed to post answer:", err);

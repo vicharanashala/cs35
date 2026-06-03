@@ -1,11 +1,61 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { faqApi, bookmarkApi } from "../services/api";
 import { useDebounce } from "../hooks/useDebounce";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "react-hot-toast";
+import Fuse from "fuse.js";
+import HighlightText from "../components/HighlightText";
 
+function getCategoryIcon(name) {
+  const lower = name.toLowerCase();
+  const baseProps = { fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" };
+  const iconStyle = { color: "#5E7A5A" };
+
+  if (lower.includes("about the internship")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-float" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+  );
+  if (lower.includes("timing")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-wiggle delay-100" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+  );
+  if (lower.includes("noc")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-bounce" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+  );
+  if (lower.includes("selection") || lower.includes("offer")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-pulse delay-200" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+  );
+  if (lower.includes("work") || lower.includes("mentorship")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-float delay-300" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+  );
+  if (lower.includes("conduct")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-wiggle delay-200" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+  );
+  if (lower.includes("interviews")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-bounce delay-100" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+  );
+  if (lower.includes("certificate")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-pulse" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+  );
+  if (lower.includes("rosetta")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-float delay-100" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+  );
+  if (lower.includes("phase 1")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-bounce delay-300" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
+  );
+  if (lower.includes("yaksha")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-wiggle" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
+  );
+  if (lower.includes("vibe")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-pulse delay-200" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+  );
+  if (lower.includes("team")) return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-float delay-200" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+  );
+  return (
+    <svg {...baseProps} className="w-8 h-8 animate-icon-bounce delay-100" style={iconStyle}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+  );
+}
 
 function FAQCard({ faq, isBookmarked, onToggleBookmark }) {
   const { user } = useAuth();
@@ -88,7 +138,7 @@ function FAQCard({ faq, isBookmarked, onToggleBookmark }) {
             </span>
           </div>
           <h3 className="text-[1.05rem] font-bold leading-snug" style={{ color: "#1F2937" }}>
-            {faq.question}
+            <HighlightText text={faq.question} matches={faq.matches?.find(m => m.key === 'question')?.indices} />
           </h3>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -129,7 +179,7 @@ function FAQCard({ faq, isBookmarked, onToggleBookmark }) {
           <div className="w-full h-px bg-gray-100 mb-4"></div>
           <div className="flex flex-col gap-4">
             <p className="text-[0.95rem] leading-relaxed whitespace-pre-line text-gray-600">
-              {faq.answer}
+              <HighlightText text={faq.answer} matches={faq.matches?.find(m => m.key === 'answer')?.indices} />
             </p>
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between pt-2">
@@ -222,6 +272,10 @@ export default function FaqsPage() {
   
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [search, setSearch] = useState(initialSearch);
+  useEffect(() => {
+    setActiveCategory(searchParams.get("category") || "All Categories");
+    setSearch(searchParams.get("q") || "");
+  }, [searchParams]);
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -247,14 +301,9 @@ export default function FaqsPage() {
     }
   };
 
-  const debouncedSearch = useDebounce(search, 300);
-
   const { data: faqs = [], isLoading, isError } = useQuery({
-    queryKey: ["faqs", activeCategory, debouncedSearch],
-    queryFn: () => faqApi.list({
-      category: activeCategory !== "All Categories" ? activeCategory : undefined,
-      search: debouncedSearch.trim() || undefined
-    }),
+    queryKey: ["faqs", { limit: 2000 }],
+    queryFn: () => faqApi.list({ limit: 2000 }),
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
@@ -271,8 +320,25 @@ export default function FaqsPage() {
   });
 
   const filtered = useMemo(() => {
-    return Array.isArray(faqs) ? [...faqs] : Array.isArray(faqs?.data) ? [...faqs.data] : [];
-  }, [faqs]);
+    let arr = Array.isArray(faqs) ? [...faqs] : Array.isArray(faqs?.data) ? [...faqs.data] : [];
+    if (activeCategory !== "All Categories") {
+      arr = arr.filter(f => f.category === activeCategory);
+    }
+    if (search.trim()) {
+      const q = search.trim();
+      const fuse = new Fuse(arr, {
+        keys: ['question', 'answer', 'tags', 'category'],
+        includeMatches: true,
+        threshold: 0.4,
+        ignoreLocation: true,
+      });
+      arr = fuse.search(q).map(res => ({
+        ...res.item,
+        matches: res.matches
+      }));
+    }
+    return arr;
+  }, [faqs, activeCategory, search]);
 
   const groupedFaqs = useMemo(() => {
     const groups = {};
@@ -297,7 +363,7 @@ export default function FaqsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
+    <div className="min-h-screen" style={{ background: "#F5F7F2" }}>
       
       {/* ── Premium Hero Section ── */}
       <div className="bg-white border-b border-gray-200 py-8 lg:py-10 relative overflow-hidden">
@@ -352,7 +418,10 @@ export default function FaqsPage() {
                 }}
               >
                 <option>All Categories</option>
-                {(Array.isArray(categories) ? categories : (categories?.data || [])).map((c) => <option key={c} value={c}>{c}</option>)}
+                {(Array.isArray(categories) ? categories : (categories?.data || [])).map((c) => {
+                  const catName = typeof c === 'string' ? c : c.name;
+                  return <option key={catName} value={catName}>{catName}</option>;
+                })}
               </select>
             </div>
           </div>
@@ -433,6 +502,9 @@ export default function FaqsPage() {
                     
                     {/* Category Header */}
                     <div className="flex items-center gap-4 mb-6">
+                      <div className="text-brand">
+                        {getCategoryIcon(group.category)}
+                      </div>
                       <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
                         {group.category}
                       </h2>

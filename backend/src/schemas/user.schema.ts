@@ -10,7 +10,6 @@ export class User extends Document {
     | 'student'
     | 'admin';
   @Prop({ default: true }) isActive: boolean;
-  @Prop({ default: 0 }) reputation: number;
   @Prop() name: string;
   @Prop({ unique: true, sparse: true }) studentId: string;
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Question' }], default: [] })

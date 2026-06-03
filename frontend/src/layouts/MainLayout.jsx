@@ -1,5 +1,7 @@
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import Fuse from "fuse.js";
+import HighlightText from "../components/HighlightText";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userApi, faqApi, notificationApi } from "../services/api";
@@ -59,6 +61,7 @@ export default function MainLayout() {
     queryFn: () => notificationApi.list(user?._id, user?.role === 'admin'),
     enabled: !!user?._id,
     refetchInterval: 30000,
+    retry: false,
   });
 
   const markReadMut = useMutation({
@@ -87,15 +90,27 @@ export default function MainLayout() {
 
   const isActive = (p) => (p === "/" ? location.pathname === "/" : location.pathname.startsWith(p));
 
-  const debouncedSearch = useDebounce(search, 300);
-
-  const { data: searchResults = [] } = useQuery({
-    queryKey: ['faq-search', debouncedSearch],
-    queryFn: () => faqApi.list({ search: debouncedSearch }),
-    enabled: debouncedSearch.trim().length > 1,
+  const { data: allFaqs = [] } = useQuery({
+    queryKey: ['faqs-all'],
+    queryFn: () => faqApi.list(),
     staleTime: 60000,
   });
-  const resultsArray = Array.isArray(searchResults) ? searchResults : searchResults?.data || [];
+
+  const resultsArray = useMemo(() => {
+    const q = search.trim();
+    if (!q) return [];
+    const arr = Array.isArray(allFaqs) ? allFaqs : (allFaqs?.data || []);
+    const fuse = new Fuse(arr, {
+      keys: ['question', 'category', 'answer', 'tags'],
+      includeMatches: true,
+      threshold: 0.4,
+      ignoreLocation: true,
+    });
+    return fuse.search(q).map(res => ({
+      ...res.item,
+      matches: res.matches
+    })).slice(0, 5);
+  }, [search, allFaqs]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -207,33 +222,36 @@ export default function MainLayout() {
       {/* ── Header ── */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b" style={{ borderColor: "#E2E8DE" }}>
         <div className="container-xl h-14 flex items-center gap-4 relative">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            <img src={logo} alt="AskSam Logo" className="w-8 h-8 object-contain rounded-full shadow-sm" />
-            <span className="text-base font-bold" style={{ color: "#1F2937" }}>AskSam</span>
-          </Link>
+          {/* Left group */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2 group">
+              <img src={logo} alt="AskSam Logo" className="w-8 h-8 object-contain rounded-full shadow-sm" />
+              <span className="text-base font-bold" style={{ color: "#1F2937" }}>AskSam</span>
+            </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-0.5 ml-2" aria-label="Main">
-            {visibleLinks.map(({ to, label }) => (
-              <Link key={to} to={to}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  isActive(to)
-                    ? "font-semibold"
-                    : "hover:bg-opacity-60"
-                }`}
-                style={isActive(to)
-                  ? { color: "#5E7A5A", background: "#f0f4ef" }
-                  : { color: "#6B7280" }}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+            {/* Desktop nav */}
+            <nav className="hidden md:flex items-center gap-0.5 ml-2" aria-label="Main">
+              {visibleLinks.map(({ to, label }) => (
+                <Link key={to} to={to}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    isActive(to)
+                      ? "font-semibold"
+                      : "hover:bg-opacity-60"
+                  }`}
+                  style={isActive(to)
+                    ? { color: "#5E7A5A", background: "#f0f4ef" }
+                    : { color: "#6B7280" }}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </div>
 
           {/* Search */}
-          <form onSubmit={handleSearch} ref={searchRef} className="flex-1 max-w-xs hidden lg:block ml-2 relative">
-            <div className="search-wrap">
+          <form onSubmit={handleSearch} ref={searchRef} className="flex-1 max-w-md hidden lg:flex items-center gap-2 mr-4 relative">
+            <div className="search-wrap flex-1">
               <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -248,9 +266,18 @@ export default function MainLayout() {
                 placeholder="Search FAQs — e.g. NOC, offer letter…"
               />
             </div>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white shrink-0 transition-colors"
+              style={{ background: "#5E7A5A" }}
+              onMouseOver={(e) => e.currentTarget.style.background = "#4a6650"}
+              onMouseOut={(e) => e.currentTarget.style.background = "#5E7A5A"}
+            >
+              Search
+            </button>
 
             {/* Dropdown for search results */}
-            {showDropdown && search.trim().length > 1 && (
+            {showDropdown && search.trim().length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-xl shadow-xl overflow-hidden z-50 animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
                 {resultsArray.length > 0 ? (
                   <ul className="max-h-72 overflow-y-auto py-1">
@@ -261,8 +288,12 @@ export default function MainLayout() {
                           onClick={() => handleResultClick(faq._id)}
                           className="w-full text-left px-4 py-2.5 hover:bg-[#f0f4ef] transition-colors focus:bg-[#f0f4ef] focus:outline-none"
                         >
-                          <p className="text-sm font-semibold text-gray-800 line-clamp-1">{faq.question}</p>
-                          <span className="text-xs font-medium text-gray-500 mt-0.5 line-clamp-1">{faq.category}</span>
+                          <p className="text-sm font-semibold text-gray-800 line-clamp-1">
+                            <HighlightText text={faq.question} matches={faq.matches?.find(m => m.key === 'question')?.indices} />
+                          </p>
+                          <span className="text-xs font-medium text-gray-500 mt-0.5 line-clamp-1">
+                            <HighlightText text={faq.category} matches={faq.matches?.find(m => m.key === 'category')?.indices} />
+                          </span>
                         </button>
                       </li>
                     ))}
@@ -283,19 +314,19 @@ export default function MainLayout() {
             )}
           </form>
 
-          <div className="flex-1 hidden lg:block" />
+          {/* Right group */}
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
+            {/* Admin link */}
+            {isAdmin && (
+              <Link to="/admin" className="hidden md:inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors"
+                style={isActive("/admin") ? { color: "#5E7A5A", background: "#f0f4ef" } : { color: "#6B7280" }}>
+                Admin
+              </Link>
+            )}
 
-          {/* Admin link */}
-          {isAdmin && (
-            <Link to="/admin" className="hidden md:inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors"
-              style={isActive("/admin") ? { color: "#5E7A5A", background: "#f0f4ef" } : { color: "#6B7280" }}>
-              Admin
-            </Link>
-          )}
-
-          {/* ── Notifications Bell Icon ── */}
-          {isAuthenticated && (
-            <div className="relative flex items-center" ref={notifRef}>
+            {/* ── Notifications Bell Icon ── */}
+            {isAuthenticated && (
+              <div className="relative flex items-center" ref={notifRef}>
               <button
                 type="button"
                 onClick={() => { setNotifOpen(!notifOpen); setDropdownOpen(false); }}
@@ -311,7 +342,7 @@ export default function MainLayout() {
               </button>
 
               {notifOpen && (
-                <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border overflow-hidden animate-scale-in z-50 origin-top-right" style={{ borderColor: "#E2E8DE" }}>
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border overflow-hidden animate-scale-in z-50 origin-top-right" style={{ borderColor: "#E2E8DE" }}>
                   <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: "#E2E8DE", background: "#FAFAF5" }}>
                     <h3 className="font-bold text-sm" style={{ color: "#1F2937" }}>Notifications</h3>
                     {unreadCount > 0 && (
@@ -535,6 +566,7 @@ export default function MainLayout() {
               <Link to="/login" className="btn-secondary text-sm">Sign In</Link>
             )}
           </div>
+          </div>
 
           {/* Mobile hamburger */}
           <button
@@ -603,7 +635,9 @@ export default function MainLayout() {
                             }}
                             className="w-full text-left px-4 py-2.5 hover:bg-[#f0f4ef] transition-colors focus:bg-[#f0f4ef] focus:outline-none"
                           >
-                            <p className="text-sm font-semibold text-gray-800 line-clamp-1">{faq.question}</p>
+                            <p className="text-sm font-semibold text-gray-800 line-clamp-1">
+                              <HighlightText text={faq.question} matches={faq.matches?.find(m => m.key === 'question')?.indices} />
+                            </p>
                           </button>
                         </li>
                       ))}

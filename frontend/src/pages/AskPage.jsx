@@ -73,6 +73,16 @@ export default function AskPage() {
   const fileInputRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
 
+  // Debounced title state for semantic duplicate detection
+  const [debouncedTitle, setDebouncedTitle] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTitle(title);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [title]);
+
   const toggleListen = () => {
     if (isListening) {
       recognitionRef.current?.stop();
@@ -174,16 +184,6 @@ export default function AskPage() {
     queryFn: () => faqApi.listCategories(),
     staleTime: 1000 * 60 * 5,
   });
-
-  // Debounced title state for semantic duplicate detection
-  const [debouncedTitle, setDebouncedTitle] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedTitle(title);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [title]);
 
   // Semantic duplicate detection using React Query
   const { data: similarFaqs = [], isLoading: isCheckingSimilar } = useQuery({
@@ -407,7 +407,10 @@ export default function AskPage() {
                       className={`input ${categoryError ? "input-error" : ""}`}
                     >
                       <option value="">Select a category</option>
-                      {categories.map((c) => <option key={c}>{c}</option>)}
+                      {categories.map((c) => {
+                        const catName = typeof c === 'string' ? c : c.name;
+                        return <option key={catName}>{catName}</option>;
+                      })}
                       <option value="new_category">+ Add New Category</option>
                     </select>
                   </div>

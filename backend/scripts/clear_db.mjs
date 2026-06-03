@@ -53,7 +53,6 @@ async function run() {
     password: hashedPassword,
     role: 'admin',
     isActive: true,
-    reputation: 100,
     name: 'Admin User',
     questionsAsked: [],
     questionsAnswered: [],

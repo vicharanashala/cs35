@@ -12,8 +12,13 @@ export class FaqController {
   // ── FAQs ─────────────────────────────────────────────────
 
   @Get('faqs')
-  getAllFAQs(@Query('category') category?: string, @Query('search') search?: string) {
-    return this.faqService.getAllFAQs(category, search);
+  getAllFAQs(
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '2000'
+  ) {
+    return this.faqService.getAllFAQs(category, search, parseInt(page), parseInt(limit));
   }
 
   @Get('faqs/:id')
@@ -304,15 +309,10 @@ export class FaqController {
     return this.faqService.getUsers();
   }
 
-  @Get('users/leaderboard')
-  getLeaderboard() {
-    return this.faqService.getLeaderboard();
-  }
-
   @Patch('users/:id')
   updateUser(
     @Param('id') id: string,
-    @Body() body: { isActive?: boolean; role?: string; reputation?: number; notificationPreferences?: any },
+    @Body() body: { isActive?: boolean; role?: string; notificationPreferences?: any },
     @CurrentUser() user: { id?: string; role?: string },
   ) {
     if (user.role !== 'admin' && user.id !== id) {
@@ -321,7 +321,6 @@ export class FaqController {
     if (user.role !== 'admin') {
       delete body.isActive;
       delete body.role;
-      delete body.reputation;
     }
     return this.faqService.updateUser(id, body);
   }

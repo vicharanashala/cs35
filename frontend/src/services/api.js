@@ -60,9 +60,10 @@ export const faqApi = {
   similar: (q) => safeRequest(client.get("/faqs/similar", { params: { q } }).then((r) => r.data)),
 };
 
-// ── Category API (admin) ─────────────────────────────────────
+// ── Category API ─────────────────────────────────────────────
 
 export const categoryApi = {
+  getStats: () => safeRequest(client.get("/categories/stats").then((r) => r.data)),
   create: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
   confirm: (name) => safeRequest(client.patch("/categories/confirm", { name }).then((r) => r.data)),
 };
@@ -98,10 +99,8 @@ export const answerApi = {
 // ── Bookmark API ──────────────────────────────────────────────
 
 export const bookmarkApi = {
-  toggle: (userId, questionId) =>
-    safeRequest(client.patch(`/users/${userId}/bookmark/${questionId}`).then((r) => r.data)),
   list: (userId) => safeRequest(client.get(`/users/${userId}/bookmarks`).then((r) => r.data)),
-  listAnswers: (userId) => safeRequest(client.get(`/users/${userId}/answers`).then((r) => r.data)),
+  toggle: (userId, faqId) => safeRequest(client.patch(`/users/${userId}/bookmark/${faqId}`).then((r) => r.data)),
 };
 
 // ── Follow API ────────────────────────────────────────────────
@@ -134,12 +133,7 @@ export const faqAdminApi = {
   pin: (id, pinned) => safeRequest(client.patch(`/faqs/${id}/pin`, { pinned }).then((r) => r.data)),
 };
 
-// ── Category API ─────────────────────────────────────────────
 
-export const categoryApi = {
-  getStats: () => safeRequest(client.get("/categories/stats").then((r) => r.data)),
-  create: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
-};
 
 // ── User API ─────────────────────────────────────────────────
 
@@ -151,7 +145,6 @@ export const userApi = {
     );
   },
   list: () => safeRequest(client.get("/users").then((r) => r.data)),
-  leaderboard: () => safeRequest(client.get("/users/leaderboard").then((r) => r.data)),
   update: (id, data) => safeRequest(client.patch(`/users/${id}`, data).then((r) => r.data)),
   delete: (id) => safeRequest(client.delete(`/users/${id}`).then((r) => r.data)),
 };

@@ -68,6 +68,12 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error("Failed to load user:", err);
+      // If token is expired/invalid (401), clear auth state so user gets redirected to login
+      if (err?.response?.status === 401) {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("authUser");
+        setUser(null);
+      }
     }
   }, []);
 

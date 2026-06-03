@@ -9,7 +9,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import logo from "../assets/logo.png";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
-import { getUserTitle } from "../utils/gamification";
+
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -62,29 +62,6 @@ function Toast({ message, type = "success", onClose }) {
   return (
     <div className="fixed bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg animate-slide-up" style={{ background: colors.bg, color: colors.color }}>
       <p className="text-sm font-medium">{message}</p>
-    </div>
-  );
-}
-
-function AdjustPointsModal({ user, onConfirm, onCancel }) {
-  const [points, setPoints] = useState(user?.reputation || 0);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
-      <div className="card p-6 max-w-sm w-full mx-4 animate-scale-in">
-        <h3 className="font-bold text-lg mb-3" style={{ color: "#1F2937" }}>Adjust Reputation</h3>
-        <p className="text-sm mb-5" style={{ color: "#6B7280" }}>Set total reputation points for <strong>{user?.name}</strong>.</p>
-        <input
-          type="number"
-          value={points}
-          onChange={(e) => setPoints(Number(e.target.value))}
-          className="input mb-5"
-        />
-        <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="btn-secondary px-4 py-2">Cancel</button>
-          <button onClick={() => onConfirm(points)} className="btn-primary px-4 py-2" style={{ background: "#059669" }}>Save Points</button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -362,7 +339,7 @@ function QuestionsTab() {
   });
 
   const answerMut = useMutation({ mutationFn: ({ id, data }) => questionApi.addAnswer(id, data), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Answer submitted!"); } });
-  const verifyMut = useMutation({ mutationFn: ({ id, verified }) => answerApi.verify(id, verified), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); qc.invalidateQueries({ queryKey: ["user-profile"] }); qc.invalidateQueries({ queryKey: ["users-leaderboard"] }); } });
+  const verifyMut = useMutation({ mutationFn: ({ id, verified }) => answerApi.verify(id, verified), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); qc.invalidateQueries({ queryKey: ["user-profile"] }); } });
   const closeMut = useMutation({ mutationFn: (id) => questionApi.close(id), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Question closed."); } });
   const reopenMut = useMutation({ mutationFn: (id) => questionApi.reopen(id), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Question reopened."); } });
   const deleteMut = useMutation({ mutationFn: (id) => questionApi.delete(id), onSuccess: () => { setSelected(null); qc.invalidateQueries(["admin-questions"]); setToast("Question deleted."); } });
@@ -885,7 +862,6 @@ function UsersTab() {
   const qc = useQueryClient();
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState("");
-  const [adjustUser, setAdjustUser] = useState(null);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -903,16 +879,6 @@ function UsersTab() {
   return (
     <div className="h-full flex flex-col min-h-0">
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
-      {adjustUser && (
-        <AdjustPointsModal 
-          user={adjustUser}
-          onConfirm={(newPoints) => {
-            updateMut.mutate({ id: adjustUser._id, data: { reputation: newPoints } });
-            setAdjustUser(null);
-          }}
-          onCancel={() => setAdjustUser(null)}
-        />
-      )}
 
       <div className="mb-4">
         <div className="search-wrap" style={{ maxWidth: 300 }}>
@@ -939,13 +905,11 @@ function UsersTab() {
                   <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Status</th>
                   <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Joined</th>
                   <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Questions</th>
-                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Reputation</th>
                   <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(u => {
-                  const rank = getUserTitle(u.reputation || 0);
                   return (
                   <tr key={u._id} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: "#F5F7F2" }}>
                     <td className="p-3 font-medium" style={{ color: "#1F2937" }}>{u.name || "—"}</td>
@@ -963,16 +927,7 @@ function UsersTab() {
                     <td className="p-3 text-center" style={{ color: "#6B7280" }}>{timeAgo(u.createdAt)}</td>
                     <td className="p-3 text-center" style={{ color: "#6B7280" }}>{u.questionsAsked?.length || 0}</td>
                     <td className="p-3 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className="font-bold text-sm" style={{ color: rank.color }}>{u.reputation || 0} pts</span>
-                        <span className="text-xs font-semibold px-1.5 rounded-full mt-1" style={{ background: rank.bg, color: rank.color }}>{rank.title}</span>
-                      </div>
-                    </td>
-                    <td className="p-3 text-center">
                       <div className="flex gap-1 justify-center flex-wrap">
-                        {u.role !== "admin" && (
-                          <button onClick={() => setAdjustUser(u)} className="text-xs px-2 py-1 rounded" style={{ background: "#EEF2FF", color: "#4F46E5" }}>Adj Pts</button>
-                        )}
                         {u.role !== "admin" && (
                           u.isActive
                             ? <button onClick={() => updateMut.mutate({ id: u._id, data: { isActive: false } })} className="text-xs px-2 py-1 rounded" style={{ background: "#fef3c7", color: "#92400e" }}>Suspend</button>

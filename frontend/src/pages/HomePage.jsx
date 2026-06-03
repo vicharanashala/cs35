@@ -2,11 +2,13 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "../hooks/useDebounce";
-import { faqApi, questionApi, userApi, bookmarkApi } from "../services/api";
+import { faqApi, questionApi, userApi } from "../services/api";
 import hero from "../assets/hero.png";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "react-hot-toast";
 import FloatingBubbles from "../components/FloatingBubbles";
+import Fuse from "fuse.js";
+import HighlightText from "../components/HighlightText";
 
 function timeAgo(d) {
   if (!d) return "";
@@ -78,28 +80,6 @@ export default function HomePage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef(null);
 
-  const { data: bookmarkedQuestions = [], refetch: refetchBookmarks } = useQuery({
-    queryKey: ["bookmarked-questions", user?._id],
-    queryFn: () => bookmarkApi.list(user?._id),
-    enabled: !!user?._id,
-  });
-
-  const handleToggleBookmark = async (id) => {
-    if (!user?._id) return;
-    const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === id);
-    try {
-      await bookmarkApi.toggle(user._id, id);
-      refetchBookmarks();
-      queryClient.invalidateQueries({ queryKey: ["bookmarked-questions", user._id] });
-      queryClient.invalidateQueries({ queryKey: ["user-profile-bookmarks", user._id] });
-      toast.success(isBookmarked ? "Bookmark removed" : "Question bookmarked!");
-    } catch (err) {
-      console.error("Failed to toggle bookmark:", err);
-      toast.error("Failed to update bookmark");
-    }
-  };
-
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
@@ -115,7 +95,6 @@ export default function HomePage() {
     if (search.trim()) navigate(`/faqs?q=${encodeURIComponent(search.trim())}`);
   };
 
-  // 1. Verified FAQs (Official Knowledge)
   const { data: faqs = [], isLoading: loadingFaqs } = useQuery({
     queryKey: ["faqs"],
     queryFn: () => faqApi.list(),
@@ -130,21 +109,21 @@ export default function HomePage() {
     [...faqList].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
   [faqList]);
 
-  const debouncedSearch = useDebounce(search, 300);
+  const searchResults = useMemo(() => {
+    const q = search.trim();
+    if (q.length < 1) return [];
+    const fuse = new Fuse(faqList, {
+      keys: ['question', 'category', 'answer', 'tags'],
+      includeMatches: true,
+      threshold: 0.4,
+      ignoreLocation: true,
+    });
+    return fuse.search(q).map(res => ({
+      ...res.item,
+      matches: res.matches
+    })).slice(0, 6);
+  }, [search, faqList]);
 
-  const { data: searchResultsData = [] } = useQuery({
-    queryKey: ['faq-search-home', debouncedSearch],
-    queryFn: () => faqApi.list({ search: debouncedSearch }),
-    enabled: debouncedSearch.trim().length > 1,
-    staleTime: 60000,
-  });
-  const searchResults = Array.isArray(searchResultsData)
-    ? searchResultsData.slice(0, 6)
-    : Array.isArray(searchResultsData?.data)
-      ? searchResultsData.data.slice(0, 6)
-      : [];
-
-  // 2. Categories
   const { data: categoriesData = [], isLoading: loadingCats } = useQuery({
     queryKey: ["categories"],
     queryFn: () => faqApi.listCategories(),
@@ -152,7 +131,6 @@ export default function HomePage() {
   });
   const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
 
-  // 3. Recent Discussions (Community)
   const { data: questions = [], isLoading: loadingQuestions } = useQuery({
     queryKey: ["questions-recent"],
     queryFn: () => questionApi.listOpen(),
@@ -166,15 +144,13 @@ export default function HomePage() {
   return (
     <div style={{ background: "#F5F7F2" }}>
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #F5F7F2 0%, #ffffff 100%)", borderBottom: "1px solid #E2E8DE" }}>
-        {/* Soft abstract blobs for background */}
+      <section className="relative" style={{ background: "linear-gradient(135deg, #F5F7F2 0%, #ffffff 100%)", borderBottom: "1px solid #E2E8DE" }}>
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-30" style={{ background: "#dde8db" }}></div>
           <div className="absolute top-24 -right-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-30" style={{ background: "#f8f0e0" }}></div>
         </div>
         <div className="container-xl py-8 sm:py-12 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left */}
             <div className="max-w-2xl">
               <h1 className="text-5xl sm:text-6xl lg:text-[4rem] font-extrabold tracking-tight mb-6 text-gray-900 leading-[1.05]">
                 Get Answers.<br />
@@ -184,7 +160,6 @@ export default function HomePage() {
                 Ask questions, help others, and build a smarter student community together. Your experience makes a difference.
               </p>
 
-              {/* Hero search */}
               <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 relative" ref={searchRef}>
                 <div className="search-wrap flex-1 shadow-md rounded-full transition-shadow hover:shadow-lg bg-white">
                   <svg className="search-icon w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,8 +176,7 @@ export default function HomePage() {
                 </div>
                 <button type="submit" className="btn-primary py-4 px-8 text-base shadow-md hover:shadow-lg rounded-full shrink-0">Search</button>
 
-                {/* Search dropdown */}
-                {showDropdown && debouncedSearch.trim().length > 1 && (
+                {showDropdown && search.trim().length > 1 && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border shadow-lg z-50 overflow-hidden animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
                     {searchResults.length > 0 ? (
                       <div className="p-2">
@@ -218,8 +192,12 @@ export default function HomePage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>{faq.question}</p>
-                              <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{faq.category}</p>
+                              <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>
+                                <HighlightText text={faq.question} matches={faq.matches?.find(m => m.key === 'question')?.indices} />
+                              </p>
+                              <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
+                                <HighlightText text={faq.category} matches={faq.matches?.find(m => m.key === 'category')?.indices} />
+                              </p>
                             </div>
                           </Link>
                         ))}
@@ -253,12 +231,9 @@ export default function HomePage() {
                     )}
                   </div>
                 )}
-
-
               </form>
             </div>
 
-{/* Right — illustration with floating questions */}
             <div className="hidden lg:flex items-center justify-center relative">
               <img
                 src={hero}
@@ -272,8 +247,8 @@ export default function HomePage() {
         </div>
       </section>
 
-        <div className="container-xl py-6 space-y-8" onClick={() => setShowDropdown(false)}>
-        {/* ── 2. Verified FAQs + Recent Discussions (side by side) ── */}
+      <div className="container-xl py-6 space-y-8" onClick={() => setShowDropdown(false)}>
+        {/* ── Verified FAQs + Recent Discussions ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Verified FAQs */}
           <section>
@@ -309,7 +284,12 @@ export default function HomePage() {
                     className="card-hover p-4 block cursor-pointer"
                     style={{ background: "#ffffff", border: "1px solid #E2E8DE", borderRadius: "12px" }}
                   >
-                    <span className="text-xs font-medium mb-1.5 block" style={{ color: "#5E7A5A" }}>{faq.category}</span>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="w-4 h-4 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
+                        {getCategoryIcon(faq.category)}
+                      </div>
+                      <span className="text-xs font-medium" style={{ color: "#5E7A5A" }}>{faq.category}</span>
+                    </div>
                     <h3 className="text-sm font-semibold leading-snug mb-1" style={{ color: "#1F2937" }}>{faq.question}</h3>
                     <p className="text-xs line-clamp-1" style={{ color: "#6B7280" }}>{faq.answer}</p>
                   </div>
@@ -354,7 +334,6 @@ export default function HomePage() {
                 ))
               ) : recentDiscussions.length > 0 ? (
                 recentDiscussions.map((q) => {
-                  const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === q._id);
                   const initial = (q.contributorName || "S")[0].toUpperCase();
                   const avatarColors = ["#5E7A5A", "#7C9A6E", "#A4BE8B", "#D4E4C9", "#3D5A3A", "#6B8E6B"];
                   const avatarColor = avatarColors[initial.charCodeAt(0) % avatarColors.length];
@@ -387,18 +366,6 @@ export default function HomePage() {
                           <p className="font-semibold text-sm truncate" style={{ color: "#1F2937" }}>{q.contributorName || "Student"}</p>
                           <p className="text-xs" style={{ color: "#9CA3AF" }}>{timeAgo(q.createdAt)}</p>
                         </div>
-                        {user && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleBookmark(q._id); }}
-                            className="p-1.5 rounded-full flex items-center justify-center"
-                            style={isBookmarked ? { background: "#F0FDF4", color: "#059669" } : { background: "#F9FAFB", color: "#9CA3AF" }}
-                          >
-                            <svg className="w-3.5 h-3.5" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                            </svg>
-                          </button>
-                        )}
                       </div>
                       <h3 className="font-semibold text-sm leading-snug mb-2" style={{ color: "#1F2937" }}>{q.question}</h3>
                       <div className="flex items-center justify-between">
@@ -428,7 +395,7 @@ export default function HomePage() {
           </section>
         </div>
 
-        {/* ── 3. Explore Categories ── */}
+        {/* ── Explore Categories ── */}
         <section>
           <div className="mb-4">
             <h2 className="section-title">Explore Categories</h2>
@@ -443,167 +410,23 @@ export default function HomePage() {
                 </div>
               ))
             ) : categories.length > 0 ? (
-              categories.map((cat) => (
-                <Link key={cat} to={`/faqs?category=${encodeURIComponent(cat)}`} className="card-hover p-2 text-center flex flex-col items-center justify-center aspect-square">
-                  <div className="flex justify-center items-center mb-1 text-brand text-base">{getCategoryIcon(cat)}</div>
-                  <h3 className="font-semibold text-[10px] line-clamp-2" style={{ color: "#1F2937" }}>{cat}</h3>
-                </Link>
-              ))
+              categories.map((cat) => {
+                const catName = typeof cat === 'string' ? cat : cat.name;
+                return (
+                  <Link key={catName} to={`/faqs?category=${encodeURIComponent(catName)}`} className="card-hover p-2 text-center flex flex-col items-center justify-center aspect-square">
+                    <div className="flex justify-center items-center mb-1 text-brand text-base">
+                      {getCategoryIcon(catName)}
+                    </div>
+                    <h3 className="font-semibold text-[10px] line-clamp-2" style={{ color: "#1F2937" }}>{catName}</h3>
+                  </Link>
+                );
+              })
             ) : (
               <div className="col-span-5 md:col-span-6 lg:col-span-8 card p-8 text-center">
                 <p className="text-sm" style={{ color: "#9CA3AF" }}>No categories found.</p>
               </div>
             )}
           </div>
-        </section>
-
-        {/* ── 3. Recent Discussions ── */}
-        <section>
-          <div className="flex items-end justify-between mb-5">
-            <div>
-              <h2 className="section-title flex items-center gap-2">
-                <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-                </svg>
-                Recent Discussions
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Community-driven Q&A. Help your peers!</p>
-            </div>
-            <Link to="/queue" className="text-sm font-medium hover:underline" style={{ color: "#5E7A5A" }}>
-              See All →
-            </Link>
-          </div>
-
-          {loadingQuestions ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="card p-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="skeleton w-10 h-10 rounded-full" />
-                    <div className="flex-1">
-                      <div className="skeleton h-3 w-20 mb-1" />
-                      <div className="skeleton h-2 w-12" />
-                    </div>
-                  </div>
-                  <div className="skeleton h-4 w-full mb-2" />
-                  <div className="skeleton h-4 w-3/4 mb-3" />
-                  <div className="skeleton h-5 w-16 rounded-full" />
-                </div>
-              ))}
-            </div>
-          ) : recentDiscussions.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentDiscussions.map((q) => {
-                const isBookmarked = bookmarkedQuestions.some((bq) => bq._id === q._id);
-                const initial = (q.contributorName || "S")[0].toUpperCase();
-                const avatarColors = ["#5E7A5A", "#7C9A6E", "#A4BE8B", "#D4E4C9", "#3D5A3A", "#6B8E6B"];
-                const avatarColor = avatarColors[initial.charCodeAt(0) % avatarColors.length];
-                return (
-                  <div
-                    key={q._id}
-                    onClick={() => navigate(`/questions/${q._id}`)}
-                    className="card-hover block cursor-pointer group/discussion"
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #E2E8DE",
-                      borderRadius: "16px",
-                      padding: "20px",
-                      transition: "all 0.2s ease",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)";
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
-                      e.currentTarget.style.transform = "translateY(0)";
-                    }}
-                  >
-                    {/* Header: Avatar + User info */}
-                    <div className="flex items-center gap-3 mb-4">
-                      {/* Avatar */}
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0"
-                        style={{ background: avatarColor }}
-                      >
-                        {initial}
-                      </div>
-                      {/* Name + time */}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-sm truncate" style={{ color: "#1F2937" }}>
-                          {q.contributorName || "Student"}
-                        </p>
-                        <p className="text-xs" style={{ color: "#9CA3AF" }}>
-                          {timeAgo(q.createdAt)}
-                        </p>
-                      </div>
-                      {/* Bookmark button */}
-                      {user && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleToggleBookmark(q._id);
-                          }}
-                          title={isBookmarked ? "Remove Bookmark" : "Bookmark"}
-                          className="p-1.5 rounded-full transition-all cursor-pointer hover:scale-110 flex items-center justify-center"
-                          style={
-                            isBookmarked
-                              ? { background: "#F0FDF4", color: "#059669" }
-                              : { background: "#F9FAFB", color: "#9CA3AF" }
-                          }
-                        >
-                          <svg className="w-4 h-4" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Question title */}
-                    <h3 className="font-semibold text-sm leading-snug mb-3" style={{ color: "#1F2937" }}>
-                      {q.question}
-                    </h3>
-
-                    {/* Footer: Category pill + stats */}
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="text-xs font-medium px-2.5 py-1 rounded-full"
-                        style={{
-                          background: "#EEF4EA",
-                          color: "#5E7A5A",
-                        }}
-                      >
-                        {q.category}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        {/* Upvotes */}
-                        <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                          </svg>
-                          {q.upvotes || 0}
-                        </span>
-                        {/* Comments / Answers */}
-                        <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                          {q.answers?.length || 0}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="card p-8 text-center">
-              <p className="text-sm" style={{ color: "#9CA3AF" }}>No recent discussions found.</p>
-            </div>
-          )}
         </section>
 
         {/* ── Footer CTA ── */}

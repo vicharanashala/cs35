@@ -59,7 +59,6 @@ export interface SafeUser {
   name: string;
   role: string;
   createdAt: string;
-  reputation: number;
   questionsCount: number;
   answersCount: number;
   verifiedCount: number;
@@ -265,7 +264,6 @@ interface InMemoryUser {
   name: string;
   role: string;
   createdAt: string;
-  reputation: number;
   questionsCount: number;
   answersCount: number;
   verifiedCount: number;
@@ -283,7 +281,6 @@ const inMemoryUsers: InMemoryUser[] = [
     name: 'Mahi Patel',
     role: 'admin',
     createdAt: '2025-09-01T00:00:00.000Z',
-    reputation: 340,
     questionsCount: 5,
     answersCount: 12,
     verifiedCount: 3,
@@ -574,7 +571,6 @@ export class LocalDataService {
       name: data.fullName,
       role: 'student',
       createdAt: new Date().toISOString(),
-      reputation: 0,
       questionsCount: 0,
       answersCount: 0,
       verifiedCount: 0,
@@ -598,12 +594,6 @@ export class LocalDataService {
     return inMemoryUsers.map(({ password: _pw, ...u }) => u as SafeUser);
   }
 
-  getLeaderboard(): SafeUser[] {
-    return inMemoryUsers
-      .map(({ password: _pw, ...u }) => u as SafeUser)
-      .sort((a, b) => (b.reputation || 0) - (a.reputation || 0));
-  }
-
   // ─── User Profile / Stats ───────────────────────────────────
 
   getUserProfile(): SafeUser {
@@ -614,7 +604,6 @@ export class LocalDataService {
       name: 'Mahi Patel',
       role: 'admin',
       createdAt: '2025-09-01T00:00:00.000Z',
-      reputation: 340,
       questionsCount: 5,
       answersCount: 12,
       verifiedCount: 3,
@@ -644,7 +633,7 @@ export class LocalDataService {
   }
 
   getUserStats(_userId: string) {
-    return { questions: 5, answers: 12, verified: 3, reputation: 340 };
+    return { questions: 5, answers: 12, verified: 3 };
   }
 
   // ─── Notifications ──────────────────────────────────────────
@@ -689,8 +678,10 @@ export class LocalDataService {
     return { bookmarked: idx === -1 };
   }
 
-  getBookmarks(_userId: string): Question[] {
-    return inMemoryQuestions.filter(q => this.userBookmarks.includes(q._id));
+  getBookmarks(_userId: string): any[] {
+    const questions = inMemoryQuestions.filter(q => this.userBookmarks.includes(q._id));
+    const faqs = this.getAllFAQs().filter((f: any) => this.userBookmarks.includes(f._id));
+    return [...questions, ...faqs];
   }
 
   toggleFollow(followerId: string, followingId: string) {

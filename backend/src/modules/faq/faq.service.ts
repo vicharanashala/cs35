@@ -590,12 +590,6 @@ export class FaqService implements OnModuleInit {
     try {
       const answer = await this.answerModel.findByIdAndUpdate(answerId, { isVerified: verified }, { new: true }).exec();
 
-      // Update reputation points for user if verified
-      if (answer && answer.contributorId) {
-        const reward = verified ? 15 : -15;
-        await this.userModel.findByIdAndUpdate(answer.contributorId, { $inc: { reputation: reward } }).exec();
-      }
-
       // If verified, mark question as answered AND auto-add any pending category from the answer
       if (verified) {
         await this.questionModel.findByIdAndUpdate(questionId, { status: 'answered' }).exec();
@@ -666,6 +660,12 @@ export class FaqService implements OnModuleInit {
       return this.localData.toggleBookmark(userId, questionId);
     }
     try {
+      // Only allow bookmarking verified FAQs, not open questions
+      const faq = await this.faqModel.findById(questionId).lean().exec();
+      if (!faq) {
+        throw new Error('Only verified FAQs can be bookmarked');
+      }
+
       const user = await this.userModel.findById(userId).exec();
       if (!user) return null;
       const bookmarked = user.questionsBookmarked || [];
@@ -890,18 +890,16 @@ export class FaqService implements OnModuleInit {
       return this.localData.getUserStats(userId);
     }
     try {
-      const [questionCount, answerCount, verifiedCount, totalReputation] =
+      const [questionCount, answerCount, verifiedCount] =
         await Promise.all([
           this.questionModel.countDocuments({ contributorId: new Types.ObjectId(userId) }).exec(),
           this.answerModel.countDocuments({ contributorId: new Types.ObjectId(userId) }).exec(),
           this.answerModel.countDocuments({ contributorId: new Types.ObjectId(userId), isVerified: true }).exec(),
-          this.userModel.findById(userId).select('reputation').lean().exec(),
         ]);
       return {
         questionCount,
         answerCount,
         verifiedCount,
-        reputation: totalReputation?.reputation || 0,
       };
     } catch {
       return this.localData.getUserStats(userId);
@@ -1055,22 +1053,7 @@ export class FaqService implements OnModuleInit {
     return this.getAllUsers();
   }
 
-  async getLeaderboard() {
-    if (!this.hasMongoDB || !this.userModel) {
-      return this.localData.getLeaderboard();
-    }
-    try {
-      return await this.userModel
-        .find({ role: 'student' })
-        .sort({ reputation: -1 })
-        .select('-password')
-        .exec();
-    } catch {
-      return this.localData.getLeaderboard();
-    }
-  }
-
-  async updateUser(id: string, data: { isActive?: boolean; role?: string; reputation?: number; notificationPreferences?: any }) {
+  async updateUser(id: string, data: { isActive?: boolean; role?: string; notificationPreferences?: any }) {
     if (!this.hasMongoDB || !this.userModel) {
       return { _id: id, ...data };
     }
@@ -1079,19 +1062,6 @@ export class FaqService implements OnModuleInit {
         .findByIdAndUpdate(id, data, { new: true })
         .select('-password')
         .exec();
-        
-      if (data.reputation !== undefined && this.notificationModel && user) {
-        const notif = await this.notificationModel.create({
-          userId: id,
-          type: 'points_adjusted',
-          title: 'Reputation Adjusted',
-          message: `An admin has adjusted your reputation points. You now have ${user.reputation} pts.`,
-          link: `/profile`,
-          senderId: 'admin',
-          senderName: 'Admin',
-        });
-        this.eventsGateway.emitNotification(notif);
-      }
       
       return user;
     } catch {
