@@ -32,9 +32,28 @@ function ProtectedRoute({ children }) {
 }
 
 function PublicRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth() || { isAuthenticated: false, loading: false };
+  const { isAuthenticated, loading, user } = useAuth() || { isAuthenticated: false, loading: false };
   if (loading) return null;
-  return isAuthenticated ? <Navigate to="/" replace /> : children;
+  if (isAuthenticated) {
+    return user?.role === "admin" ? <Navigate to="/admin" replace /> : <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+function StudentRoute({ children }) {
+  const { user, isAuthenticated, loading } = useAuth() || {};
+  if (loading) return null;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role === "admin") return <Navigate to="/admin" replace />;
+  return children;
+}
+
+function AdminRoute({ children }) {
+  const { user, isAuthenticated, loading } = useAuth() || {};
+  if (loading) return null;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== "admin") return <Navigate to="/" replace />;
+  return children;
 }
 
 export default function App() {
@@ -53,17 +72,17 @@ export default function App() {
         <Route
           path="admin"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <AdminPage />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
         <Route
           path="/"
           element={
-            <ProtectedRoute>
+            <StudentRoute>
               <MainLayout />
-            </ProtectedRoute>
+            </StudentRoute>
           }
         >
           <Route index element={<HomePage />} />
