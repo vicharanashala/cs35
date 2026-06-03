@@ -1285,22 +1285,33 @@ export class FaqService implements OnModuleInit {
       return this.localData.getAdminStats();
     }
     try {
-      const [questions, open, answered, verified, faqs, categories, users] = await Promise.all([
+      const [questions, open, answered, verified, faqs, initialCategoriesCount, users] = await Promise.all([
         this.questionModel.countDocuments().exec(),
         this.questionModel.countDocuments({ status: { $in: ['open', 'reopened'] } }).exec(),
         this.questionModel.countDocuments({ status: 'answered' }).exec(),
         this.answerModel.countDocuments({ isVerified: true }).exec(),
         this.faqModel.countDocuments().exec(),
-        this.categoryModel.countDocuments().exec(),
+        this.categoryModel.countDocuments({ isActive: true }).exec(),
         this.userModel.countDocuments({ role: 'student' }).exec(),
       ]);
+
+      let categoriesCount = initialCategoriesCount;
+      if (categoriesCount === 0) {
+        const [distinctFaqs, distinctQuestions] = await Promise.all([
+          this.faqModel.distinct('category').exec(),
+          this.questionModel.distinct('category').exec(),
+        ]);
+        const allCats = new Set([...distinctFaqs, ...distinctQuestions].filter(Boolean));
+        categoriesCount = allCats.size;
+      }
+
       return {
         totalQuestions: questions,
         openQuestions: open,
         answeredQuestions: answered,
         verifiedQuestions: verified,
         totalFaqs: faqs,
-        totalCategories: categories,
+        totalCategories: categoriesCount,
         totalUsers: users
       };
     } catch {
