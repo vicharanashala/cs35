@@ -384,6 +384,12 @@ export class LocalDataService {
     return { _id: id, views: 1 };
   }
 
+  feedback(id: string, isHelpful: boolean) {
+    const faq = this.getFaqById(id);
+    if (!faq) return null;
+    return { ...faq, helpfulCount: isHelpful ? 1 : 0, unhelpfulCount: isHelpful ? 0 : 1 };
+  }
+
   // ─── Questions ─────────────────────────────────────────────
 
   getAllQuestions(params: { search?: string; category?: string; status?: string } = {}): Question[] {

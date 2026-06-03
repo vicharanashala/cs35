@@ -2,8 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "../hooks/useDebounce";
-import { faqApi, questionApi, userApi, bookmarkApi } from "../services/api";
-import { getUserTitle } from "../utils/gamification";
+import { faqApi, questionApi, bookmarkApi } from "../services/api";
 import hero from "../assets/hero.png";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "react-hot-toast";
@@ -121,68 +120,6 @@ export default function HomePage() {
     queryFn: () => faqApi.list(),
     staleTime: 1000 * 60 * 5,
   });
-
-  const faqList = useMemo(() => {
-    return Array.isArray(faqs) ? faqs : (Array.isArray(faqs?.data) ? faqs.data : []);
-  }, [faqs]);
-
-  const topFaqs = useMemo(() =>
-    [...faqList].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
-  [faqList]);
-
-  const debouncedSearch = useDebounce(search, 300);
-
-  const { data: searchResultsData = [] } = useQuery({
-    queryKey: ['faq-search-home', debouncedSearch],
-    queryFn: () => faqApi.list({ search: debouncedSearch }),
-    enabled: debouncedSearch.trim().length > 1,
-    staleTime: 60000,
-  });
-  const searchResults = Array.isArray(searchResultsData)
-    ? searchResultsData.slice(0, 6)
-    : Array.isArray(searchResultsData?.data)
-      ? searchResultsData.data.slice(0, 6)
-      : [];
-
-  // 2. Categories
-  const { data: categoriesData = [], isLoading: loadingCats } = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => faqApi.listCategories(),
-    staleTime: 1000 * 60 * 5,
-  });
-  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
-
-  // 3. Recent Discussions (Community)
-  const { data: questions = [], isLoading: loadingQuestions } = useQuery({
-    queryKey: ["questions-recent"],
-    queryFn: () => questionApi.listOpen(), // Just using open ones for recent demo
-    staleTime: 1000 * 30,
-  });
-
-  const recentDiscussions = useMemo(() =>
-    [...questions].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 3),
-  [questions]);
-
-  // 4. Top Contributors — gracefully handles /users 404
-  const { data: users = [], isLoading: loadingUsers } = useQuery({
-    queryKey: ["users-leaderboard"],
-    queryFn: async () => {
-      try {
-        return await userApi.leaderboard();
-      } catch {
-        return [];
-      }
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const topContributors = useMemo(() => {
-    const list = Array.isArray(users) ? users : Array.isArray(users?.data) ? users.data : [];
-    return [...list]
-      .filter((u) => u.reputation > 0)
-      .sort((a, b) => (b.reputation || 0) - (a.reputation || 0))
-      .slice(0, 5);
-  }, [users]);
 
   return (
     <div style={{ background: "#F5F7F2" }}>
@@ -376,24 +313,23 @@ export default function HomePage() {
             <h2 className="section-title">Explore Categories</h2>
             <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Browse knowledge by topic.</p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
             {loadingCats ? (
-               [...Array(3)].map((_, i) => (
-                <div key={i} className="card p-6 flex flex-col items-center">
-                  <div className="skeleton h-8 w-8 rounded-full mb-3" />
-                  <div className="skeleton h-4 w-24" />
+               [...Array(8)].map((_, i) => (
+                <div key={i} className="card p-2 flex flex-col items-center justify-center aspect-square">
+                  <div className="skeleton h-5 w-5 rounded-full mb-1" />
+                  <div className="skeleton h-2 w-12" />
                 </div>
               ))
             ) : categories.length > 0 ? (
               categories.map((cat) => (
-                <Link key={cat} to={`/faqs?category=${encodeURIComponent(cat)}`} className="card-hover p-6 text-center">
-                  <div className="flex justify-center items-center mb-3 text-brand">{getCategoryIcon(cat)}</div>
-                  <h3 className="font-semibold text-base mb-1" style={{ color: "#1F2937" }}>{cat}</h3>
-                  <p className="text-xs" style={{ color: "#9CA3AF" }}>View FAQs →</p>
+                <Link key={cat} to={`/faqs?category=${encodeURIComponent(cat)}`} className="card-hover p-2 text-center flex flex-col items-center justify-center aspect-square">
+                  <div className="flex justify-center items-center mb-1 text-brand text-base">{getCategoryIcon(cat)}</div>
+                  <h3 className="font-semibold text-[10px] line-clamp-2" style={{ color: "#1F2937" }}>{cat}</h3>
                 </Link>
               ))
             ) : (
-              <div className="col-span-2 md:col-span-3 card p-8 text-center">
+              <div className="col-span-5 md:col-span-6 lg:col-span-8 card p-8 text-center">
                 <p className="text-sm" style={{ color: "#9CA3AF" }}>No categories found.</p>
               </div>
             )}
@@ -402,7 +338,7 @@ export default function HomePage() {
 
         {/* ── 3. Community Section (Discussions & Leaderboard) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <section className="lg:col-span-2">
+          <section>
             <div className="flex items-end justify-between mb-5">
               <div>
                 <h2 className="section-title flex items-center gap-2">
@@ -481,59 +417,6 @@ export default function HomePage() {
                    <p className="text-sm" style={{ color: "#9CA3AF" }}>No recent discussions found.</p>
                  </div>
               )}
-            </div>
-          </section>
-
-          <section className="lg:col-span-1">
-            <div className="mb-5">
-              <h2 className="section-title flex items-center gap-2">
-                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
-                Top Contributors
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Earn reputation by helping others.</p>
-            </div>
-            
-            <div className="card overflow-hidden">
-              <div className="p-4 bg-white">
-                {loadingUsers ? (
-                  [...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 py-3 border-b last:border-0" style={{ borderColor: "#E2E8DE" }}>
-                      <div className="skeleton h-8 w-8 rounded-full" />
-                      <div className="skeleton h-4 w-24" />
-                    </div>
-                  ))
-                ) : topContributors.length > 0 ? (
-                  <div className="divide-y" style={{ borderColor: "#E2E8DE" }}>
-                    {topContributors.map((user, idx) => {
-                      const rank = getUserTitle(user.reputation || 0);
-                      return (
-                      <div key={user._id} className="flex items-center gap-3 py-3 px-1">
-                        <div className="w-6 text-center font-bold" style={{ color: idx === 0 ? "#EAB308" : idx === 1 ? "#9CA3AF" : idx === 2 ? "#B45309" : "#D1D5DB" }}>
-                          #{idx + 1}
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xs" style={{ background: "#dde8db", color: "#3a4f38" }}>
-                          {user.name?.charAt(0)?.toUpperCase() || "?"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate flex items-center gap-2" style={{ color: "#1F2937" }}>
-                            {user.name}
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ background: rank.bg, color: rank.color }}>
-                              {rank.title}
-                            </span>
-                          </p>
-                          <p className="text-xs font-semibold mt-0.5" style={{ color: rank.color }}>{user.reputation} points</p>
-                        </div>
-                      </div>
-                    )})}
-                  </div>
-                ) : (
-                  <div className="py-6 text-center">
-                    <p className="text-sm" style={{ color: "#9CA3AF" }}>No contributors yet.</p>
-                  </div>
-                )}
-              </div>
             </div>
           </section>
         </div>

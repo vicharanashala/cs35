@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Headers, ForbiddenException } from '@nestjs/common';
 import { FaqService } from './faq.service';
+import { CurrentUser, Public, Roles } from '../../common/decorators';
 
 @Controller()
 export class FaqController {
@@ -346,35 +347,7 @@ export class FaqController {
     return { deleted: true, _id: id };
   }
 
-  @Get('users/:userId/bookmarks')
-  getBookmarks(@Param('userId') userId: string) {
-    return this.faqService.getBookmarks(userId);
-  }
 
-  @Patch('users/:userId/bookmark/:questionId')
-  toggleBookmark(@Param('userId') userId: string, @Param('questionId') questionId: string) {
-    return this.faqService.toggleBookmark(userId, questionId);
-  }
-
-  @Patch('users/:followerId/follow/:followingId')
-  toggleFollow(@Param('followerId') followerId: string, @Param('followingId') followingId: string) {
-    return this.faqService.toggleFollow(followerId, followingId);
-  }
-
-  @Get('users/:userId/following')
-  getFollowing(@Param('userId') userId: string) {
-    return this.faqService.getFollowing(userId);
-  }
-
-  @Get('users/:userId/activity')
-  getUserActivity(@Param('userId') userId: string) {
-    return this.faqService.getUserActivity(userId);
-  }
-
-  @Get('users/:userId/stats')
-  getUserStats(@Param('userId') userId: string) {
-    return this.faqService.getUserStats(userId);
-  }
 
   // ── Notifications ─────────────────────────────────────────
 
