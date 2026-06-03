@@ -46,7 +46,7 @@ function VoteBtn({ count, active, onClick, direction }) {
   );
 }
 
-function AnswerCard({ answer, onVote, onEdit, userVotes, currentUser }) {
+function AnswerCard({ answer, onVote, onEdit, onDelete, userVotes, currentUser }) {
   const vote = userVotes[answer._id] || 0;
   // Use real DB upvotes as base — don't add local offset so all users see same count
   const upvotes = answer.upvotes || 0;
@@ -79,16 +79,27 @@ function AnswerCard({ answer, onVote, onEdit, userVotes, currentUser }) {
 
         <div className="flex items-center gap-2">
           {isOwnAnswer && (
-            <button
-              onClick={() => onEdit(answer)}
-              className="text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 border hover:bg-gray-50 mr-2"
-              style={{ color: "#374151", borderColor: "#E2E8DE" }}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-              </svg>
-              Edit
-            </button>
+            <>
+              <button
+                onClick={() => onEdit(answer)}
+                className="text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 border hover:bg-gray-50 mr-2"
+                style={{ color: "#374151", borderColor: "#E2E8DE" }}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+                Edit
+              </button>
+              <button
+                onClick={() => onDelete(answer)}
+                className="text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 border hover:bg-red-50 mr-2 text-red-600 border-red-200"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete
+              </button>
+            </>
           )}
           {upvotes > 0 && (
             <span className="text-xs px-2 py-1 rounded" style={{ background: "#F0FDF4", color: "#15803D" }}>
@@ -103,7 +114,7 @@ function AnswerCard({ answer, onVote, onEdit, userVotes, currentUser }) {
   );
 }
 
-function VerifiedHero({ answer, onVote, onEdit, userVotes, currentUser }) {
+function VerifiedHero({ answer, onVote, onEdit, onDelete, userVotes, currentUser }) {
   const vote = userVotes[answer._id] || 0;
   const upvotes = answer.upvotes || 0;
   const downvotes = answer.downvotes || 0;
@@ -147,16 +158,27 @@ function VerifiedHero({ answer, onVote, onEdit, userVotes, currentUser }) {
         </div>
         <div className="flex items-center gap-1.5">
           {isOwnAnswer && (
-            <button
-              onClick={() => onEdit(answer)}
-              className="text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 border hover:bg-green-50 mr-2"
-              style={{ color: "#065F46", borderColor: "#A7F3D0" }}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-              </svg>
-              Edit
-            </button>
+            <>
+              <button
+                onClick={() => onEdit(answer)}
+                className="text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 border hover:bg-green-50 mr-2"
+                style={{ color: "#065F46", borderColor: "#A7F3D0" }}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+                Edit
+              </button>
+              <button
+                onClick={() => onDelete(answer)}
+                className="text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 border hover:bg-red-50 mr-2 text-red-600 border-red-200"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete
+              </button>
+            </>
           )}
           <VoteBtn count={upvotes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
           <VoteBtn count={downvotes} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
@@ -259,6 +281,22 @@ export default function QuestionPage() {
   const handleCancelEdit = () => {
     setEditingAnswerId(null);
     setAnswerContent("");
+  };
+
+  const handleDeleteAnswer = async (answer) => {
+    if (window.confirm("Are you sure you want to delete this answer?")) {
+      try {
+        await answerApi.delete(answer._id);
+        toast.success("Answer deleted successfully");
+        if (editingAnswerId === answer._id) {
+          handleCancelEdit();
+        }
+        queryClient.invalidateQueries({ queryKey: ["question", id] });
+      } catch (err) {
+        console.error("Failed to delete answer:", err);
+        toast.error("Failed to delete answer");
+      }
+    }
   };
 
   const toggleListen = () => {
@@ -567,7 +605,7 @@ export default function QuestionPage() {
 
                 {/* Verified Hero Answer */}
                 {verifiedAnswer && (
-                  <VerifiedHero answer={verifiedAnswer} onVote={handleVote} onEdit={handleEditAnswer} userVotes={userVotes} currentUser={user} />
+                  <VerifiedHero answer={verifiedAnswer} onVote={handleVote} onEdit={handleEditAnswer} onDelete={handleDeleteAnswer} userVotes={userVotes} currentUser={user} />
                 )}
 
                 {/* Community Answers */}
@@ -578,6 +616,7 @@ export default function QuestionPage() {
                       answer={a}
                       onVote={handleVote}
                       onEdit={handleEditAnswer}
+                      onDelete={handleDeleteAnswer}
                       userVotes={userVotes}
                       currentUser={user}
                     />
