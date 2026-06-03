@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "../hooks/useDebounce";
-import { faqApi, questionApi, bookmarkApi } from "../services/api";
+import { faqApi, questionApi, userApi, bookmarkApi } from "../services/api";
 import hero from "../assets/hero.png";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "react-hot-toast";
@@ -120,6 +120,47 @@ export default function HomePage() {
     queryFn: () => faqApi.list(),
     staleTime: 1000 * 60 * 5,
   });
+
+  const faqList = useMemo(() => {
+    return Array.isArray(faqs) ? faqs : (Array.isArray(faqs?.data) ? faqs.data : []);
+  }, [faqs]);
+
+  const topFaqs = useMemo(() =>
+    [...faqList].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
+  [faqList]);
+
+  const debouncedSearch = useDebounce(search, 300);
+
+  const { data: searchResultsData = [] } = useQuery({
+    queryKey: ['faq-search-home', debouncedSearch],
+    queryFn: () => faqApi.list({ search: debouncedSearch }),
+    enabled: debouncedSearch.trim().length > 1,
+    staleTime: 60000,
+  });
+  const searchResults = Array.isArray(searchResultsData)
+    ? searchResultsData.slice(0, 6)
+    : Array.isArray(searchResultsData?.data)
+      ? searchResultsData.data.slice(0, 6)
+      : [];
+
+  // 2. Categories
+  const { data: categoriesData = [], isLoading: loadingCats } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => faqApi.listCategories(),
+    staleTime: 1000 * 60 * 5,
+  });
+  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
+
+  // 3. Recent Discussions (Community)
+  const { data: questions = [], isLoading: loadingQuestions } = useQuery({
+    queryKey: ["questions-recent"],
+    queryFn: () => questionApi.listOpen(),
+    staleTime: 1000 * 30,
+  });
+
+  const recentDiscussions = useMemo(() =>
+    [...questions].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 3),
+  [questions]);
 
   return (
     <div style={{ background: "#F5F7F2" }}>
