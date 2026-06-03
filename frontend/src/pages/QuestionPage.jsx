@@ -46,7 +46,7 @@ function VoteBtn({ count, active, onClick, direction }) {
   );
 }
 
-function AnswerCard({ answer, onVote, userVotes, currentUser }) {
+function AnswerCard({ answer, onVote, onEdit, userVotes, currentUser }) {
   const vote = userVotes[answer._id] || 0;
   // Use real DB upvotes as base — don't add local offset so all users see same count
   const upvotes = answer.upvotes || 0;
@@ -78,6 +78,18 @@ function AnswerCard({ answer, onVote, userVotes, currentUser }) {
         </div>
 
         <div className="flex items-center gap-2">
+          {isOwnAnswer && (
+            <button
+              onClick={() => onEdit(answer)}
+              className="text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 border hover:bg-gray-50 mr-2"
+              style={{ color: "#374151", borderColor: "#E2E8DE" }}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+              Edit
+            </button>
+          )}
           {upvotes > 0 && (
             <span className="text-xs px-2 py-1 rounded" style={{ background: "#F0FDF4", color: "#15803D" }}>
               {upvotes} found helpful
@@ -91,7 +103,7 @@ function AnswerCard({ answer, onVote, userVotes, currentUser }) {
   );
 }
 
-function VerifiedHero({ answer, onVote, userVotes, currentUser }) {
+function VerifiedHero({ answer, onVote, onEdit, userVotes, currentUser }) {
   const vote = userVotes[answer._id] || 0;
   const upvotes = answer.upvotes || 0;
   const downvotes = answer.downvotes || 0;
@@ -134,6 +146,18 @@ function VerifiedHero({ answer, onVote, userVotes, currentUser }) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          {isOwnAnswer && (
+            <button
+              onClick={() => onEdit(answer)}
+              className="text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 border hover:bg-green-50 mr-2"
+              style={{ color: "#065F46", borderColor: "#A7F3D0" }}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+              Edit
+            </button>
+          )}
           <VoteBtn count={upvotes} active={vote > 0} onClick={() => onVote(answer._id, 1)} direction="up" />
           <VoteBtn count={downvotes} active={vote < 0} onClick={() => onVote(answer._id, -1)} direction="down" />
         </div>
@@ -222,6 +246,20 @@ export default function QuestionPage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [voteError, setVoteError] = useState("");
+  const [editingAnswerId, setEditingAnswerId] = useState(null);
+
+  const handleEditAnswer = (answer) => {
+    setEditingAnswerId(answer._id);
+    setAnswerContent(answer.content);
+    setTimeout(() => {
+      document.getElementById("answer-form")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAnswerId(null);
+    setAnswerContent("");
+  };
 
   const toggleListen = () => {
     if (isListening) {
@@ -350,6 +388,24 @@ export default function QuestionPage() {
     if (!answerContent.trim()) return;
     setIsSubmitting(true);
     setSubmitError("");
+
+    if (editingAnswerId) {
+      try {
+        await answerApi.update(editingAnswerId, { content: answerContent });
+        setAnswerContent("");
+        setEditingAnswerId(null);
+        setSubmitSuccess(true);
+        setTimeout(() => {
+          setSubmitSuccess(false);
+        }, 2000);
+        queryClient.invalidateQueries({ queryKey: ["question", id] });
+      } catch (err) {
+        console.error("Failed to update answer:", err);
+        setSubmitError("Failed to update answer. Please try again.");
+      }
+      setIsSubmitting(false);
+      return;
+    }
 
     const currentUserName = user?.name || user?.username || "Student";
     const newAnswer = {
@@ -511,7 +567,7 @@ export default function QuestionPage() {
 
                 {/* Verified Hero Answer */}
                 {verifiedAnswer && (
-                  <VerifiedHero answer={verifiedAnswer} onVote={handleVote} userVotes={userVotes} currentUser={user} />
+                  <VerifiedHero answer={verifiedAnswer} onVote={handleVote} onEdit={handleEditAnswer} userVotes={userVotes} currentUser={user} />
                 )}
 
                 {/* Community Answers */}
@@ -521,6 +577,7 @@ export default function QuestionPage() {
                       key={a._id}
                       answer={a}
                       onVote={handleVote}
+                      onEdit={handleEditAnswer}
                       userVotes={userVotes}
                       currentUser={user}
                     />
@@ -549,10 +606,10 @@ export default function QuestionPage() {
                   )}
                 </div>
 
-                {/* Reply Form — hidden if user is the question owner */}
-                {!(user?._id && question?.contributorId && user?._id === (question?.contributorId?._id || question?.contributorId)) && (
+                {/* Reply Form — hidden if user is the question owner unless they are editing their existing answer */}
+                {(!(user?._id && question?.contributorId && user?._id === (question?.contributorId?._id || question?.contributorId)) || editingAnswerId) && (
                 <div id="answer-form" className="card p-5">
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Add your Answer</h3>
+                  <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>{editingAnswerId ? "Edit your Answer" : "Add your Answer"}</h3>
                   {submitError && (
                     <div className="mb-4 p-3 rounded-md text-sm" style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>
                       {submitError}
@@ -560,7 +617,7 @@ export default function QuestionPage() {
                   )}
                   {submitSuccess && (
                     <div className="mb-4 p-3 rounded-md text-sm animate-fade-in" style={{ background: "#F0FDF4", color: "#16A34A", border: "1px solid #BBF7D0" }}>
-                      Your answer has been posted!
+                      {editingAnswerId ? "Your answer has been updated!" : "Your answer has been posted!"}
                     </div>
                   )}
                   <form onSubmit={submitAnswer} className="space-y-4">
@@ -598,17 +655,28 @@ export default function QuestionPage() {
                         </span>
                       </div>
                     </div>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || !answerContent.trim() || answerContent.length > 2000}
-                      className="btn-primary w-full sm:w-auto"
-                    >
-                      {isSubmitting ? "Posting..." : "Post Answer"}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !answerContent.trim() || answerContent.length > 2000}
+                        className="btn-primary w-full sm:w-auto"
+                      >
+                        {isSubmitting ? (editingAnswerId ? "Updating..." : "Posting...") : (editingAnswerId ? "Update Answer" : "Post Answer")}
+                      </button>
+                      {editingAnswerId && (
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          className="btn-secondary w-full sm:w-auto"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </form>
                 </div>
                 )}
-                {user?._id && question?.contributorId && user?._id === question?.contributorId && (
+                {user?._id && question?.contributorId && user?._id === (question?.contributorId?._id || question?.contributorId) && !editingAnswerId && (
                   <div className="card p-5 text-center text-sm" style={{ color: "#9CA3AF" }}>
                     You cannot answer your own question.
                   </div>
