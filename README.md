@@ -14,8 +14,9 @@
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-> **A crowdsourced FAQ & Q&A portal designed for students** — built at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).  
-> *Current Phase: Minimum Viable Product (MVP)*
+> **AskSam is a collaborative FAQ and Q&A portal for Samagama students** — built at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).
+>
+> Students ask once, the community responds, the strongest answer is verified, and the result can be promoted into the canonical FAQ. Repeated questions are detected, organized, and closed with a clean moderation flow.
 
 </div>
 
@@ -33,7 +34,49 @@ Traditional forums and group chats often bury valuable knowledge. **AskSam** is 
 |:---:|:---:|:---:|:---:|
 | **500+** | **150+** | **10** | **99.9%** |
 
-</div>
+## Key Features
+
+### Browse & Search
+
+| Feature | Description |
+|---|---|
+| Full-text FAQ Search | Search across canonical FAQs with category and keyword filters |
+| Category Browsing | Explore questions and FAQs organized by topic |
+| Tag-based Filtering | Narrow results using tags on both questions and FAQs |
+| Bookmarks | Logged-in users can save questions for quick access later |
+| Trending Searches | Surface the questions the community is asking most |
+
+### Ask & Answer
+
+| Feature | Description |
+|---|---|
+| Question Submission | Post questions with a title, rich text body, category, and optional screenshot |
+| Community Answers | Allow multiple answers per question while tracking every contributor |
+| Answer Verification | Verify the best answer and promote it into a canonical FAQ |
+| Accept Answer | Let the question author mark the strongest answer as accepted |
+| Upvote/Downvote | Support voting on both questions and individual answers |
+| Reopen Logic | Mark a verified answer as incorrect and send the question back to the queue |
+| Moderation Queue | Keep open and reopened questions ordered oldest-first for community follow-up |
+
+### Real-time & Social
+
+| Feature | Description |
+|---|---|
+| Live Notifications | Socket.IO pushes for new answers, status updates, and admin actions |
+| User Profiles | Track asked questions, submitted answers, bookmarks, and activity |
+| Follow System | Follow other users to stay updated on their contributions |
+| Activity Heatmap | Visualize contribution patterns over time |
+| Role-based Access | JWT auth with `student` and `admin` roles, enforced on protected endpoints |
+| Admin Dashboard | Tag, categorize, merge, close, pin, and manage all questions and FAQs |
+
+### AI & Analytics
+
+| Feature | Description |
+|---|---|
+| AI Moderation | Groq LLM integration for smart pre-moderation of new questions |
+| Full-text Search | Search across questions and FAQs from one interface |
+| Search Analytics | Record every query to surface trends and failed searches |
+| FAQ Feedback | Let users mark FAQs as helpful or unhelpful with context |
 
 ---
 
@@ -114,6 +157,68 @@ npm run start:dev
 cd ../frontend
 npm install
 npm run dev
+
+# 4 — Open your browser
+Visit http://localhost:5173 in your browser
+```
+
+### Production Build
+
+```bash
+# Backend
+cd backend && npm run build && npm run start:prod
+
+# Frontend
+cd frontend && npm run build
+# Serve frontend/dist/ with any static file server
+```
+
+### Database Scripts
+
+```bash
+cd backend/scripts
+
+node seed_faqs.mjs           # Seed DB from faqData.json
+node clear_db.mjs            # Drop all collections (⚠️ destructive)
+node echo_env.mjs            # Print environment configuration
+node recreate_email_index.mjs # Recreate MongoDB email index
+```
+
+---
+
+## Build & Test Status
+
+| Scope | Command / Suite | Status |
+|---|---|---|
+| Frontend build | `npm run build` | ✅ Passing |
+| Backend build | `npm run build` | ✅ Passing |
+| E2E QA (Puppeteer) | `node qa_audit.mjs` — 10/10 checks | ✅ Passing |
+
+---
+
+## Design System
+
+AskSam uses a **Sage Green Academic Palette** built on Tailwind CSS v4 CSS variables via `@theme`.
+
+```css
+/* Brand — sage green */
+--color-brand-50:  #f0f4ef;
+--color-brand-100: #dde8db;
+--color-brand-500: #5E7A5A;  /* primary */
+--color-brand-900: #1f2b1e;
+
+/* Warm accent — cream/sand */
+--color-warm-50:   #fdf9f3;
+--color-warm-500:  #c9b082;
+--color-warm-600:  #b09363;
+
+/* Background */
+--color-sage-bg:    #F5F7F2;
+--color-sage-card:  #FFFFFF;
+--color-sage-border:#E2E8DE;
+
+/* Status colors */
+status-green-*, status-amber-*, status-red-*, status-orange-*
 ```
 > The application will be running at `http://localhost:5173`.
 
