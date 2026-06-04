@@ -2,6 +2,7 @@
 
 
 <div align="center">
+    
 # AskSam — Samagama Collaborative FAQ Platform
     
 ![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-flat-square&logo=nestjs&logoColor=white)
@@ -14,6 +15,7 @@
 
 
 </div>
+
 **A highly scalable, collaborative FAQ and Q&A platform built for Samagama students at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).**
 ---
 
