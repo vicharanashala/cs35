@@ -1,5 +1,5 @@
-# CS35 – Crowdsourced FAQ Repository
-# AskSam — Samagama Collaborative FAQ Platform
+
+                            # AskSam — Samagama Collaborative FAQ Platform
 
 <div align="center">
 
