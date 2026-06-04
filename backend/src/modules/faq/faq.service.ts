@@ -838,10 +838,10 @@ export class FaqService implements OnModuleInit {
       return this.localData.toggleBookmark(userId, questionId);
     }
     try {
-      // Only allow bookmarking verified FAQs, not open questions
       const faq = await this.faqModel.findById(questionId).lean().exec();
-      if (!faq) {
-        throw new Error('Only verified FAQs can be bookmarked');
+      const question = faq ? null : await this.questionModel.findById(questionId).lean().exec();
+      if (!faq && !question) {
+        throw new Error('FAQ or Question not found');
       }
 
       const user = await this.userModel.findById(userId).exec();

@@ -315,6 +315,7 @@ export default function FaqsPage() {
     try {
       await bookmarkApi.toggle(user._id, faqId);
       refetchBookmarks();
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
       queryClient.invalidateQueries({ queryKey: ["user-profile-bookmarks", user._id] });
       toast.success(isBookmarked ? "Bookmark removed" : "FAQ bookmarked! ✓");
     } catch (err) {

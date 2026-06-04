@@ -247,6 +247,7 @@ export class AuthService {
           questionsCount,
           answersCount,
           verifiedCount,
+          bookmarkedCount: user.questionsBookmarked?.length || 0,
         },
       };
     } catch {

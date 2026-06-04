@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from 'react-hot-toast';
 import { Link } from "react-router-dom";
-import { userApi, questionApi } from "../services/api";
+import { userApi, questionApi, bookmarkApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
 
@@ -57,10 +57,17 @@ export default function ProfilePage() {
     enabled: !!profile?._id,
   });
 
-
+  const { data: bookmarksData, isLoading: bookmarksLoading } = useQuery({
+    queryKey: ['user-profile-bookmarks', profile?._id],
+    queryFn: () => bookmarkApi.list(profile?._id),
+    enabled: !!profile?._id,
+  });
 
   const questionsAsked = Array.isArray(questionsData) ? questionsData : [];
   const questionsAnswered = Array.isArray(answersData) ? answersData : [];
+  const bookmarkedItems = useMemo(() => {
+    return Array.isArray(bookmarksData) ? bookmarksData : (bookmarksData?.data || []);
+  }, [bookmarksData]);
 
   const stats = [
     {
@@ -95,6 +102,17 @@ export default function ProfilePage() {
       ),
       color: "#059669",
       bg: "#ECFDF5",
+    },
+    {
+      label: "Bookmarked FAQs",
+      value: bookmarkedItems.length ?? 0,
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+        </svg>
+      ),
+      color: "#4F46E5",
+      bg: "#EEF2FF",
     },
   ];
 
@@ -380,6 +398,99 @@ export default function ProfilePage() {
                               View Question
                             </Link>
                           </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Bookmarked FAQs & Questions */}
+            <div className="card overflow-hidden">
+              <div className="p-5 border-b" style={{ borderColor: "#E2E8DE" }}>
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  Bookmarked FAQs & Questions
+                  {bookmarkedItems.length > 0 && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full text-indigo-700 bg-indigo-50">
+                      {bookmarkedItems.length}
+                    </span>
+                  )}
+                </h3>
+              </div>
+              <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
+                {bookmarksLoading ? (
+                  <div className="p-8 text-center text-sm text-gray-500">Loading bookmarks...</div>
+                ) : bookmarkedItems.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-gray-500">You haven't bookmarked anything yet.</div>
+                ) : (
+                  bookmarkedItems.map((item) => (
+                    <div key={item._id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                      <div
+                        onClick={() => setExpandedId(expandedId === `bookmark-${item._id}` ? null : `bookmark-${item._id}`)}
+                        className="block cursor-pointer"
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <p className="text-sm font-medium line-clamp-1 flex-1" style={{ color: "#1F2937" }}>
+                            {item.question}
+                          </p>
+                          <svg
+                            className="w-4 h-4 shrink-0 transition-transform duration-200"
+                            style={{ color: "#9CA3AF", transform: expandedId === `bookmark-${item._id}` ? "rotate-180" : "rotate(0deg)" }}
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "#F3F4F6", color: "#6B7280" }}>{item.category}</span>
+                          <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{
+                            background: item.status === "verified" ? "#ECFDF5" : item.status === "answered" ? "#E0F2FE" : "#FEF3C7",
+                            color: item.status === "verified" ? "#047857" : item.status === "answered" ? "#0369a1" : "#b45309"
+                          }}>{item.status || "open"}</span>
+                          <span className="text-xs" style={{ color: "#9CA3AF" }}>{timeAgo(item.createdAt)}</span>
+                        </div>
+                      </div>
+
+                      {expandedId === `bookmark-${item._id}` && (
+                        <div className="mt-4 pt-4 animate-fade-in border-t" style={{ borderColor: "#F3F4F6" }}>
+                          {item.status === "verified" ? (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-gray-400">Verified Answer:</p>
+                              <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
+                                {item.details}
+                              </p>
+                              <div className="mt-4 pt-2">
+                                <Link to={`/faqs/${item._id}`} className="text-sm font-semibold hover:underline" style={{ color: "#5E7A5A" }}>
+                                  Read full documentation
+                                </Link>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              {(!item.answers || item.answers.length === 0) ? (
+                                <p className="text-sm italic" style={{ color: "#6B7280" }}>No answers available yet.</p>
+                              ) : (
+                                <div className="space-y-3 mb-4">
+                                  {item.answers.map((ans) => (
+                                    <div key={ans._id} className="p-3 bg-gray-50 rounded-lg">
+                                      <p className="text-xs font-semibold mb-1" style={{ color: "#4B5563" }}>
+                                        {ans.contributorName || "Student"} answered:
+                                      </p>
+                                      <p className="text-sm whitespace-pre-line" style={{ color: "#1F2937" }}>
+                                        {ans.content}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="mt-3">
+                                <Link to={`/questions/${item._id}`} className="btn-primary btn-sm">
+                                  View Question Details
+                                </Link>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

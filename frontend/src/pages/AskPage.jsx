@@ -43,14 +43,14 @@ function SuccessModal({ show, question, onClose }) {
 
 function CustomCategorySelect({ categories, value, onChange, hasError }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [hoveredOther, setHoveredOther] = useState(false);
+  const [showOthers, setShowOthers] = useState(false);
   const dropRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropRef.current && !dropRef.current.contains(e.target)) {
         setIsOpen(false);
-        setHoveredOther(false);
+        setShowOthers(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -89,39 +89,23 @@ function CustomCategorySelect({ categories, value, onChange, hasError }) {
           ))}
           
           {otherCats.length > 0 && (
-            <div 
-              className="relative group"
-              onMouseEnter={() => setHoveredOther(true)}
-              onMouseLeave={() => setHoveredOther(false)}
-            >
+            <div className="relative">
               <div 
                 className="px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer flex justify-between items-center"
-                onClick={(e) => { e.stopPropagation(); setHoveredOther(!hoveredOther); }}
+                onClick={(e) => { e.stopPropagation(); setShowOthers(!showOthers); }}
               >
                 <span>Others</span>
-                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                <svg className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${showOthers ? "rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
               
-              {hoveredOther && (
-                <div className="absolute left-[98%] top-0 ml-1 w-64 bg-white border border-[#E2E8DE] shadow-xl rounded-xl z-50 py-1 max-h-64 overflow-y-auto hidden sm:block">
+              {showOthers && (
+                <div className="bg-slate-50 pl-2 py-1 border-y border-slate-100/50">
                   {otherCats.map(cat => (
                     <div 
                       key={cat}
-                      className={`px-4 py-2.5 text-sm cursor-pointer border-l-2 ${value === cat ? "border-[#5E7A5A] bg-[#f0f4ef] text-[#5E7A5A] font-semibold" : "border-transparent text-slate-700 hover:border-[#5E7A5A] hover:bg-slate-50"}`}
-                      onClick={() => { onChange(cat); setIsOpen(false); }}
-                    >
-                      {cat.replace("Others - ", "")}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {/* Fallback for mobile */}
-              {hoveredOther && (
-                <div className="sm:hidden bg-slate-50 pl-4 py-1 border-y border-slate-100">
-                  {otherCats.map(cat => (
-                    <div 
-                      key={cat}
-                      className={`px-4 py-2.5 text-sm cursor-pointer ${value === cat ? "text-[#5E7A5A] font-semibold" : "text-slate-700 hover:bg-white"}`}
+                      className={`px-6 py-2 text-sm cursor-pointer transition-colors ${value === cat ? "text-[#5E7A5A] font-semibold" : "text-slate-600 hover:text-slate-900 hover:bg-white"}`}
                       onClick={() => { onChange(cat); setIsOpen(false); }}
                     >
                       {cat.replace("Others - ", "")}

@@ -8,7 +8,6 @@ import { toast } from "react-hot-toast";
 import Fuse from "fuse.js";
 import HighlightText from "../components/HighlightText";
 
-const PRIORITIES  = ["All", "High", "Medium", "Low"];
 const STATUSES    = ["All", "Unanswered", "Answered"];
 
 function timeAgo(d) {
@@ -22,12 +21,6 @@ function timeAgo(d) {
 }
 
 function initials(name = "?") { return name.charAt(0).toUpperCase(); }
-
-function PriorityBadge({ priority }) {
-  if (!priority) return null;
-  const cls = priority === "High" ? "priority-high" : priority === "Medium" ? "priority-medium" : "priority-low";
-  return <span className={cls}>{priority}</span>;
-}
 
 function QuestionRow({ question, isBookmarked, onToggleBookmark }) {
   const [expanded, setExpanded] = useState(false);
@@ -92,7 +85,6 @@ function QuestionRow({ question, isBookmarked, onToggleBookmark }) {
           <div className="flex flex-wrap items-center gap-2 mb-1 mt-1">
             <span className="tag tag-brand">{question.category}</span>
             {question.status === "reopened" && <span className="badge badge-orange">Reopened</span>}
-            <PriorityBadge priority={question.priority} />
           </div>
           <p className="text-sm font-medium leading-snug" style={{ color: "#1F2937" }}>
             <HighlightText text={question.question} matches={question.matches?.find(m => m.key === 'question')?.indices} />
@@ -255,11 +247,9 @@ export default function QueuePage() {
   const { user } = useAuth();
   const [search, setSearch]               = useState("");
   const [activeCategory, setActiveCategory] = useState("All Categories");
-  const [priority, setPriority]           = useState("All");
   const [status, setStatus]               = useState("All");
   
   const [pendingCategory, setPendingCategory] = useState("All Categories");
-  const [pendingPriority, setPendingPriority] = useState("All");
   const [pendingStatus, setPendingStatus]     = useState("All");
 
   const [sortBy, setSortBy]               = useState("newest");
@@ -296,6 +286,7 @@ export default function QueuePage() {
     try {
       await bookmarkApi.toggle(user._id, qId);
       refetchBookmarks();
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
       queryClient.invalidateQueries({ queryKey: ["user-profile-bookmarks", user._id] });
       toast.success(isBookmarked ? "Bookmark removed" : "Question bookmarked! ✓");
     } catch (err) {
@@ -334,7 +325,6 @@ export default function QueuePage() {
 
   const activeFilterCount = [
     activeCategory !== "All Categories",
-    priority !== "All",
     status !== "All",
   ].filter(Boolean).length;
 
@@ -359,7 +349,6 @@ export default function QueuePage() {
     // Always exclude closed questions from the queue
     r = r.filter((x) => x.status !== 'closed');
     if (activeCategory !== "All Categories") r = r.filter((x) => x.category === activeCategory);
-    if (priority !== "All") r = r.filter((x) => (x.priority || "Medium") === priority);
     if (status === "Unanswered") r = r.filter((x) => !x.answers?.length);
     if (status === "Answered")   r = r.filter((x) => x.answers?.length > 0);
 
@@ -382,7 +371,7 @@ export default function QueuePage() {
         : new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
     );
     return r;
-  }, [questions, search, activeCategory, priority, status, sortBy]);
+  }, [questions, search, activeCategory, status, sortBy]);
 
   const myQuestions = filtered.filter((q) => {
     const cId = q.contributorId?._id || q.contributorId;
@@ -462,7 +451,6 @@ export default function QueuePage() {
                         {activeFilterCount > 0 && (
                           <button onClick={() => {
                             setPendingCategory("All Categories");
-                            setPendingPriority("All");
                             setPendingStatus("All");
                           }} className="text-xs font-medium hover:underline" style={{ color: "#5E7A5A" }}>
                             Reset all
@@ -497,24 +485,6 @@ export default function QueuePage() {
                         <div className="divider" />
 
                         <div>
-                          <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>PRIORITY</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {PRIORITIES.map((p) => (
-                              <button key={p}
-                                onClick={() => setPendingPriority(p)}
-                                className="px-3 py-1.5 text-xs rounded-full transition-colors min-h-[32px]"
-                                style={pendingPriority === p
-                                  ? { background: "#5E7A5A", color: "#fff" }
-                                  : { background: "#F5F7F2", color: "#6B7280" }}>
-                                {p}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="divider" />
-
-                        <div>
                           <p className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>STATUS</p>
                           <div className="flex flex-wrap gap-1.5">
                             {STATUSES.map((s) => (
@@ -536,7 +506,6 @@ export default function QueuePage() {
                         onClick={(e) => {
                           e.preventDefault();
                           setActiveCategory(pendingCategory);
-                          setPriority(pendingPriority);
                           setStatus(pendingStatus);
                           setFilterOpen(false);
                         }}
