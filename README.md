@@ -11,9 +11,9 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-> **A crowdsourced FAQ & Q&A portal for Samagama students** — built at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).
+> **AskSam is a collaborative FAQ and Q&A portal for Samagama students** — built at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).
 >
-> Students ask questions → Community answers → Best answer is verified → Promoted to a canonical FAQ. Repeated questions get closed automatically.
+> Students ask once, the community responds, the strongest answer is verified, and the result can be promoted into the canonical FAQ. Repeated questions are detected, organized, and closed with a clean moderation flow.
 
 </div>
 
@@ -83,43 +83,43 @@
 
 | Feature | Description |
 |---|---|
-| Full-text FAQ Search | Search across all canonical FAQs with category filters |
-| Category Browsing | Browse FAQs and questions organized by topic |
-| Tag-based Filtering | Filter content by tags on both questions and FAQs |
-| Bookmarks | Logged-in users can bookmark any question for quick access |
-| Trending Searches | See what questions are trending in the community |
+| Full-text FAQ Search | Search across canonical FAQs with category and keyword filters |
+| Category Browsing | Explore questions and FAQs organized by topic |
+| Tag-based Filtering | Narrow results using tags on both questions and FAQs |
+| Bookmarks | Logged-in users can save questions for quick access later |
+| Trending Searches | Surface the questions the community is asking most |
 
 ### Ask & Answer
 
 | Feature | Description |
 |---|---|
-| Question Submission | Submit questions with title, rich-text body, category, and optional screenshot |
-| Community Answers | Multiple answers per question; all answer authors are tracked |
-| Answer Verification | Mark the best answer as verified — auto-converts it into a canonical FAQ |
-| Accept Answer | Question author can accept a specific answer as the best one |
-| Upvote/Downvote | Community voting on both questions and individual answers |
-| Reopen Logic | Flag a verified answer as incorrect → question re-enters the open queue |
-| Moderation Queue | Open & reopened questions listed oldest-first for the community to pick up |
+| Question Submission | Post questions with a title, rich text body, category, and optional screenshot |
+| Community Answers | Allow multiple answers per question while tracking every contributor |
+| Answer Verification | Verify the best answer and promote it into a canonical FAQ |
+| Accept Answer | Let the question author mark the strongest answer as accepted |
+| Upvote/Downvote | Support voting on both questions and individual answers |
+| Reopen Logic | Mark a verified answer as incorrect and send the question back to the queue |
+| Moderation Queue | Keep open and reopened questions ordered oldest-first for community follow-up |
 
 ### Real-time & Social
 
 | Feature | Description |
 |---|---|
-| Live Notifications | Socket.IO pushes for new answers, status changes, and admin actions |
-| User Profiles | Track your asked questions, submitted answers, and overall activity |
-| Follow System | Follow other users to see their activity |
-| Activity Heatmap | Visualize your contribution activity over time |
-| Role-based Access | JWT auth with `student` and `admin` roles; guards on all protected endpoints |
+| Live Notifications | Socket.IO pushes for new answers, status updates, and admin actions |
+| User Profiles | Track asked questions, submitted answers, bookmarks, and activity |
+| Follow System | Follow other users to stay updated on their contributions |
+| Activity Heatmap | Visualize contribution patterns over time |
+| Role-based Access | JWT auth with `student` and `admin` roles, enforced on protected endpoints |
 | Admin Dashboard | Tag, categorize, merge, close, pin, and manage all questions and FAQs |
 
 ### AI & Analytics
 
 | Feature | Description |
 |---|---|
-| AI Moderation | Groq LLM integration for smart question pre-moderation |
-| Full-text Search | Search across questions and FAQs |
-| Search Analytics | Every search query recorded — trending queries and failed searches tracked |
-| FAQ Feedback | Users can mark FAQs as helpful/unhelpful with reasons |
+| AI Moderation | Groq LLM integration for smart pre-moderation of new questions |
+| Full-text Search | Search across questions and FAQs from one interface |
+| Search Analytics | Record every query to surface trends and failed searches |
+| FAQ Feedback | Let users mark FAQs as helpful or unhelpful with context |
 
 ---
 
@@ -354,7 +354,7 @@ npm install
 npm run dev
 
 # 4 — Open your browser
-open http://localhost:5173
+Visit http://localhost:5173 in your browser
 ```
 
 ### Production Build
