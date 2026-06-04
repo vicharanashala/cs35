@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="AskSam Banner" />
+</p>
+
 <div align="center">
 
 ![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-flat-square&logo=nestjs&logoColor=white)
@@ -7,25 +11,23 @@
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-flat-square&logo=socket.io&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-flat-square&logo=tailwindcss&logoColor=white)
 
-**A collaborative FAQ and Q&A platform built for Samagama students at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).**
+**A highly scalable, collaborative FAQ and Q&A platform built for Samagama students at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).**
 
 </div>
 
 ---
 
-## 📌 Features
+## 📌 Executive Summary
 
-- **Knowledge Discovery:** Full-text search across FAQs and open questions.
-- **Q&A Workflow:** Moderation queue with oldest-first routing for open questions.
-- **Answer Verification:** Authors and admins can verify the best answer, generating a canonical FAQ automatically.
-- **Reopen Flow:** Verified answers can be flagged as incorrect to re-enter the moderation queue.
-- **Real-Time Notifications:** Live updates via Socket.IO for new answers and status changes.
-- **Access Control:** Role-based access for students and administrators.
-- **Offline Resilience:** Falls back to a read-only JSON representation if the primary database is offline.
+AskSam is a next-generation knowledge management portal engineered to prevent information loss in student communities. By leveraging automated moderation queues, verified answer tracking, and real-time community engagement, AskSam transforms chaotic forum discussions into a clean, canonical FAQ database. 
+
+The architecture is built for high availability, utilizing modern server-state management on the client and a robust, event-driven micro-service architecture on the backend.
 
 ---
 
-## 🔄 How AskSam Works
+## 🏗️ System Architecture
+
+### 🔄 Platform Workflow
 
 ```mermaid
 flowchart TD
@@ -40,13 +42,13 @@ flowchart TD
     I --> E
 ```
 
-## 🏗️ Technical Architecture
+### ⚙️ Technical Topology
 
 ```mermaid
 flowchart LR
     Client["React SPA (Frontend)"] -- "HTTP / WebSockets" --> API["NestJS Gateway (Backend)"]
-    API -- "Read / Write" --> DB[("MongoDB")]
-    API -. "Fallback Read" .-> JSON["faqData.json"]
+    API -- "Read / Write" --> DB[("MongoDB Atlas")]
+    API -. "Offline Fallback" .-> JSON["faqData.json"]
     
     style Client fill:#61DAFB,stroke:#333,stroke-width:2px,color:#000
     style API fill:#E0234E,stroke:#333,stroke-width:2px,color:#FFF
@@ -58,98 +60,148 @@ flowchart LR
 
 ## 📂 Project Structure
 
+To maintain separation of concerns and scale efficiently, the monorepo is divided into specialized modules. Specific proprietary algorithms regarding FAQ promotion and AI moderation have been abstracted into black-box core modules.
+
+<details>
+<summary><b>🌍 Frontend Architecture (React / Vite)</b></summary>
+
 ```text
-cs35/
-├── backend/          # NestJS application and MongoDB schemas
-│   ├── src/          # API Controllers, Services, and Gateways
-│   └── scripts/      # Database seeding and utility scripts
-├── frontend/         # React SPA built with Vite
-│   ├── src/          # UI Components, Pages, and Hooks
-│   └── public/       # Static assets
-├── assets/           # Project diagrams and images
-└── README.md         # Project documentation
+frontend/
+├── src/
+│   ├── assets/           # Static media, icons, and SVGs
+│   ├── components/       # Reusable UI components
+│   │   ├── common/       # Buttons, Modals, Inputs
+│   │   └── layout/       # Navbars, Sidebars, Footers
+│   ├── hooks/            # Custom React hooks (TanStack Query wrappers)
+│   ├── pages/            # View-level route components
+│   ├── router/           # React Router v7 configuration & lazy loading
+│   ├── services/         # API client & Socket.IO event listeners
+│   ├── store/            # Client-side state management context
+│   ├── styles/           # Tailwind CSS theme configuration (v4)
+│   ├── types/            # TypeScript interfaces and shared DTOs
+│   └── utils/            # Helper functions and formatters
+├── public/               # Raw static assets
+├── index.html            # Application entry point
+├── package.json          # Dependency definitions
+└── vite.config.ts        # Vite build and proxy configurations
 ```
+</details>
+
+<details>
+<summary><b>🛠️ Backend Architecture (NestJS)</b></summary>
+
+```text
+backend/
+├── src/
+│   ├── common/           # Shared guards, interceptors, and decorators
+│   ├── config/           # Environment variable validation schemas
+│   ├── core/             # 🔒 Proprietary Business Logic & Algorithms
+│   ├── modules/          # Feature-based domain modules
+│   │   ├── auth/         # JWT generation and validation
+│   │   ├── users/        # User profile and role management
+│   │   ├── questions/    # Moderation queue and answer lifecycle
+│   │   ├── faqs/         # Canonical FAQ generation handlers
+│   │   └── search/       # Full-text indexing and query analytics
+│   ├── database/         # Mongoose schemas and connection factories
+│   ├── events/           # Socket.IO Gateway definitions
+│   ├── app.module.ts     # Root dependency injection container
+│   └── main.ts           # Server bootstrap and middleware setup
+├── scripts/              # Database seeding and migration utilities
+├── package.json          # Dependency definitions
+└── tsconfig.json         # Strict TypeScript compiler options
+```
+</details>
+
+---
+
+## ✨ Platform Features
+
+- **Knowledge Discovery:** Lightning-fast full-text search indexing across verified FAQs and active open questions.
+- **Intelligent Routing:** A dynamic moderation queue that routes questions using an oldest-first algorithm.
+- **Answer Verification Engine:** Proprietary logic that allows authorized users to verify answers, seamlessly converting them into canonical database entries.
+- **Reopen & Flagging Flow:** A self-correcting community mechanism where verified answers can be challenged and sent back to the queue.
+- **Real-Time WebSockets:** Live data pushing via Socket.IO ensures clients are updated instantly without manual polling.
+- **Role-Based Access Control (RBAC):** Granular permissions ensuring only authorized admins can finalize canonical data.
+- **Fault Tolerance:** Built-in offline resilience that falls back to a localized JSON structure if the primary document store is temporarily unavailable.
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - Node.js (v18 or higher)
-- MongoDB
+- MongoDB Server
 - npm (v9 or higher)
 
-### Environment Variables
+### Environment Configuration
 
-You need to set up environment variables for both the backend and frontend.
+For security, create `.env` files in both directories based on these templates:
 
-**Backend (`backend/.env`):**
+<details>
+<summary><b>Backend Environment (<code>backend/.env</code>)</b></summary>
+
 ```env
 PORT=3000
 MONGODB_URI=mongodb://localhost:27017/samagama
-JWT_SECRET=your_super_secret_jwt_key
-GROQ_API_KEY=optional_api_key
+JWT_SECRET=your_secure_jwt_secret_key
+# Core algorithmic services
+GROQ_API_KEY=optional_key_for_advanced_moderation
 ```
+</details>
 
-**Frontend (`frontend/.env`):**
+<details>
+<summary><b>Frontend Environment (<code>frontend/.env</code>)</b></summary>
+
 ```env
 VITE_API_URL=http://localhost:3000/api
 ```
+</details>
 
-### Installation
+### Local Installation
 
-1. Clone the repository:
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/vicharanashala/cs35.git
    cd cs35
    ```
 
-2. Start the Backend server:
+2. **Boot the API Server:**
    ```bash
    cd backend
    npm install
    npm run start:dev
    ```
 
-3. Start the Frontend client:
+3. **Boot the Client Application:**
    ```bash
    cd ../frontend
    npm install
    npm run dev
    ```
 
-The application will be available at `http://localhost:5173`.
-
-### Running Tests
-
-```bash
-# Backend
-cd backend && npm run test
-
-# Frontend
-cd frontend && npm run test
-```
+The application is now actively running at `http://localhost:5173`.
 
 ---
 
-## 🔌 Core API Endpoints
+## 🔌 API Gateway (Core Endpoints)
 
-The API is prefixed with `/api`. Protected routes require a Bearer token in the `Authorization` header.
+The API is fully guarded. Protected routes demand a valid Bearer token within the `Authorization` header.
 
-| Endpoint | Method | Description |
-| :--- | :---: | :--- |
-| `/api/auth/login` | `POST` | Authenticate and retrieve JWT |
-| `/api/faqs` | `GET` | Retrieve canonical FAQs |
-| `/api/questions` | `GET` | List questions based on filters |
-| `/api/questions` | `POST` | Submit a new question |
-| `/api/questions/:id/answer` | `PATCH` | Submit an answer to a question |
-| `/api/questions/:id/convert-to-faq`| `POST` | (Admin) Promote verified answer |
-| `/api/search/full` | `GET` | Full-text search across all content |
+| Domain | Endpoint | Method | Action |
+| :--- | :--- | :---: | :--- |
+| **Auth** | `/api/auth/login` | `POST` | Authenticate and issue JWT payload |
+| **FAQs** | `/api/faqs` | `GET` | Fetch canonical knowledge base |
+| **Queue** | `/api/questions` | `GET` | Query the active moderation queue |
+| **Ask** | `/api/questions` | `POST` | Dispatch a new question to the queue |
+| **Answer** | `/api/questions/:id/answer` | `PATCH` | Submit a community answer |
+| **Verify** | `/api/questions/:id/convert-to-faq` | `POST` | *(Admin)* Finalize and promote answer |
+| **Search** | `/api/search/full` | `GET` | Execute full-text index query |
 
 ---
 
-## 👥 Contributors
+## 👥 Engineering Team
+
+Developed and maintained by the 2026 cohort at the Vicharanashala internship program, IIT Ropar.
 
 - Mano Shruthi S
 - Pavan Kumar M
@@ -167,3 +219,8 @@ The API is prefixed with `/api`. Protected routes require a Bearer token in the 
 ## 📜 License
 
 This project is licensed under the MIT License.
+
+<div align="center">
+  <br/>
+  <b>Built for scalability. Designed for students.</b>
+</div>
