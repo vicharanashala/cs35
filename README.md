@@ -459,6 +459,167 @@ Built with ❤️ by **10 students** of the Vicharanashala internship program, I
 > Special mention: **[GitHub Copilot](https://github.com/features/copilot)** — assisted with code review and documentation throughout development.
 
 ---
+# Additional Enhancements
+
+## Screenshots
+
+### Home Page
+![Home Page](docs/screenshots/home.png)
+
+### FAQ Browser
+![FAQ Browser](docs/screenshots/faqs.png)
+
+### Question Detail Page
+![Question Detail](docs/screenshots/question.png)
+
+### Admin Dashboard
+![Admin Dashboard](docs/screenshots/admin.png)
+
+---
+
+## Why AskSam?
+
+- Reduces duplicate questions through intelligent FAQ promotion.
+- Community-driven knowledge sharing platform.
+- Real-time notifications using WebSockets.
+- AI-assisted moderation for higher content quality.
+- Academic-focused design for educational communities.
+- Scalable NestJS + React architecture.
+
+---
+
+## Security Features
+
+- JWT-based Authentication
+- Password Hashing with bcrypt
+- Rate Limiting on Authentication Endpoints
+- Role-Based Access Control (RBAC)
+- Protected API Routes
+- Input Validation using DTOs
+- Secure Environment Variable Management
+
+---
+
+## Performance Optimizations
+
+- Lazy-loaded routes with React Router
+- Query caching using TanStack Query
+- Optimized MongoDB indexing
+- WebSocket event batching
+- API response compression
+- Debounced search requests
+
+---
+
+## Project Structure
+
+```text
+cs35/
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   └── components/
+│
+├── backend/
+│   ├── src/
+│   ├── scripts/
+│   └── modules/
+│
+├── faqData.json
+├── README.md
+└── context.md
+```
+
+---
+
+## User Roles
+
+### Student
+
+- Ask Questions
+- Submit Answers
+- Vote Content
+- Bookmark Questions
+- Follow Contributors
+
+### Admin
+
+- Verify Answers
+- Promote FAQs
+- Manage Categories
+- View Analytics
+- Moderate Content
+
+---
+
+## Deployment
+
+### Frontend
+
+Supported Platforms:
+
+- Vercel
+- Netlify
+- GitHub Pages
+
+### Backend
+
+Supported Platforms:
+
+- Railway
+- Render
+- AWS EC2
+- DigitalOcean
+- Docker Containers
+
+### Database
+
+- MongoDB Atlas
+
+---
+
+## Docker
+
+### Build and Run
+
+```bash
+docker-compose up --build
+```
+
+### Stop Containers
+
+```bash
+docker-compose down
+```
+
+---
+
+## Contributing
+
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit your changes.
+4. Push the branch.
+5. Open a Pull Request.
+
+Please follow the project's coding standards and naming conventions.
+
+---
+
+## Roadmap
+
+### Version 2.0
+
+- [ ] AI-powered duplicate question detection
+- [ ] Semantic search using embeddings
+- [ ] Multi-language support
+- [ ] Mobile application
+- [ ] Reputation and badge system
+- [ ] Leaderboards
+- [ ] Email notifications
+- [ ] Dark mode
+- [ ] Community moderation voting
+- [ ] Advanced analytics dashboard
 
 ## License
 
