@@ -191,6 +191,8 @@ The frontend expects the backend API at `http://localhost:3000/api` by default. 
 ## Contributors
 - Divyadharshini S (original README contribution)
 - GitHub Copilot assistant (merge cleanup)
+**Sri Tejaswi Putta** — Feature enhancements, documentation refinement, and project collaboration.
+
 
 ## Recommended Next Steps
 
