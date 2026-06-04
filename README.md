@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/banner.svg" alt="AskSam Banner" width="100%"/>
+  <img src="assets/banner.svg" alt="AskSam Banner" />
 </p>
 
 <div align="center">
@@ -46,7 +46,7 @@
 <br/>
 
 <div align="center">
-  <img src="./assets/tech-radar.svg" alt="Tech Radar" width="100%" max-width="600px"/>
+  <img src="assets/tech-radar.svg" alt="Tech Radar" />
 </div>
 
 ---
