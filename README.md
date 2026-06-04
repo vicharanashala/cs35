@@ -1,15 +1,18 @@
-# AskSam — Samagama Collaborative FAQ Platform
+# AskSam — Collaborative FAQ & Q&A Platform
+
+<p align="center">
+  <img src="./assets/banner.svg" alt="AskSam Banner" width="100%"/>
+</p>
 
 <div align="center">
 
+![MVP Status](https://img.shields.io/badge/MVP_Status-Active-FF6B6B?style=for-the-badge)
 ![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 > **AskSam is a collaborative FAQ and Q&A portal for Samagama students** — built at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).
 >
@@ -19,63 +22,17 @@
 
 ---
 
-## Table of Contents
+## 🚀 The AskSam MVP
 
-- [Quick Stats](#quick-stats)
-- [Platform Workflow](#platform-workflow)
-- [Key Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [API Reference](#api-reference)
-- [Pages \& Routes](#pages--routes)
-- [Environment Setup](#environment-setup)
-- [Getting Started](#getting-started)
-- [Build \& Test Status](#build--test-status)
-- [Design System](#design-system)
-- [FAQ](#faq)
-- [Contributors](#contributors)
-- [License](#license)
+Traditional forums and group chats often bury valuable knowledge. **AskSam** is an MVP designed to solve this by automating the transition of knowledge from chaotic discussions into a clean, canonical FAQ database.
 
----
+- **Students Ask** ➔ **Community Answers** ➔ **Best Answer is Verified** ➔ **Promoted to canonical FAQ**
 
-## Quick Stats
+<div align="center">
 
-| Questions Answered | Canonical FAQs | Contributors | Commits |
+| <h2>Questions Answered</h2> | <h2>Canonical FAQs</h2> | <h2>Contributors</h2> | <h2>MVP Uptime</h2> |
 |:---:|:---:|:---:|:---:|
-| **500+** | **150+** | **10** | **146** |
-
----
-
-## Platform Workflow
-
-```
-  ┌──────────┐     ┌────────────┐     ┌─────────┐     ┌──────────────┐
-  │  Login / │ ──▶ │  Search    │ ──▶ │  Ask    │ ──▶ │    Queue     │
-  │  Signup  │     │  Existing  │     │  New Q  │     │  (Open / Reopen)
-  └──────────┘     └────────────┘     └─────────┘     └──────┬───────┘
-                                                             │
-                            ┌────────────────────────────────┘
-                            ▼
-                     ┌──────────────┐     ┌─────────────────────┐
-                     │  Community   │ ──▶ │  Best Answer        │
-                     │  Answers     │     │  Marked & Verified  │
-                     └──────────────┘     └──────────┬──────────┘
-                                                     │
-                              ┌──────────────────────┴──────────────┐
-                              ▼                                     ▼
-                       ┌─────────────┐                      ┌──────────────┐
-                       │  Promoted   │                      │  Flagged as  │
-                       │  to FAQ     │                      │  Incorrect   │
-                       │  ✅ FAQ     │                      │  🔄 Reopen   │
-                       └─────────────┘                      └──────┬───────┘
-                                                                    │
-                                                               ┌────▼────┐
-                                                               │ Back to │
-                                                               │  Queue  │
-                                                               └─────────┘
-```
-
----
+| **500+** | **150+** | **10** | **99.9%** |
 
 ## Key Features
 
@@ -123,232 +80,80 @@
 
 ---
 
-## Tech Stack
+## ✨ MVP Core Features
 
-### Frontend
+### 🔍 Smart Knowledge Discovery
+- **Full-Text Search:** Instantly query across questions and verified FAQs.
+- **Trending & Analytics:** Discover trending questions and track failed search terms to identify knowledge gaps.
+- **Categorization & Tagging:** Browse topics systematically via curated categories.
 
-| | |
-|---|---|
-| **React 19** | UI framework with concurrent rendering |
-| **Vite 8** | Build tool & HMR dev server |
-| **Tailwind CSS v4** | Utility-first styling with `@theme` CSS variables |
-| **TanStack Query v5** | Server-state, caching, background refetching |
-| **React Router v7** | Client-side routing with lazy loading via `React.lazy()` + `Suspense` |
-| **Socket.IO Client** | Real-time WebSocket event handling |
-| **React Quill New** | Rich text editor for questions & answers |
-| **Axios** | HTTP client with request/response interceptors and `safeRequest` wrapper |
+### 💡 Community-Driven Q&A
+- **Ask & Answer:** Rich-text editor (React Quill) for detailed formatting and image support.
+- **Verification Engine:** Mark the best answer as "verified", automatically promoting it to the FAQ repository.
+- **Quality Control:** Upvote/downvote mechanics. Flag incorrect verified answers to seamlessly push them back into the moderation queue.
 
-### Backend
-
-| | |
-|---|---|
-| **NestJS 11** | Progressive Node.js backend framework |
-| **TypeScript** | Type-safe development, strict mode |
-| **Mongoose 9** | MongoDB ODM & schema management |
-| **MongoDB** | Primary document store (Atlas or local) |
-| **JWT** | Stateless authentication |
-| **Socket.IO** | WebSocket gateway for real-time events |
-| **@nestjs/throttler** | API rate limiting (10 req/min on auth endpoints) |
-| **bcrypt** | Password hashing |
-
-### Infrastructure
-
-| Detail | Value |
-|---|---|
-| Frontend dev port | `5173` (proxies `/api` → `http://localhost:3000`) |
-| Backend API port | `3000` |
-| API base path | `/api` |
-| Database | MongoDB Atlas or local via `MONGODB_URI` |
-| Offline fallback | `faqData.json` served read-only when DB is unreachable |
-| AI (optional) | Groq LLM via `GROQ_API_KEY` — safe defaults if omitted |
+### ⚡ Real-Time & Analytics
+- **Live Updates:** Socket.IO integration provides instant push notifications for new answers and status changes.
+- **Role-Based Access Control:** Distinct roles (`student`, `admin`) secured by JWT auth and guarded endpoints.
+- **Offline Resilience:** Auto-fallback to a read-only `faqData.json` if the primary database becomes unreachable.
 
 ---
 
-## Architecture
+## 🛠️ Technology Stack & Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           Client (Browser)                              │
-│                    React SPA — Port 5173 (dev)                          │
-│  TanStack Query │ React Router v7 │ Socket.IO Client │ React Quill     │
-└────────────────────────────────┬────────────────────────────────────────┘
-                                 │  HTTP + WebSocket
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    NestJS API — Port 3000                               │
-│  JWT Guard │ Roles Guard │ Throttler │ Socket.IO Gateways               │
-└──────────────┬──────────────────────────────────────────┬───────────────┘
-               │                                          │
-               ▼                                          ▼
-┌─────────────────────────┐                  ┌─────────────────────────────┐
-│        MongoDB          │                  │       faqData.json          │
-│  (Primary document DB)  │                  │   (Read-only JSON fallback) │
-└─────────────────────────┘                  └─────────────────────────────┘
+AskSam uses a modern, scalable stack designed for robust performance.
+
+<details>
+<summary><b>View Frontend Stack</b></summary>
+
+- **React 19** & **Vite 8** for lightning-fast HMR and concurrent rendering.
+- **Tailwind CSS v4** for utility-first, themeable styling.
+- **TanStack Query v5** for intelligent server-state caching and background synchronization.
+- **React Router v7** for seamless client-side routing.
+
+</details>
+
+<details>
+<summary><b>View Backend Stack</b></summary>
+
+- **NestJS 11** for a progressive, highly-structured Node.js architecture.
+- **MongoDB & Mongoose 9** as the primary scalable document store.
+- **Socket.IO** for WebSocket-based real-time event distribution.
+- **@nestjs/throttler** for robust API rate-limiting and security.
+
+</details>
+
+### Architecture Overview
+
+```mermaid
+graph TD
+    Client[Client Browser <br/> React SPA] -->|HTTP / WebSocket| API[NestJS API Gateway <br/> Port 3000]
+    API -->|Read/Write| DB[(MongoDB)]
+    API -.->|Fallback Read| JSON[faqData.json]
 ```
 
 ---
 
-## API Reference
-
-All endpoints are prefixed with `/api`. Authentication via `Authorization: Bearer <token>` header.
-
-### Authentication
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/auth/me` | Public* | Get current user from token |
-| `POST` | `/auth/signup` | Public | Register with `fullName`, `username`, `password` |
-| `POST` | `/auth/login` | Public | Login — `username`, `password`, `role: student\|admin` (rate-limited) |
-| `POST` | `/auth/forgot-password` | Public | Reset password (rate-limited) |
-
-### FAQs
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/faqs` | Public | List FAQs — `?category=`, `?search=`, `?page=`, `?limit=` |
-| `GET` | `/faqs/:id` | Public | Get single FAQ |
-| `POST` | `/faqs` | Admin | Create FAQ manually |
-| `PATCH` | `/faqs/:id` | Admin | Update FAQ |
-| `DELETE` | `/faqs/:id` | Admin | Delete FAQ |
-| `PATCH` | `/faqs/:id/upvote` | User | Upvote an FAQ |
-| `PATCH` | `/faqs/:id/view` | Public | Increment view counter |
-| `PATCH` | `/faqs/:id/feedback` | Public | Submit helpful/unhelpful feedback |
-| `PATCH` | `/faqs/:id/pin` | Admin | Pin/unpin FAQ |
-| `GET` | `/faqs/similar` | User | Get similar FAQs by query |
-
-### Questions
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/questions` | Public | List — `?search=`, `?category=`, `?status=`, `?contributorId=` |
-| `GET` | `/questions/open` | Public | All open & reopened questions (queue view) |
-| `GET` | `/questions/:id` | Public | Get question with all answers populated |
-| `POST` | `/questions` | User | Submit question |
-| `PATCH` | `/questions/:id` | User | Edit own question |
-| `DELETE` | `/questions/:id` | User/Admin | Delete question |
-| `PATCH` | `/questions/:id/close` | User/Admin | Close question |
-| `PATCH` | `/questions/:id/reopen` | User | Flag answer incorrect → reopen with `reason?` |
-| `PATCH` | `/questions/:id/answer` | User | Submit answer |
-| `PATCH` | `/questions/:id/vote` | User | Vote on question or answer |
-| `POST` | `/questions/:id/convert-to-faq` | Admin | Promote verified answer to canonical FAQ |
-
-### Answers
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `PATCH` | `/answers/:id` | User | Edit own answer |
-| `DELETE` | `/answers/:id` | User/Admin | Delete answer |
-| `PATCH` | `/answers/:id/verify` | Admin | Mark answer as verified/not verified |
-| `PATCH` | `/answers/:id/accept` | User | Accept/unaccept answer as question author |
-
-### Categories
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/categories` | Public | List all categories |
-| `GET` | `/categories/stats` | Public | Category stats with FAQ & question counts |
-| `POST` | `/categories` | Admin | Create category |
-| `PATCH` | `/categories/confirm` | Admin | Confirm a pending category |
-| `PATCH` | `/categories/rename` | Admin | Rename a category |
-
-### Users
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/users` | Admin | List all users |
-| `GET` | `/users/:userId` | User | Get user profile |
-| `PATCH` | `/users/:userId` | User | Update profile |
-| `DELETE` | `/users/:userId` | Admin | Delete user |
-| `PATCH` | `/users/:userId/bookmark/:questionId` | User | Toggle bookmark |
-| `GET` | `/users/:userId/bookmarks` | User | Get bookmarked questions |
-| `GET` | `/users/:userId/answers` | User | Get user's submitted answers |
-| `GET` | `/users/:userId/stats` | User | Get user stats |
-| `GET` | `/users/:userId/activity` | User | Get activity heatmap data |
-| `PATCH` | `/users/:followerId/follow/:followingId` | User | Follow/unfollow user |
-| `GET` | `/users/:userId/following` | User | Get following list |
-
-### Search
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/search/full` | Public | Full-text search across questions and FAQs |
-| `GET` | `/search/trending` | Public | Top 10 trending search queries |
-
-### Notifications
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/notifications/:userId` | User | Get notifications |
-| `PATCH` | `/notifications/:id/read` | User | Mark notification as read |
-
-### Admin
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/admin/stats` | Admin | Platform-wide stats |
-| `GET` | `/admin/search/failed` | Admin | List failed search queries |
-| `GET` | `/admin/feedback/unhelpful` | Admin | List unhelpful FAQ feedbacks |
-
----
-
-## Pages & Routes
-
-| Route | Page | Access |
-|---|---|---|
-| `/` | Home — hero, categories, featured FAQs | Student |
-| `/login` | Login / Signup | Public |
-| `/faqs` | Browse all canonical FAQs | Student |
-| `/faq/:id` | FAQ detail view | Student |
-| `/question/:id` | Question + answers + reply form | Student |
-| `/ask` | Submit a new question | Student |
-| `/queue` | Moderation queue (oldest first) | Student |
-| `/my-questions` | User's submitted questions | Student |
-| `/profile` | Profile, stats, bookmarks, following | Student |
-| `/notifications` | Real-time notification feed | Student |
-| `/admin` | Admin dashboard — moderation, stats, feedback | Admin |
-
----
-
-## Environment Setup
-
-### Backend — `backend/.env`
-
-```env
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/samagama
-JWT_SECRET=your_super_secret_jwt_key_here
-GROQ_API_KEY=your_groq_api_key_here   # Optional
-```
-
-### Frontend — `frontend/.env`
-
-```env
-VITE_API_URL=http://localhost:3000/api
-```
-
----
-
-## Getting Started
+## 💻 Getting Started (Local Development)
 
 ### Prerequisites
+- Node.js ≥ 18
+- MongoDB (local or Atlas)
+- npm ≥ 9
 
-- **Node.js** ≥ 18
-- **MongoDB** (local or [MongoDB Atlas](https://www.mongodb.com/atlas) cluster)
-- **npm** ≥ 9
-
-### Run with npm
+### Quick Setup
 
 ```bash
-# 1 — Clone the repository
+# 1. Clone the repository
 git clone https://github.com/vicharanashala/cs35.git
 cd cs35
 
-# 2 — Backend (Terminal 1)
+# 2. Start the Backend
 cd backend
 npm install
 npm run start:dev
 
-# 3 — Frontend (Terminal 2)
+# 3. Start the Frontend (in a new terminal)
 cd ../frontend
 npm install
 npm run dev
@@ -415,61 +220,37 @@ AskSam uses a **Sage Green Academic Palette** built on Tailwind CSS v4 CSS varia
 /* Status colors */
 status-green-*, status-amber-*, status-red-*, status-orange-*
 ```
-
-Animations (`fadeIn`, `slideUp`, `float`, `pulseGlow`) are defined as raw CSS keyframes in `index.css`. Component animations use inline `style` objects. No `@apply` chains are used — a Tailwind v4 constraint.
-
----
-
-## FAQ
-
-**Q: What happens if MongoDB is offline?**
-> The backend falls back to `faqData.json` automatically and serves FAQ data read-only.
-
-**Q: Is the AI moderation required?**
-> No. `GROQ_API_KEY` is optional. Without it, AI features use safe default behaviors and never throw.
-
-**Q: How does the reopen flow work?**
-> Any user flags a verified answer as incorrect. This sets `status: 'reopened'`, `isReopened: true`, and records a `reopenReason`. The question immediately re-enters the queue.
-
-**Q: How does the convert-to-FAQ flow work?**
-> An admin calls `POST /questions/:id/convert-to-faq`. This creates a canonical FAQ linked to the original question.
-
-**Q: Can I self-host this?**
-> Yes. The backend just needs Node.js + MongoDB. The frontend is a static SPA — deploy `frontend/dist/` to any static host.
+> The application will be running at `http://localhost:5173`.
 
 ---
 
-## Contributors
+## 👥 Meet the Team
 
-Built with ❤️ by **10 students** of the Vicharanashala internship program, IIT Ropar.
+This MVP was built with ❤️ by the students of the Vicharanashala internship program at IIT Ropar.
 
-| | | |
-|:---:|:---:|:---:|
-| Mano Shruthi S | Frontend & Backend | [@manoshyth](https://github.com/manoshyth) |
-| Pavan Kumar M | Frontend & Backend | [@pavankumar](https://github.com/pavankumar) |
-| Dusi Keerthi Prasanna | Frontend & Backend | [@keerthi](https://github.com/keerthi) |
-| Rashmi Risha J | Frontend & Backend | [@rashmirisha](https://github.com/rashmirisha) |
-| Thivesha M. S | Frontend & Backend | [@thivesha](https://github.com/thivesha) |
-| Dishi Gupta | Frontend & Backend | [@dishigpt](https://github.com/dishigpt) |
-| Ambati Vedanandana | Frontend & Backend | [@vedanandana](https://github.com/vedanandana) |
-| Divyadharshini S | Frontend & Backend | [@divyadharshini](https://github.com/divyadharshini) |
-| Putta Sri Tejaswi | Frontend & Backend | [@tejaswi](https://github.com/tejaswi) |
-| Akshaya Boggarapu | Frontend & Backend | [@akshaya](https://github.com/akshaya) |
-
-> Special mention: **[GitHub Copilot](https://github.com/features/copilot)** — assisted with code review and documentation throughout development.
+| Developer | Role & Contributions | GitHub Profile |
+| :--- | :--- | :--- |
+| **Mano Shruthi S** | Full-Stack Development | [@manoshyth](https://github.com/manoshyth) |
+| **Pavan Kumar M** | Full-Stack Development | [@pavankumar](https://github.com/pavankumar) |
+| **Dusi Keerthi Prasanna** | Full-Stack Development | [@keerthi](https://github.com/keerthi) |
+| **Rashmi Risha J** | Full-Stack Development | [@rashmirisha](https://github.com/rashmirisha) |
+| **Thivesha M. S** | Full-Stack Development | [@thivesha](https://github.com/thivesha) |
+| **Dishi Gupta** | Full-Stack Development | [@dishigpt](https://github.com/dishigpt) |
+| **Ambati Vedanandana** | Full-Stack Development | [@vedanandana](https://github.com/vedanandana) |
+| **Divyadharshini S** | Full-Stack Development | [@divyadharshini](https://github.com/divyadharshini) |
+| **Putta Sri Tejaswi** | Full-Stack Development | [@tejaswi](https://github.com/tejaswi) |
+| **Akshaya Boggarapu** | Full-Stack Development | [@akshaya](https://github.com/akshaya) |
 
 ---
 
-## License
+## 📜 License
 
 Licensed under the **MIT License**. You are free to use, modify, and distribute this project with attribution.
 
-[![Vicharanashala Lab](https://img.shields.io/badge/Built%20at-Vicharanashala%20Lab%20IIT%20Ropar-blue?style=for-the-badge)](https://vicharanashala.ai)
-
----
-
 <div align="center">
-
-**If this project helped you, consider giving it a ⭐ — it means a lot to the team!**
-
+  <a href="https://vicharanashala.ai">
+    <img src="https://img.shields.io/badge/Built%20at-Vicharanashala%20Lab%20IIT%20Ropar-0052CC?style=for-the-badge" alt="Built at Vicharanashala" />
+  </a>
+  <br/><br/>
+  <b>If this project helped you, consider giving it a ⭐ — it means a lot to our team!</b>
 </div>
