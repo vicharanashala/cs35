@@ -11,6 +11,8 @@ import { Notification } from '../../schemas/notification.schema';
 import { EventsGateway } from './events.gateway';
 @Injectable()
 export class FaqService implements OnModuleInit {
+  private mongoConnected = false;
+
   constructor(
     @Optional() @InjectModel(Faq.name) private faqModel: Model<Faq> | undefined,
     @Optional()
@@ -26,7 +28,13 @@ export class FaqService implements OnModuleInit {
     @InjectModel(Notification.name)
     private notificationModel: Model<Notification> | undefined,
     private eventsGateway: EventsGateway,
-    ) {}
+  ) {
+    this.mongoConnected = !!this.faqModel;
+  }
+
+  private get hasMongoDB() {
+    return this.mongoConnected;
+  }
 
   async onModuleInit() {
     await this.seedFromJson();
@@ -424,12 +432,12 @@ export class FaqService implements OnModuleInit {
         await this.questionModel
           .findByIdAndUpdate(answer.questionId, { status: 'answered' })
           .exec();
-        this.eventsGateway.emitStatusUpdated(answer.questionId, 'answered');
+        this.eventsGateway.emitStatusUpdated(answer.questionId.toString(), 'answered');
       } else {
         await this.questionModel
           .findByIdAndUpdate(answer.questionId, { status: 'open' })
           .exec();
-        this.eventsGateway.emitStatusUpdated(answer.questionId, 'open');
+        this.eventsGateway.emitStatusUpdated(answer.questionId.toString(), 'open');
       }
       
       if (verified && answer.contributorId) {
@@ -604,6 +612,8 @@ export class FaqService implements OnModuleInit {
         totalUsers: 0,
       };
     }
+  }
+
   // ── Notifications ───────────────────────────────────────────
 
   async getNotifications(userId: string, isAdmin = false) {
