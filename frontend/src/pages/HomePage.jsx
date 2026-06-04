@@ -1,14 +1,20 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "../hooks/useAuth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "../hooks/useDebounce";
 import { faqApi, questionApi, userApi } from "../services/api";
-import { getUserTitle } from "../utils/gamification";
+import hero from "../assets/hero.png";
+import { useAuth } from "../hooks/useAuth";
+import { toast } from "react-hot-toast";
+import FloatingBubbles from "../components/FloatingBubbles";
+import Fuse from "fuse.js";
+import HighlightText from "../components/HighlightText";
 
 function timeAgo(d) {
   if (!d) return "";
-  const mins = Math.floor((Date.now() - new Date(d)) / 60000);
+  const date = new Date(d);
+  if (date.getTime() === 0 || isNaN(date.getTime())) return "";
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
@@ -67,12 +73,13 @@ function getCategoryIcon(name) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef(null);
 
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
@@ -88,38 +95,45 @@ export default function HomePage() {
     if (search.trim()) navigate(`/faqs?q=${encodeURIComponent(search.trim())}`);
   };
 
-  // 1. Verified FAQs (Official Knowledge)
   const { data: faqs = [], isLoading: loadingFaqs } = useQuery({
     queryKey: ["faqs"],
     queryFn: () => faqApi.list(),
     staleTime: 1000 * 60 * 5,
   });
 
+  const faqList = useMemo(() => {
+    return Array.isArray(faqs) ? faqs : (Array.isArray(faqs?.data) ? faqs.data : []);
+  }, [faqs]);
+
   const topFaqs = useMemo(() =>
-    [...faqs].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
-  [faqs]);
+    [...faqList].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4),
+  [faqList]);
 
-  const debouncedSearch = useDebounce(search, 300);
+  const searchResults = useMemo(() => {
+    const q = search.trim();
+    if (q.length < 1) return [];
+    const fuse = new Fuse(faqList, {
+      keys: ['question', 'category', 'answer', 'tags'],
+      includeMatches: true,
+      threshold: 0.4,
+      ignoreLocation: true,
+    });
+    return fuse.search(q).map(res => ({
+      ...res.item,
+      matches: res.matches
+    })).slice(0, 6);
+  }, [search, faqList]);
 
-  const { data: searchResultsData = [] } = useQuery({
-    queryKey: ['faq-search-home', debouncedSearch],
-    queryFn: () => faqApi.list({ search: debouncedSearch }),
-    enabled: debouncedSearch.trim().length > 1,
-    staleTime: 60000,
-  });
-  const searchResults = Array.isArray(searchResultsData) ? searchResultsData.slice(0, 6) : (searchResultsData?.data || []).slice(0, 6);
-
-  // 2. Categories
-  const { data: categories = [], isLoading: loadingCats } = useQuery({
+  const { data: categoriesData = [], isLoading: loadingCats } = useQuery({
     queryKey: ["categories"],
     queryFn: () => faqApi.listCategories(),
     staleTime: 1000 * 60 * 5,
   });
+  const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
 
-  // 3. Recent Discussions (Community)
   const { data: questions = [], isLoading: loadingQuestions } = useQuery({
     queryKey: ["questions-recent"],
-    queryFn: () => questionApi.listOpen(), // Just using open ones for recent demo
+    queryFn: () => questionApi.listOpen(),
     staleTime: 1000 * 30,
   });
 
@@ -127,184 +141,168 @@ export default function HomePage() {
     [...questions].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 3),
   [questions]);
 
-  // 4. Top Contributors
-  const { data: users = [], isLoading: loadingUsers } = useQuery({
-    queryKey: ["users-leaderboard"],
-    queryFn: () => userApi.list(),
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const topContributors = useMemo(() => {
-    const list = Array.isArray(users) ? users : users.data || [];
-    return [...list]
-      .filter((u) => u.reputation > 0)
-      .sort((a, b) => (b.reputation || 0) - (a.reputation || 0))
-      .slice(0, 5);
-  }, [users]);
-
   return (
     <div style={{ background: "#F5F7F2" }}>
       {/* ── Hero ── */}
-      <section className="bg-white border-b" style={{ borderColor: "#E2E8DE" }}>
-        <div className="container-xl py-10 sm:py-14">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            {/* Left */}
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-3" style={{ color: "#1F2937" }}>
+      <section className="relative" style={{ background: "linear-gradient(135deg, #F5F7F2 0%, #ffffff 100%)", borderBottom: "1px solid #E2E8DE" }}>
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-30" style={{ background: "#dde8db" }}></div>
+          <div className="absolute top-24 -right-24 w-96 h-96 rounded-full mix-blend-multiply filter blur-3xl opacity-30" style={{ background: "#f8f0e0" }}></div>
+        </div>
+        <div className="container-xl py-8 sm:py-12 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="max-w-2xl">
+              <h1 className="text-5xl sm:text-6xl lg:text-[4rem] font-extrabold tracking-tight mb-6 text-gray-900 leading-[1.05]">
                 Get Answers.<br />
                 <span style={{ color: "#5E7A5A" }}>Share Knowledge.</span>
               </h1>
-              <p className="text-base mb-8" style={{ color: "#6B7280" }}>
-                Ask questions, help others, and build a smarter student community together.
+              <p className="text-lg sm:text-xl mb-10 text-gray-600 leading-relaxed max-w-lg">
+                Ask questions, help others, and build a smarter student community together. Your experience makes a difference.
               </p>
 
-              {/* Hero search */}
-              <form onSubmit={handleSearch} className="flex gap-2 relative" ref={searchRef}>
-                <div className="search-wrap flex-1">
-                  <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 relative" ref={searchRef}>
+                <div className="search-wrap flex-1 shadow-md rounded-full transition-shadow hover:shadow-lg bg-white">
+                  <svg className="search-icon w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
-                    className="search-input py-3"
+                    className="search-input py-4 text-base pl-12 bg-transparent shadow-none w-full"
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
                     onFocus={() => setShowDropdown(true)}
                     placeholder="Search FAQs — e.g. NOC, offer letter, stipend…"
+                    style={{ background: "transparent", boxShadow: "none" }}
                   />
                 </div>
-                <button type="submit" className="btn-primary">Search</button>
+                <button type="submit" className="btn-primary py-4 px-8 text-base shadow-md hover:shadow-lg rounded-full shrink-0">Search</button>
 
-                {/* Search dropdown */}
-                {showDropdown && searchResults.length > 0 && (
+                {showDropdown && search.trim().length > 1 && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border shadow-lg z-50 overflow-hidden animate-scale-in" style={{ borderColor: "#E2E8DE" }}>
-                    <div className="p-2">
-                      <p className="text-xs font-semibold px-3 py-1.5" style={{ color: "#9CA3AF" }}>RELATED QUESTIONS</p>
-                      {searchResults.map((faq) => (
+                    {searchResults.length > 0 ? (
+                      <div className="p-2">
+                        <p className="text-xs font-semibold px-3 py-1.5" style={{ color: "#9CA3AF" }}>RELATED QUESTIONS</p>
+                        {searchResults.map((faq) => (
+                          <Link
+                            key={faq._id}
+                            to={`/faqs/${faq._id}`}
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>
+                                <HighlightText text={faq.question} matches={faq.matches?.find(m => m.key === 'question')?.indices} />
+                              </p>
+                              <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
+                                <HighlightText text={faq.category} matches={faq.matches?.find(m => m.key === 'category')?.indices} />
+                              </p>
+                            </div>
+                          </Link>
+                        ))}
+                        <div className="border-t mt-2 pt-2 px-3" style={{ borderColor: "#E2E8DE" }}>
+                          <Link
+                            to={`/faqs?q=${encodeURIComponent(search)}`}
+                            onClick={() => setShowDropdown(false)}
+                            className="text-xs font-medium hover:underline"
+                            style={{ color: "#5E7A5A" }}
+                          >
+                            See all results for "{search}" →
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-6 text-center">
+                        <svg className="w-8 h-8 mx-auto mb-2" style={{ color: "#D1D5DB" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-sm font-medium mb-1" style={{ color: "#374151" }}>No FAQs found</p>
+                        <p className="text-xs" style={{ color: "#9CA3AF" }}>Try a different search term or</p>
                         <Link
-                          key={faq._id}
-                          to={`/faq/${faq._id}`}
+                          to={`/ask?question=${encodeURIComponent(search)}`}
                           onClick={() => setShowDropdown(false)}
-                          className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium line-clamp-1" style={{ color: "#1F2937" }}>{faq.question}</p>
-                            <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{faq.category}</p>
-                          </div>
-                        </Link>
-                      ))}
-                      <div className="border-t mt-2 pt-2 px-3" style={{ borderColor: "#E2E8DE" }}>
-                        <Link
-                          to={`/faqs?q=${encodeURIComponent(search)}`}
-                          onClick={() => setShowDropdown(false)}
-                          className="text-xs font-medium hover:underline"
+                          className="text-xs font-medium hover:underline mt-1 inline-block"
                           style={{ color: "#5E7A5A" }}
                         >
-                          See all results for "{search}" →
+                          ask this as a question →
                         </Link>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </form>
             </div>
 
-            {/* Right — illustration */}
-            <div className="hidden lg:flex items-center justify-center">
+            <div className="hidden lg:flex items-center justify-center relative">
               <img
-                src="/hero.png"
+                src={hero}
                 alt="Students collaborating"
                 className="w-full max-w-sm object-contain"
                 style={{ borderRadius: "1rem" }}
               />
+              <FloatingBubbles questions={faqList} />
             </div>
           </div>
         </div>
       </section>
 
-        <div className="container-xl py-10 space-y-12" onClick={() => setShowDropdown(false)}>
-        {/* ── 1. Verified FAQs ── */}
-        <section>
-          <div className="flex items-end justify-between mb-5">
-            <div>
-              <h2 className="section-title flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Top Verified FAQs
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Official information curated by admins.</p>
+      <div className="container-xl py-6 space-y-8" onClick={() => setShowDropdown(false)}>
+        {/* ── Verified FAQs + Recent Discussions ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Verified FAQs */}
+          <section>
+            <div className="flex items-end justify-between mb-4">
+              <div>
+                <h2 className="section-title flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Verified FAQs
+                </h2>
+                <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Official answers from admins.</p>
+              </div>
+              <Link to="/faqs" className="text-sm font-medium hover:underline" style={{ color: "#5E7A5A" }}>
+                View all →
+              </Link>
             </div>
-            <Link to="/faqs" className="text-sm font-medium hover:underline" style={{ color: "#5E7A5A" }}>
-              View all FAQs →
-            </Link>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {loadingFaqs ? (
-              [...Array(4)].map((_, i) => (
-                <div key={i} className="card p-5">
-                  <div className="skeleton h-3 w-20 mb-3" />
-                  <div className="skeleton h-4 w-full mb-2" />
-                  <div className="skeleton h-4 w-3/4" />
-                </div>
-              ))
-            ) : topFaqs.length > 0 ? (
-              topFaqs.map((faq) => (
-                <Link key={faq._id} to={`/faq/${faq._id}`} className="card-hover p-5 flex flex-col h-full">
-                  <span className="tag tag-brand w-max mb-3">{faq.category}</span>
-                  <h3 className="text-base font-semibold leading-snug mb-2" style={{ color: "#1F2937" }}>
-                    {faq.question}
-                  </h3>
-                  <p className="text-sm line-clamp-2 mt-auto" style={{ color: "#6B7280" }}>
-                    {faq.answer}
-                  </p>
-                </Link>
-              ))
-            ) : (
-              <div className="col-span-1 md:col-span-2 card p-8 text-center">
-                 <p className="text-sm" style={{ color: "#9CA3AF" }}>No verified FAQs found.</p>
-              </div>
-            )}
-          </div>
-        </section>
+            <div className="space-y-3">
+              {loadingFaqs ? (
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className="card p-4">
+                    <div className="skeleton h-3 w-20 mb-2" />
+                    <div className="skeleton h-4 w-full mb-1" />
+                    <div className="skeleton h-3 w-2/3" />
+                  </div>
+                ))
+              ) : topFaqs.length > 0 ? (
+                topFaqs.map((faq) => (
+                  <div
+                    key={faq._id}
+                    onClick={() => navigate(`/faqs/${faq._id}`)}
+                    className="card-hover p-4 block cursor-pointer"
+                    style={{ background: "#ffffff", border: "1px solid #E2E8DE", borderRadius: "12px" }}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="w-4 h-4 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
+                        {getCategoryIcon(faq.category)}
+                      </div>
+                      <span className="text-xs font-medium" style={{ color: "#5E7A5A" }}>{faq.category}</span>
+                    </div>
+                    <h3 className="text-sm font-semibold leading-snug mb-1" style={{ color: "#1F2937" }}>{faq.question}</h3>
+                    <p className="text-xs line-clamp-1" style={{ color: "#6B7280" }}>{faq.answer}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm" style={{ color: "#9CA3AF" }}>No verified FAQs found.</p>
+              )}
+            </div>
+          </section>
 
-        {/* ── 2. Explore Categories ── */}
-        <section>
-          <div className="mb-5">
-            <h2 className="section-title">Explore Categories</h2>
-            <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Browse knowledge by topic.</p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {loadingCats ? (
-               [...Array(3)].map((_, i) => (
-                <div key={i} className="card p-6 flex flex-col items-center">
-                  <div className="skeleton h-8 w-8 rounded-full mb-3" />
-                  <div className="skeleton h-4 w-24" />
-                </div>
-              ))
-            ) : categories.length > 0 ? (
-              categories.map((cat) => (
-                <Link key={cat} to={`/faqs?category=${encodeURIComponent(cat)}`} className="card-hover p-6 text-center">
-                  <div className="flex justify-center items-center mb-3 text-brand">{getCategoryIcon(cat)}</div>
-                  <h3 className="font-semibold text-base mb-1" style={{ color: "#1F2937" }}>{cat}</h3>
-                  <p className="text-xs" style={{ color: "#9CA3AF" }}>View FAQs →</p>
-                </Link>
-              ))
-            ) : (
-              <div className="col-span-2 md:col-span-3 card p-8 text-center">
-                <p className="text-sm" style={{ color: "#9CA3AF" }}>No categories found.</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* ── 3. Community Section (Discussions & Leaderboard) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <section className="lg:col-span-2">
-            <div className="flex items-end justify-between mb-5">
+          {/* Recent Discussions */}
+          <section>
+            <div className="flex items-end justify-between mb-4">
               <div>
                 <h2 className="section-title flex items-center gap-2">
                   <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,10 +310,10 @@ export default function HomePage() {
                   </svg>
                   Recent Discussions
                 </h2>
-                <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Community-driven Q&A. Help your peers!</p>
+                <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Community questions waiting for answers.</p>
               </div>
               <Link to="/queue" className="text-sm font-medium hover:underline" style={{ color: "#5E7A5A" }}>
-                View Queue →
+                See All →
               </Link>
             </div>
 
@@ -323,106 +321,144 @@ export default function HomePage() {
               {loadingQuestions ? (
                 [...Array(3)].map((_, i) => (
                   <div key={i} className="card p-4">
-                    <div className="skeleton h-4 w-1/2 mb-2" />
-                    <div className="skeleton h-3 w-1/3" />
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="skeleton w-9 h-9 rounded-full" />
+                      <div className="flex-1">
+                        <div className="skeleton h-3 w-20 mb-1" />
+                        <div className="skeleton h-2 w-12" />
+                      </div>
+                    </div>
+                    <div className="skeleton h-4 w-full mb-2" />
+                    <div className="skeleton h-5 w-16 rounded-full" />
                   </div>
                 ))
               ) : recentDiscussions.length > 0 ? (
-                recentDiscussions.map((q) => (
-                  <Link key={q._id} to={`/question/${q._id}`} className="card-hover p-5 block">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <span className="tag tag-neutral">{q.category}</span>
-                      {q.isReopened && <span className="badge badge-orange">Reopened</span>}
-                    </div>
-                    <h3 className="font-medium text-base mb-2" style={{ color: "#1F2937" }}>
-                      {q.question}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: "#9CA3AF" }}>
-                      <span>Asked by {q.contributor || "Student"}</span>
-                      <span>·</span>
-                      <span>{timeAgo(q.createdAt)}</span>
-                      <span>·</span>
-                      <span className="font-medium" style={{ color: "#5E7A5A" }}>{q.answers?.length || 0} answers</span>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                 <div className="card p-8 text-center">
-                   <p className="text-sm" style={{ color: "#9CA3AF" }}>No recent discussions found.</p>
-                 </div>
-              )}
-            </div>
-          </section>
-
-          <section className="lg:col-span-1">
-            <div className="mb-5">
-              <h2 className="section-title flex items-center gap-2">
-                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
-                Top Contributors
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Earn reputation by helping others.</p>
-            </div>
-            
-            <div className="card overflow-hidden">
-              <div className="p-4 bg-white">
-                {loadingUsers ? (
-                  [...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 py-3 border-b last:border-0" style={{ borderColor: "#E2E8DE" }}>
-                      <div className="skeleton h-8 w-8 rounded-full" />
-                      <div className="skeleton h-4 w-24" />
-                    </div>
-                  ))
-                ) : topContributors.length > 0 ? (
-                  <div className="divide-y" style={{ borderColor: "#E2E8DE" }}>
-                    {topContributors.map((user, idx) => {
-                      const rank = getUserTitle(user.reputation || 0);
-                      return (
-                      <div key={user._id} className="flex items-center gap-3 py-3 px-1">
-                        <div className="w-6 text-center font-bold" style={{ color: idx === 0 ? "#EAB308" : idx === 1 ? "#9CA3AF" : idx === 2 ? "#B45309" : "#D1D5DB" }}>
-                          #{idx + 1}
+                recentDiscussions.map((q) => {
+                  const isOwnQuestion = user?._id && q?.contributorId && user._id === (q.contributorId._id || q.contributorId);
+                  const displayName = isOwnQuestion ? "You" : (q.contributorName || "Student");
+                  const initial = displayName[0].toUpperCase();
+                  const avatarColors = ["#5E7A5A", "#7C9A6E", "#A4BE8B", "#D4E4C9", "#3D5A3A", "#6B8E6B"];
+                  const avatarColor = avatarColors[initial.charCodeAt(0) % avatarColors.length];
+                  return (
+                    <div
+                      key={q._id}
+                      onClick={() => navigate(`/questions/${q._id}`)}
+                      className="block cursor-pointer"
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #E2E8DE",
+                        borderRadius: "12px",
+                        padding: "16px",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = "none";
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-xs shrink-0" style={{ background: avatarColor }}>
+                          {initial}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-xs" style={{ background: "#dde8db", color: "#3a4f38" }}>
-                          {user.name ? user.name.charAt(0).toUpperCase() : "?"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate flex items-center gap-2" style={{ color: "#1F2937" }}>
-                            {user.name}
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm" style={{ background: rank.bg, color: rank.color }}>
-                              {rank.title}
-                            </span>
-                          </p>
-                          <p className="text-xs font-semibold mt-0.5" style={{ color: rank.color }}>{user.reputation} points</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm truncate" style={{ color: "#1F2937" }}>{displayName}</p>
+                          <p className="text-xs" style={{ color: "#9CA3AF" }}>{timeAgo(q.createdAt)}</p>
                         </div>
                       </div>
-                    )})}
-                  </div>
-                ) : (
-                  <div className="py-6 text-center">
-                    <p className="text-sm" style={{ color: "#9CA3AF" }}>No contributors yet.</p>
-                  </div>
-                )}
-              </div>
+                      <h3 className="font-semibold text-sm leading-snug mb-2" style={{ color: "#1F2937" }}>{q.question}</h3>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "#EEF4EA", color: "#5E7A5A" }}>{q.category}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1 text-xs" style={{ color: "#6B7280" }}>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            {q.answers?.length || 0}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm" style={{ color: "#9CA3AF" }}>No recent discussions found.</p>
+              )}
             </div>
           </section>
         </div>
 
-        {/* ── Footer CTA ── */}
-        <section className="card p-8 text-center bg-white">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: "#f0f4ef" }}>
-            <svg className="w-8 h-8" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        {/* ── Explore Categories ── */}
+        <section>
+          <div className="mb-4">
+            <h2 className="section-title">Explore Categories</h2>
+            <p className="text-sm mt-1" style={{ color: "#6B7280" }}>Browse knowledge by topic.</p>
           </div>
-          <h2 className="text-xl font-bold mb-2" style={{ color: "#1F2937" }}>Can't find what you're looking for?</h2>
-          <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
-            Ask your question and the community will help!
-          </p>
-          <Link to="/ask" className="btn-primary">
-            Ask a Question
-          </Link>
+          <div className="grid grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
+            {loadingCats ? (
+               [...Array(8)].map((_, i) => (
+                <div key={i} className="card p-2 flex flex-col items-center justify-center aspect-square">
+                  <div className="skeleton h-5 w-5 rounded-full mb-1" />
+                  <div className="skeleton h-2 w-12" />
+                </div>
+              ))
+            ) : categories.length > 0 ? (
+              (() => {
+                const uniqueCats = new Map();
+                categories.forEach(cat => {
+                   const catName = typeof cat === 'string' ? cat : cat.name;
+                   if (catName.startsWith("Others - ")) {
+                      if (!uniqueCats.has("Others")) {
+                          uniqueCats.set("Others", "Others");
+                      }
+                   } else {
+                      uniqueCats.set(catName, catName);
+                   }
+                });
+                const catsArr = Array.from(uniqueCats.values());
+                return catsArr.sort((a, b) => {
+                   if (a === "Others") return 1;
+                   if (b === "Others") return -1;
+                   return 0; // maintain original relative order otherwise
+                });
+              })().map((catName) => {
+                return (
+                  <Link key={catName} to={`/faqs?category=${encodeURIComponent(catName)}`} className="card-hover p-2 text-center flex flex-col items-center justify-center aspect-square">
+                    <div className="flex justify-center items-center mb-1 text-brand text-base">
+                      {getCategoryIcon(catName)}
+                    </div>
+                    <h3 className="font-semibold text-[10px] line-clamp-2" style={{ color: "#1F2937" }}>{catName}</h3>
+                  </Link>
+                );
+              })
+            ) : (
+              <div className="col-span-5 md:col-span-6 lg:col-span-8 card p-8 text-center">
+                <p className="text-sm" style={{ color: "#9CA3AF" }}>No categories found.</p>
+              </div>
+            )}
+          </div>
         </section>
+
+        {/* ── Footer CTA ── */}
+        {user?.role !== "admin" && (
+          <section className="card p-8 text-center bg-white">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: "#f0f4ef" }}>
+              <svg className="w-8 h-8" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold mb-2" style={{ color: "#1F2937" }}>Can't find what you're looking for?</h2>
+            <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
+              Ask your question and the community will help!
+            </p>
+            <Link to="/ask" className="btn-primary">
+              Ask a Question
+            </Link>
+          </section>
+        )}
       </div>
     </div>
   );

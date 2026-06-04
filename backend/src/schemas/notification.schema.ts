@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Notification extends Document {
@@ -20,6 +20,15 @@ export class Notification extends Document {
 
   @Prop({ default: false })
   isRead: boolean;
+
+  @Prop()
+  senderId?: string;
+
+  @Prop()
+  senderName?: string;
+
+  @Prop()
+  senderAvatar?: string;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);

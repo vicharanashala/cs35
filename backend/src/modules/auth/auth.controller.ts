@@ -1,17 +1,29 @@
-import { Controller, Post, Body, Get, Headers, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Headers,
+  UseGuards,
+} from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('auth')
+@UseGuards(JwtAuthGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Get('me')
   getMe(@Headers('authorization') authHeader?: string) {
     const token = authHeader?.replace('Bearer ', '');
     return this.authService.getMe(token || '');
   }
 
+  @Public()
   @Post('signup')
   signup(
     @Body() body: { fullName: string; username: string; password: string },
@@ -19,8 +31,9 @@ export class AuthController {
     return this.authService.signup(body);
   }
 
+  @Public()
   @UseGuards(ThrottlerGuard)
-  @Throttle({ login: { limit: 5, ttl: 60000 } })
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
   @Post('login')
   login(
     @Body()
@@ -37,24 +50,19 @@ export class AuthController {
     return this.authService.loginStudent(body.username || '', body.password);
   }
 
+  @Public()
   @UseGuards(ThrottlerGuard)
   @Throttle({ short: { limit: 10, ttl: 60000 } })
-  @Post('forgot-password/request')
-  requestPasswordReset(@Body() body: { username: string }) {
-    return this.authService.requestPasswordReset(body.username);
-  }
-
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ short: { limit: 10, ttl: 60000 } })
-  @Post('forgot-password/reset')
-  resetPasswordWithOtp(
+  @Post('forgot-password')
+  forgotPassword(
     @Body()
     body: {
-      username: string;
-      otp: string;
+      username?: string;
+      email?: string;
       newPassword: string;
+      confirmNewPassword: string;
     },
   ) {
-    return this.authService.resetPasswordWithOtp(body.username, body.otp, body.newPassword);
+    return this.authService.forgotPassword(body);
   }
 }

@@ -1,31 +1,20 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { OtpService } from './otp.service';
-import { EmailService } from './email.service';
 import { User, UserSchema } from '../../schemas/user.schema';
-import { Otp, OtpSchema } from '../../schemas/otp.schema';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @Module({
   imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: User.name,
-        useFactory: () => UserSchema,
-      },
-      {
-        name: Otp.name,
-        useFactory: () => OtpSchema,
-      },
-    ]),
     JwtModule.registerAsync({
       global: true,
       inject: [],
       useFactory: () => ({
-        secret: process.env.JWT_SECRET || 'asksam-dev-secret-change-in-production',
+        secret:
+          process.env.JWT_SECRET || 'asksam-dev-secret-change-in-production',
         signOptions: { expiresIn: '7d' },
       }),
     }),
@@ -43,6 +32,29 @@ import { Otp, OtpSchema } from '../../schemas/otp.schema';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, OtpService, EmailService],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    RolesGuard,
+    {
+      provide: 'USER_MODEL',
+      useFactory: () => require('mongoose').model(User.name, UserSchema),
+    },
+    {
+      provide: 'QUESTION_MODEL',
+      useFactory: () => {
+        const { Question, QuestionSchema } = require('../../schemas/question.schema');
+        return require('mongoose').model(Question.name, QuestionSchema);
+      },
+    },
+    {
+      provide: 'ANSWER_MODEL',
+      useFactory: () => {
+        const { Answer, AnswerSchema } = require('../../schemas/answer.schema');
+        return require('mongoose').model(Answer.name, AnswerSchema);
+      },
+    },
+  ],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

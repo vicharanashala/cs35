@@ -38,4 +38,20 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   emitFaqConverted(faq: any) {
     this.server.emit('faqConverted', faq);
   }
+
+  emitVoteUpdated(answerId: string, upvotes: number) {
+    this.server.emit('voteUpdated', { answerId, upvotes });
+  }
+
+  emitUserUpdated(userId: string) {
+    this.server.emit('userUpdated', { userId });
+  }
+
+  emitAnswerAccepted(answerId: string, questionId: string, accepted: boolean) {
+    this.server.emit('answerAccepted', { answerId, questionId, accepted });
+  }
+
+  emitNotification(notification: any) {
+    this.server.emit('newNotification', notification);
+  }
 }

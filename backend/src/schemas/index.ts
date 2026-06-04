@@ -1,5 +1,4 @@
 export { Faq, FaqSchema } from './faq.schema';
 export { Question, QuestionSchema } from './question.schema';
 export { Answer, AnswerSchema } from './answer.schema';
-export { User, UserSchema } from './user.schema';
-export { Otp, OtpSchema } from './otp.schema';
+export { Category, CategorySchema } from './category.schema';

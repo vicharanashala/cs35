@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
+// @ts-ignore
 import * as bcrypt from 'bcrypt';
-import { Injectable, Optional } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { Injectable, Optional, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import { User } from '../../schemas/user.schema';
 import { Question } from '../../schemas/question.schema';
 import { Answer } from '../../schemas/answer.schema';
-import { OtpService } from './otp.service';
 
 @Injectable()
 export class AuthService {
@@ -15,16 +14,15 @@ export class AuthService {
 
   constructor(
     @Optional()
-    @InjectModel(User.name)
+    @Inject('USER_MODEL')
     private userModel: Model<User> | undefined,
     @Optional()
-    @InjectModel(Question.name)
+    @Inject('QUESTION_MODEL')
     private questionModel: Model<Question> | undefined,
     @Optional()
-    @InjectModel(Answer.name)
+    @Inject('ANSWER_MODEL')
     private answerModel: Model<Answer> | undefined,
     private jwtService: JwtService,
-    private otpService: OtpService,
   ) {
     if (this.userModel) {
       this.mongoConnected = true;
@@ -35,7 +33,13 @@ export class AuthService {
     return this.mongoConnected;
   }
 
-  private signToken(payload: { sub: string; email?: string; role: string; name: string }): string {
+  private signToken(payload: {
+    sub: string;
+    email?: string;
+    role: string;
+    name: string;
+    id?: string;
+  }): string {
     return this.jwtService.sign(payload);
   }
 
@@ -53,18 +57,10 @@ export class AuthService {
     }
 
     try {
-      if (!data.username || data.username.trim().length < 3) {
+      if (!data.username || !/^[a-zA-Z0-9_]{3,20}$/.test(data.username.trim())) {
         return {
           success: false,
-          message: 'Username must be at least 3 characters',
-        };
-      }
-
-      if (!/^[a-zA-Z0-9_]+$/.test(data.username)) {
-        return {
-          success: false,
-          message:
-            'Username can only contain letters, numbers, and underscores',
+          message: 'Username must be 3-20 characters long and contain only letters, numbers, or underscores',
         };
       }
 
@@ -75,10 +71,10 @@ export class AuthService {
         };
       }
 
-      const existingUsername = await this.userModel
-        .findOne({ username: data.username })
+      const existingUser = await this.userModel!
+        .findOne({ username: data.username.trim() })
         .exec();
-      if (existingUsername) {
+      if (existingUser) {
         return {
           success: false,
           message: 'Username already taken. Please choose another.',
@@ -87,7 +83,7 @@ export class AuthService {
 
       const hashedPassword = await bcrypt.hash(data.password, 10);
 
-      const lastUser = await this.userModel
+      const lastUser = await this.userModel!
         .findOne({ role: 'student', studentId: { $exists: true } })
         .sort({ studentId: -1 })
         .exec();
@@ -96,9 +92,8 @@ export class AuthService {
         : 0;
       const studentId = `STU-${String(lastNum + 1).padStart(5, '0')}`;
 
-      await this.userModel.create({
-        username: data.username,
-        email: '',
+      const createdUser = await this.userModel!.create({
+        username: data.username.trim(),
         password: hashedPassword,
         name: data.fullName,
         role: 'student',
@@ -110,12 +105,14 @@ export class AuthService {
       });
 
       const token = this.signToken({
-        sub: data.username,
+        sub: data.username.trim(),
         role: 'student',
-        name: data.fullName,
+        name: data.username.trim(),
+        id: createdUser._id.toString(),
       });
       return { success: true, message: 'Account created successfully', token };
     } catch (err) {
+      console.error('Signup error:', err);
       return { success: false, message: 'Signup failed. Please try again.' };
     }
   }
@@ -139,7 +136,7 @@ export class AuthService {
     }
 
     try {
-      const user = await this.userModel
+      const user = await this.userModel!
         .findOne({ username, role: 'student', isActive: true })
         .exec();
       if (!user) {
@@ -157,78 +154,17 @@ export class AuthService {
       const token = this.signToken({
         sub: username,
         role: 'student',
-        name: user.name || 'Student',
+        name: user.username,
+        id: user._id.toString(),
       });
       return {
         success: true,
         message: 'Login successful',
         token,
-        name: user.name || 'Student',
+        name: user.username,
       };
     } catch (err) {
       return { success: false, message: 'Login failed. Please try again.' };
-    }
-  }
-
-  async requestPasswordReset(
-    username: string,
-  ): Promise<{ success: boolean; message: string }> {
-    if (!this.hasMongoDB || !this.otpService) {
-      return { success: false, message: 'Password reset unavailable in demo mode' };
-    }
-
-    try {
-      if (!username.trim()) {
-        return { success: false, message: 'Username is required' };
-      }
-
-      const user = await this.userModel
-        .findOne({ username, role: 'student' })
-        .exec();
-      if (!user) {
-        return { success: false, message: 'Account not found. Please sign up.' };
-      }
-
-      await this.otpService.generateAndSend(user.email || `${username}@asksam.local`, username);
-      return { success: true, message: 'OTP sent to your email address' };
-    } catch (err) {
-      return { success: false, message: 'Failed to send OTP. Please try again.' };
-    }
-  }
-
-  async resetPasswordWithOtp(
-    username: string,
-    otp: string,
-    newPassword: string,
-  ): Promise<{ success: boolean; message: string }> {
-    if (!this.hasMongoDB || !this.otpService) {
-      return { success: false, message: 'Password reset unavailable in demo mode' };
-    }
-
-    try {
-      if (!newPassword || newPassword.length < 6) {
-        return { success: false, message: 'Password must be at least 6 characters' };
-      }
-
-      const user = await this.userModel
-        .findOne({ username, role: 'student' })
-        .exec();
-      if (!user) {
-        return { success: false, message: 'Account not found.' };
-      }
-
-      const valid = await this.otpService.verify(user.email || `${username}@asksam.local`, otp);
-      if (!valid) {
-        return { success: false, message: 'Invalid or expired OTP. Please request a new one.' };
-      }
-
-      user.password = await bcrypt.hash(newPassword, 10);
-      await user.save();
-      await this.otpService.invalidate(user.email || `${username}@asksam.local`);
-
-      return { success: true, message: 'Password reset successful. You can now login.' };
-    } catch (err) {
-      return { success: false, message: 'Password reset failed. Please try again.' };
     }
   }
 
@@ -240,12 +176,11 @@ export class AuthService {
     if (!this.hasMongoDB || !this.questionModel || !this.answerModel) {
       let payload: { sub: string; role: string; name: string };
       try {
-        payload = this.jwtService.verify(token) as { sub: string; role: string; name: string };
+        payload = this.jwtService.verify(token);
         return {
           success: true,
           user: {
             name: payload.name || 'Student',
-            username: payload.sub,
             role: payload.role || 'student',
             createdAt: new Date().toISOString(),
             questionsCount: 0,
@@ -261,29 +196,42 @@ export class AuthService {
     try {
       let payload: { sub: string; role: string; name: string };
       try {
-        payload = this.jwtService.verify(token) as { sub: string; role: string; name: string };
+        payload = this.jwtService.verify(token);
       } catch {
         return { success: false, message: 'Invalid or expired token' };
       }
 
-      const user = await this.userModel
-        .findOne({ username: payload.sub, role: payload.role as 'student' | 'admin' })
+      const user = await this.userModel!
+        .findOne({
+          $or: [{ username: payload.sub }, { email: payload.sub }],
+          role: payload.role as 'student' | 'admin',
+        })
         .select('-password')
         .exec();
       if (!user) return { success: false, message: 'User not found' };
 
-      const questionsCount = await this.questionModel
-        .countDocuments({ contributorName: user.username })
-        .exec();
-      const answersCount = await this.answerModel
-        .countDocuments({ contributorId: user._id.toString() })
-        .exec();
-      const verifiedCount = await this.answerModel
+      const questionsCount = await this.questionModel.collection
         .countDocuments({
-          contributorId: user._id.toString(),
+          $or: [
+            { contributorId: user._id },
+            { contributorId: user._id.toString() }
+          ]
+        });
+      const answersCount = await this.answerModel.collection
+        .countDocuments({
+          $or: [
+            { contributorId: user._id },
+            { contributorId: user._id.toString() }
+          ]
+        });
+      const verifiedCount = await this.answerModel.collection
+        .countDocuments({
+          $or: [
+            { contributorId: user._id },
+            { contributorId: user._id.toString() }
+          ],
           isVerified: true,
-        })
-        .exec();
+        });
 
       return {
         success: true,
@@ -295,10 +243,11 @@ export class AuthService {
           role: user.role,
           studentId: user.studentId,
           createdAt: (user as any).createdAt,
+          notificationPreferences: (user as any).notificationPreferences || { notifyOnAnswer: true, notifyOnVerification: true },
           questionsCount,
           answersCount,
           verifiedCount,
-          reputation: user.reputation,
+          bookmarkedCount: user.questionsBookmarked?.length || 0,
         },
       };
     } catch {
@@ -330,7 +279,7 @@ export class AuthService {
     }
 
     try {
-      const user = await this.userModel
+      const user = await this.userModel!
         .findOne({ email, role: 'admin', isActive: true })
         .exec();
       if (!user) {
@@ -347,6 +296,7 @@ export class AuthService {
         email,
         role: 'admin',
         name: user.name || 'Admin',
+        id: user._id.toString(),
       });
       return {
         success: true,
@@ -356,6 +306,64 @@ export class AuthService {
       };
     } catch (err) {
       return { success: false, message: 'Login failed. Please try again.' };
+    }
+  }
+
+  async forgotPassword(data: {
+    username?: string;
+    email?: string;
+    newPassword: string;
+    confirmNewPassword: string;
+  }): Promise<{ success: boolean; message: string }> {
+    if (!this.hasMongoDB) {
+      return {
+        success: false,
+        message: 'Password reset unavailable in demo mode',
+      };
+    }
+
+    try {
+      const identifier = data.username?.trim() || data.email?.trim();
+      if (!identifier) {
+        return { success: false, message: 'Username or Email is required' };
+      }
+
+      if (!data.newPassword || data.newPassword.length < 6) {
+        return {
+          success: false,
+          message: 'Password must be at least 6 characters',
+        };
+      }
+
+      if (data.newPassword !== data.confirmNewPassword) {
+        return { success: false, message: 'Passwords do not match' };
+      }
+
+      const user = await this.userModel!
+        .findOne({
+          $or: [{ username: identifier }, { email: identifier }],
+          role: 'student',
+        })
+        .exec();
+      if (!user) {
+        return {
+          success: false,
+          message: 'Account not found. Please sign up.',
+        };
+      }
+
+      user.password = await bcrypt.hash(data.newPassword, 10);
+      await user.save();
+
+      return {
+        success: true,
+        message: 'Password reset successful. You can now login.',
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: 'Password reset failed. Please try again.',
+      };
     }
   }
 }
