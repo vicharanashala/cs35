@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/banner.svg" alt="AskSam Banner" />
-</p>
-
 <div align="center">
 
 ![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-flat-square&logo=nestjs&logoColor=white)
@@ -42,12 +38,6 @@
                                                   |
                                              [Back to Queue]
 ```
-
-<br/>
-
-<div align="center">
-  <img src="assets/tech-radar.svg" alt="Tech Radar" />
-</div>
 
 ---
 
