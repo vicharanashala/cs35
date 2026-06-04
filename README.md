@@ -25,18 +25,33 @@
 
 ---
 
-## 🏗️ Architecture Workflow
+## 🔄 How AskSam Works
 
-```text
-  [Login / Signup] -> [Search] -> [Ask Question] -> [Queue (Open)]
-                                                          |
-  [Community Answers] <- [Best Answer Verified] <---------+
-                               |
-            +------------------+------------------+
-            |                                     |
-  [Promoted to FAQ]                      [Flagged Incorrect]
-                                                  |
-                                             [Back to Queue]
+```mermaid
+flowchart TD
+    A([User Login / Signup]) --> B{Search Existing?}
+    B -- Found --> C([View FAQ])
+    B -- Not Found --> D([Ask New Question])
+    D --> E[(Moderation Queue)]
+    E --> F[Community Submits Answers]
+    F --> G{Mark Best Answer?}
+    G -- Verified --> H[Promoted to Canonical FAQ ✅]
+    G -- Incorrect --> I[Flagged for Re-evaluation 🔄]
+    I --> E
+```
+
+## 🏗️ Technical Architecture
+
+```mermaid
+flowchart LR
+    Client["React SPA (Frontend)"] -- "HTTP / WebSockets" --> API["NestJS Gateway (Backend)"]
+    API -- "Read / Write" --> DB[("MongoDB")]
+    API -. "Fallback Read" .-> JSON["faqData.json"]
+    
+    style Client fill:#61DAFB,stroke:#333,stroke-width:2px,color:#000
+    style API fill:#E0234E,stroke:#333,stroke-width:2px,color:#FFF
+    style DB fill:#47A248,stroke:#333,stroke-width:2px,color:#FFF
+    style JSON fill:#F7DF1E,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ---
