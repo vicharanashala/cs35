@@ -1,5 +1,4 @@
 import axios from "axios";
-import { io } from "socket.io-client";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
@@ -9,9 +8,16 @@ const client = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-export const socket = io(API_URL.replace("/api", ""), {
-  autoConnect: true,
-});
+client.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 client.interceptors.response.use(
   (response) => response,
@@ -32,11 +38,27 @@ function safeRequest(promise) {
 
 // ── Public FAQ API ────────────────────────────────────────────
 
+
 export const faqApi = {
   list: (params = {}) => safeRequest(client.get("/faqs", { params }).then((r) => r.data)),
   getById: (id) => safeRequest(client.get(`/faqs/${id}`).then((r) => r.data)),
   listCategories: () => safeRequest(client.get("/categories").then((r) => r.data)),
+  createCategory: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
   incrementView: (id) => safeRequest(client.patch(`/faqs/${id}/view`).then((r) => r.data)),
+  feedback: (id, body) => safeRequest(client.patch(`/faqs/${id}/feedback`, body).then((r) => r.data)),
+  listUnhelpfulFeedback: () => safeRequest(client.get("/admin/feedback/unhelpful").then((r) => r.data)),
+  trending: () => safeRequest(client.get("/search/trending").then((r) => r.data)),
+  failedSearches: () => safeRequest(client.get("/admin/search/failed").then((r) => r.data)),
+  similar: (q) => safeRequest(client.get("/faqs/similar", { params: { q } }).then((r) => r.data)),
+};
+
+// ── Category API ─────────────────────────────────────────────
+
+export const categoryApi = {
+  getStats: () => safeRequest(client.get("/categories/stats").then((r) => r.data)),
+  create: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
+  confirm: (name) => safeRequest(client.patch("/categories/confirm", { name }).then((r) => r.data)),
+  rename: (oldName, newName) => safeRequest(client.patch("/categories/rename", { oldName, newName }).then((r) => r.data)),
 };
 
 // ── Question API ─────────────────────────────────────────────
@@ -51,7 +73,8 @@ export const questionApi = {
   close: (id) => safeRequest(client.patch(`/questions/${id}/close`).then((r) => r.data)),
   reopen: (id) => safeRequest(client.patch(`/questions/${id}/reopen`).then((r) => r.data)),
   addAnswer: (id, data) => safeRequest(client.patch(`/questions/${id}/answer`, data).then((r) => r.data)),
-  convertToFaq: (id, answerId) => safeRequest(client.patch(`/questions/${id}/convert-to-faq`, { answerId }).then((r) => r.data)),
+  convertToFaq: (id, { answerId, category, isNewCategory } = {}) =>
+    safeRequest(client.post(`/questions/${id}/convert-to-faq`, { answerId, category, isNewCategory }).then((r) => r.data)),
   vote: (questionId, answerId, direction) =>
     safeRequest(client.patch(`/questions/${questionId}/vote`, { answerId, direction }).then((r) => r.data)),
 };
@@ -61,7 +84,37 @@ export const questionApi = {
 export const answerApi = {
   update: (id, data) => safeRequest(client.patch(`/answers/${id}`, data).then((r) => r.data)),
   delete: (id) => safeRequest(client.delete(`/answers/${id}`).then((r) => r.data)),
-  verify: (id, verified) => safeRequest(client.patch(`/answers/${id}/verify`, { verified }).then((r) => r.data)),
+  verify: (id, verified, questionId) => safeRequest(client.patch(`/answers/${id}/verify`, { verified, questionId }).then((r) => r.data)),
+  accept: (id, accepted, questionId) =>
+    safeRequest(client.patch(`/answers/${id}/accept`, { accepted, questionId }).then((r) => r.data)),
+};
+
+// ── Bookmark API ──────────────────────────────────────────────
+
+export const bookmarkApi = {
+  list: (userId) => safeRequest(client.get(`/users/${userId}/bookmarks`).then((r) => r.data)),
+  toggle: (userId, faqId) => safeRequest(client.patch(`/users/${userId}/bookmark/${faqId}`).then((r) => r.data)),
+};
+
+// ── Follow API ────────────────────────────────────────────────
+
+export const followApi = {
+  toggle: (followerId, followingId) =>
+    safeRequest(client.patch(`/users/${followerId}/follow/${followingId}`).then((r) => r.data)),
+  getFollowing: (userId) => safeRequest(client.get(`/users/${userId}/following`).then((r) => r.data)),
+};
+
+// ── User Stats / Activity API ─────────────────────────────────
+
+export const userStatsApi = {
+  activity: (userId) => safeRequest(client.get(`/users/${userId}/activity`).then((r) => r.data)),
+  stats: (userId) => safeRequest(client.get(`/users/${userId}/stats`).then((r) => r.data)),
+};
+
+// ── Full-Text Search API ──────────────────────────────────────
+
+export const searchApi = {
+  fullText: (q) => safeRequest(client.get("/search/full", { params: { q } }).then((r) => r.data)),
 };
 
 // ── FAQ Management API ────────────────────────────────────────
@@ -73,12 +126,7 @@ export const faqAdminApi = {
   pin: (id, pinned) => safeRequest(client.patch(`/faqs/${id}/pin`, { pinned }).then((r) => r.data)),
 };
 
-// ── Category API ─────────────────────────────────────────────
 
-export const categoryApi = {
-  getStats: () => safeRequest(client.get("/categories/stats").then((r) => r.data)),
-  create: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
-};
 
 // ── User API ─────────────────────────────────────────────────
 

@@ -1,10 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { questionApi, faqApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
 
 const TIPS = [
   "Be specific and clear",
@@ -43,25 +41,160 @@ function SuccessModal({ show, question, onClose }) {
   );
 }
 
+function CustomCategorySelect({ categories, value, onChange, hasError }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [hoveredOther, setHoveredOther] = useState(false);
+  const dropRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setHoveredOther(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const normalCats = [];
+  const otherCats = [];
+  categories.forEach(c => {
+    const name = typeof c === 'string' ? c : c.name;
+    if (name.startsWith("Others - ")) otherCats.push(name);
+    else normalCats.push(name);
+  });
+
+  return (
+    <div className="relative" ref={dropRef}>
+      <div 
+        className={`input cursor-pointer flex justify-between items-center bg-white ${hasError ? "border-red-500" : ""}`}
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ padding: "0.5rem 0.75rem", minHeight: "42px" }}
+      >
+        <span className={value ? "text-slate-800" : "text-slate-500"}>{value || "Select a category"}</span>
+        <svg className="w-4 h-4 text-slate-400 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-[#E2E8DE] shadow-xl rounded-xl z-50 py-1 flex flex-col max-h-72 overflow-y-auto">
+          {normalCats.map(cat => (
+            <div 
+              key={cat}
+              className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${value === cat ? "bg-[#f0f4ef] text-[#5E7A5A] font-semibold" : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"}`}
+              onClick={() => { onChange(cat); setIsOpen(false); }}
+            >
+              {cat}
+            </div>
+          ))}
+          
+          {otherCats.length > 0 && (
+            <div 
+              className="relative group"
+              onMouseEnter={() => setHoveredOther(true)}
+              onMouseLeave={() => setHoveredOther(false)}
+            >
+              <div 
+                className="px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer flex justify-between items-center"
+                onClick={(e) => { e.stopPropagation(); setHoveredOther(!hoveredOther); }}
+              >
+                <span>Others</span>
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </div>
+              
+              {hoveredOther && (
+                <div className="absolute left-[98%] top-0 ml-1 w-64 bg-white border border-[#E2E8DE] shadow-xl rounded-xl z-50 py-1 max-h-64 overflow-y-auto hidden sm:block">
+                  {otherCats.map(cat => (
+                    <div 
+                      key={cat}
+                      className={`px-4 py-2.5 text-sm cursor-pointer border-l-2 ${value === cat ? "border-[#5E7A5A] bg-[#f0f4ef] text-[#5E7A5A] font-semibold" : "border-transparent text-slate-700 hover:border-[#5E7A5A] hover:bg-slate-50"}`}
+                      onClick={() => { onChange(cat); setIsOpen(false); }}
+                    >
+                      {cat.replace("Others - ", "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Fallback for mobile */}
+              {hoveredOther && (
+                <div className="sm:hidden bg-slate-50 pl-4 py-1 border-y border-slate-100">
+                  {otherCats.map(cat => (
+                    <div 
+                      key={cat}
+                      className={`px-4 py-2.5 text-sm cursor-pointer ${value === cat ? "text-[#5E7A5A] font-semibold" : "text-slate-700 hover:bg-white"}`}
+                      onClick={() => { onChange(cat); setIsOpen(false); }}
+                    >
+                      {cat.replace("Others - ", "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AskPage() {
   const navigate      = useNavigate();
+  const location = useLocation();
+
+  // Auto-focus textarea when navigated with state.openModal (e.g. from HomePage)
+  useEffect(() => {
+    if (location.state?.openModal && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [])
   const textareaRef   = useRef(null);
   const queryClient  = useQueryClient();
   const { user } = useAuth();
+
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+
+  const { data: editData } = useQuery({
+    queryKey: ['question', editId],
+    queryFn: () => questionApi.getById(editId),
+    enabled: !!editId,
+  });
 
   const [title, setTitle]               = useState("");
   const [category, setCategory]         = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [details, setDetails]           = useState("");
+  const [tags, setTags]                 = useState([]);
+
+  // Populate form if edit data loads
+  useEffect(() => {
+    if (editData && editId) {
+      setTitle(editData.question || "");
+      setCategory(editData.category || "");
+      setDetails(editData.details || "");
+      setTags(editData.tags || []);
+    }
+  }, [editData, editId]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess]   = useState(false);
   const [submitted, setSubmitted]       = useState("");
   const [touched, setTouched]           = useState({});
   const [error, setError]               = useState("");
+  const [tagInput, setTagInput]         = useState("");
 
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
+
+  // Debounced title state for semantic duplicate detection
+  const [debouncedTitle, setDebouncedTitle] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTitle(title);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [title]);
 
   const toggleListen = () => {
     if (isListening) {
@@ -92,17 +225,26 @@ export default function AskPage() {
     setIsListening(true);
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target.result;
-      const imageMarkdown = `\n![Image](${base64})\n`;
-      setDetails((prev) => prev + imageMarkdown);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+
+  const addTag = (value) => {
+    const trimmed = value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "");
+    if (trimmed && !tags.includes(trimmed) && tags.length < 5) {
+      setTags((prev) => [...prev, trimmed]);
+    }
+    setTagInput("");
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === "," || e.key === " ") {
+      e.preventDefault();
+      addTag(tagInput);
+    } else if (e.key === "Backspace" && !tagInput && tags.length > 0) {
+      setTags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setTags((prev) => prev.filter((t) => t !== tagToRemove));
   };
 
   const finalCategory = category === "new_category" ? customCategory.trim() : category;
@@ -110,24 +252,35 @@ export default function AskPage() {
   const categoryError = touched.category && !finalCategory;
   const isValid       = title.trim().length >= 4 && !!finalCategory;
 
-  const { data: categories = [] } = useQuery({
+
+  const { data: categoriesData = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: () => faqApi.listCategories(),
     staleTime: 1000 * 60 * 5,
   });
+  const categories = useMemo(() => {
+    return Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
+  }, [categoriesData]);
 
-  // Related questions from FAQ
-  const { data: faqs = [] } = useQuery({
-    queryKey: ["faqs"],
-    queryFn: () => faqApi.list(),
-    staleTime: 1000 * 60 * 5,
+  // Semantic duplicate detection using React Query
+  const { data: similarFaqs = [], isLoading: isCheckingSimilar } = useQuery({
+    queryKey: ["similar-faqs", debouncedTitle],
+    queryFn: () => faqApi.similar(debouncedTitle),
+    enabled: debouncedTitle.trim().length >= 4,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
-  const related = useMemo(() => {
-    if (title.trim().length < 3) return [];
-    const q = title.toLowerCase();
-    return faqs.filter((f) => f.question?.toLowerCase().includes(q) || f.category?.toLowerCase().includes(q)).slice(0, 4);
-  }, [title, faqs]);
+  const potentialDuplicates = useMemo(() => {
+    if (!Array.isArray(similarFaqs)) return [];
+    return similarFaqs.filter(f => f.similarity >= 0.70);
+  }, [similarFaqs]);
+
+  const relatedSuggestions = useMemo(() => {
+    if (!Array.isArray(similarFaqs)) return [];
+    return similarFaqs.filter(f => f.similarity >= 0.50 && f.similarity < 0.70);
+  }, [similarFaqs]);
+
+  const [expandedFaqId, setExpandedFaqId] = useState(null);
 
 
 
@@ -138,11 +291,30 @@ export default function AskPage() {
     setIsSubmitting(true);
     try {
       const contributorName = user?.name || "Student";
-      await questionApi.create({ question: title.trim(), category: finalCategory, details: details.trim(), tags: [], contributorName });
-      setSubmitted(title);
-      setShowSuccess(true);
+      // If student picked 'Add New Category', store the new cat name in pendingCategory
+      const isNewCat = category === "new_category";
+      const payload = {
+        question: title.trim(),
+        category: isNewCat ? "General" : finalCategory,
+        pendingCategory: isNewCat ? finalCategory : undefined,
+        details: details.trim(),
+        tags,
+      };
+
+      if (editId) {
+        await questionApi.update(editId, payload);
+      } else {
+        await questionApi.create({
+          ...payload,
+          contributorName,
+          contributorId: user?._id,
+        });
+      }
+
+      setSubmitted(title); setShowSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["questions-open"] });
       queryClient.invalidateQueries({ queryKey: ["my-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
     } catch (err) {
       console.error("Failed to submit question:", err);
       setError("Failed to submit question. Please try again.");
@@ -153,6 +325,13 @@ export default function AskPage() {
   const handleClose = () => {
     setShowSuccess(false); setTitle(""); setCategory(""); setCustomCategory(""); setDetails(""); setTouched({});
   };
+
+  useEffect(() => {
+    if (showSuccess) {
+      const t = setTimeout(() => navigate("/queue"), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [showSuccess, navigate]);
 
   return (
     <div style={{ background: "#F5F7F2" }}>
@@ -171,9 +350,9 @@ export default function AskPage() {
           {/* ── Form ── */}
           <div className="lg:col-span-2">
             <div className="card p-6">
-              <h1 className="text-xl font-bold mb-1" style={{ color: "#1F2937" }}>Ask a Question</h1>
+              <h1 className="text-xl font-bold mb-1" style={{ color: "#1F2937" }}>{editId ? "Edit Question" : "Ask a Question"}</h1>
               <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
-                Be specific and clear. It helps others provide better answers.
+                {editId ? "Update your question details below." : "Be specific and clear. It helps others provide better answers."}
               </p>
 
               <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -196,33 +375,95 @@ export default function AskPage() {
                   {titleError && <p className="input-hint" style={{ color: "#dc2626" }}>Please enter at least 4 characters</p>}
                 </div>
 
+                {isCheckingSimilar && (
+                  <div className="flex items-center gap-2 text-xs py-1 animate-fade-in" style={{ color: "#5E7A5A" }}>
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Checking for duplicate answers...</span>
+                  </div>
+                )}
+
+                {/* Duplicate Warning Card */}
+                {potentialDuplicates.length > 0 && (
+                  <div className="p-4 rounded-xl border animate-slide-down" style={{ background: "#FFFBEB", borderColor: "#FCD34D" }}>
+                    <div className="flex gap-2.5 items-start">
+                      <div className="shrink-0 text-amber-500 mt-0.5">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold mb-1" style={{ color: "#92400E" }}>Wait, an answer already exists!</h4>
+                        <p className="text-xs mb-3 text-amber-800">
+                          We found highly similar questions in our database (above 70% match). Click "View Answer" to see if it solves your question instantly!
+                        </p>
+                        
+                        <div className="space-y-2.5">
+                          {potentialDuplicates.map((faq) => (
+                            <div key={faq._id} className="p-3 bg-white rounded-lg border border-amber-200 shadow-sm transition-all hover:border-amber-400">
+                              <div className="flex items-start justify-between gap-3">
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full animate-fade-in" style={{ background: "#FEF3C7", color: "#B45309" }}>
+                                  {Math.round(faq.similarity * 100)}% Match
+                                </span>
+                                <span className="text-xs" style={{ color: "#9CA3AF" }}>{faq.category}</span>
+                              </div>
+                              <p className="text-sm font-medium mt-1.5" style={{ color: "#1F2937" }}>
+                                {faq.question}
+                              </p>
+                              
+                              <button
+                                type="button"
+                                onClick={() => setExpandedFaqId(expandedFaqId === faq._id ? null : faq._id)}
+                                className="text-xs font-semibold mt-2 underline flex items-center gap-1 cursor-pointer"
+                                style={{ color: "#5E7A5A" }}
+                              >
+                                {expandedFaqId === faq._id ? "Hide Answer" : "View Answer"}
+                                <svg className={`w-3 h-3 transition-transform ${expandedFaqId === faq._id ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+
+                              {expandedFaqId === faq._id && (
+                                <div className="mt-3 p-3 rounded bg-slate-50 border border-slate-200 text-xs animate-slide-down">
+                                  <p className="font-semibold text-slate-700 mb-1">Answer:</p>
+                                  <p className="text-slate-600 leading-relaxed whitespace-pre-line">{faq.answer}</p>
+                                  <div className="mt-3 flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={handleClose}
+                                      className="px-3 py-1 bg-emerald-600 text-white rounded font-medium hover:bg-emerald-700 text-xxs transition-colors cursor-pointer"
+                                    >
+                                      This solved my question
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+
                 {/* Category */}
                 <div className="space-y-3">
                   <div>
                     <label className="label">Category <span style={{ color: "#dc2626" }}>*</span></label>
-                    <select
+                    <CustomCategorySelect 
+                      categories={categories}
                       value={category}
-                      onChange={(e) => { setCategory(e.target.value); setTouched((t) => ({ ...t, category: true })); }}
-                      className={`input ${categoryError ? "input-error" : ""}`}
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map((c) => <option key={c}>{c}</option>)}
-                      <option value="new_category">+ Add New Category</option>
-                    </select>
+                      onChange={(val) => { setCategory(val); setTouched((t) => ({ ...t, category: true })); }}
+                      hasError={categoryError}
+                    />
                   </div>
-                  {category === "new_category" && (
-                    <div className="animate-fade-in">
-                      <input
-                        type="text"
-                        value={customCategory}
-                        onChange={(e) => { setCustomCategory(e.target.value); setError(""); }}
-                        onBlur={() => setTouched((t) => ({ ...t, category: true }))}
-                        placeholder="Type new category name..."
-                        className={`input ${categoryError ? "input-error" : ""}`}
-                      />
-                    </div>
-                  )}
                   {categoryError && <p className="input-hint" style={{ color: "#dc2626" }}>Please provide a category</p>}
+
+
                 </div>
 
                 {/* Details */}
@@ -231,7 +472,7 @@ export default function AskPage() {
                   <div className="flex items-center gap-2 mb-2">
                     {/* Speech to Text */}
                     <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
-                      className="w-8 h-8 rounded transition-colors flex items-center justify-center relative border"
+                      className="w-8 h-8 rounded transition-colors flex items-center justify-center relative border cursor-pointer"
                       style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent", borderColor: "#E2E8DE" }}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                         <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
@@ -243,14 +484,16 @@ export default function AskPage() {
                         </span>
                       )}
                     </button>
+                    
                     <span className="text-xs" style={{ color: "#6B7280" }}>Click to dictate</span>
                   </div>
-                  <ReactQuill 
-                    theme="snow" 
-                    value={details} 
-                    onChange={setDetails} 
-                    placeholder="Write the details of your question…"
-                    className="bg-white rounded-lg overflow-hidden" 
+                  <textarea
+                    className="input w-full p-3 resize-y min-h-[150px] bg-white rounded-lg border"
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
+                    placeholder="Write the details of your question..."
+                    rows={6}
+                    style={{ color: "#1F2937", borderColor: "#E2E8DE" }}
                   />
                 </div>
 
@@ -263,14 +506,14 @@ export default function AskPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Posting…
+                      {editId ? "Updating..." : "Posting..."}
                     </>
                   ) : (
                     <>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      Post Question
+                      {editId ? "Update Question" : "Post Question"}
                     </>
                   )}
                 </button>
@@ -295,20 +538,20 @@ export default function AskPage() {
               </ul>
             </div>
 
-            {/* Related Questions */}
-            {related.length > 0 && (
+            {/* Related Questions (Semantic Suggestions) */}
+            {relatedSuggestions.length > 0 && (
               <div className="card p-5 animate-fade-in">
-                <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Related Questions</h3>
+                <h3 className="text-sm font-semibold mb-4" style={{ color: "#1F2937" }}>Related FAQs</h3>
                 <div className="space-y-3">
-                  {related.map((faq) => (
-                    <Link key={faq._id} to={`/faq/${faq._id}`}
-                      className="block group">
-                      <p className="text-sm leading-snug group-hover:underline" style={{ color: "#5E7A5A" }}>
+                  {relatedSuggestions.map((faq) => (
+                    <Link key={faq._id} to={`/faqs/${faq._id}`} className="block group">
+                      <p className="text-sm leading-snug group-hover:underline font-medium" style={{ color: "#5E7A5A" }}>
                         {faq.question}
                       </p>
                       <div className="flex items-center gap-2 mt-1 text-xs" style={{ color: "#9CA3AF" }}>
+                        <span className="font-semibold text-amber-600">{Math.round(faq.similarity * 100)}% match</span>
+                        <span>·</span>
                         <span>{faq.category}</span>
-                        {faq.answerCount > 0 && <span>· {faq.answerCount} answers</span>}
                       </div>
                     </Link>
                   ))}

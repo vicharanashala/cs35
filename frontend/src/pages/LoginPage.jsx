@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import logo from "../assets/logo.png";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -10,8 +11,7 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState("student");
   const [isRegister, setIsRegister] = useState(true);
 
-  const [form, setForm] = useState({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
-  const [forgotStep, setForgotStep] = useState("request"); // "request" | "reset"
+  const [form, setForm] = useState({ fullName: "", username: "", email: "", password: "" });
   const [forgotForm, setForgotForm] = useState({ username: "", newPassword: "", confirmNewPassword: "" });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
@@ -20,13 +20,10 @@ export default function LoginPage() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showForgotNew, setShowForgotNew] = useState(false);
   const [showForgotConfirm, setShowForgotConfirm] = useState(false);
-  const [forgotSuccess, setForgotSuccess] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const setField = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
-  const setForgotField = (k) => (e) => setForgotForm((p) => ({ ...p, [k]: e.target.value }));
 
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
@@ -37,28 +34,20 @@ export default function LoginPage() {
         setError("Please enter your full name");
         return;
       }
-      if (!form.username.trim() || form.username.trim().length < 3) {
-        setError("Username must be at least 3 characters");
-        return;
-      }
-      if (!/^[a-zA-Z0-9_]+$/.test(form.username)) {
-        setError("Username can only contain letters, numbers, and underscores");
+      if (!form.username.trim() || !/^[a-zA-Z0-9_]{3,20}$/.test(form.username.trim())) {
+        setError("Username must be 3-20 characters long and contain only letters, numbers, or underscores");
         return;
       }
       if (form.password.length < 6) {
         setError("Password must be at least 6 characters");
         return;
       }
-      if (form.password !== form.confirmPassword) {
-        setError("Passwords do not match");
-        return;
-      }
 
       setIsLoading(true);
       try {
         const res = await authApi.signup({
-          fullName: form.fullName,
-          username: form.username,
+          fullName: form.fullName.trim(),
+          username: form.username.trim(),
           password: form.password,
         });
         if (!res.success) {
@@ -66,7 +55,7 @@ export default function LoginPage() {
           setIsLoading(false);
           return;
         }
-        login({ username: form.username, name: form.fullName, role: "student", token: res.token });
+        login({ username: form.username.trim(), name: form.fullName.trim(), role: "student", token: res.token });
         navigate("/");
       } catch (err) {
         console.error("Signup error:", err);
@@ -74,8 +63,8 @@ export default function LoginPage() {
       }
       setIsLoading(false);
     } else {
-      if (!form.username.trim()) {
-        setError("Please enter your username");
+      if (!form.username.trim() || !/^[a-zA-Z0-9_]{3,20}$/.test(form.username.trim())) {
+        setError("Please enter a valid username");
         return;
       }
       if (!form.password) {
@@ -85,13 +74,13 @@ export default function LoginPage() {
 
       setIsLoading(true);
       try {
-        const res = await authApi.login({ username: form.username, password: form.password, role: "student" });
+        const res = await authApi.login({ username: form.username.trim(), password: form.password, role: "student" });
         if (!res.success) {
           setError(res.message);
           setIsLoading(false);
           return;
         }
-        login({ username: form.username, name: res.name || "Student", role: "student", token: res.token });
+        login({ username: form.username.trim(), name: res.name || "Student", role: "student", token: res.token });
         navigate("/");
       } catch (err) {
         console.error("Login error:", err);
@@ -126,38 +115,25 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
-  const handleRequestOtp = async (e) => {
-    e.preventDefault();
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
     setError("");
-    if (!forgotForm.username.trim()) {
-      setError("Please enter your username");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await authApi.requestPasswordReset(forgotForm.username);
-      if (!res.success) {
-        setError(res.message);
-        setIsLoading(false);
-        return;
-      }
-      setOtpSent(true);
-      setForgotStep("reset");
-      setIsLoading(false);
-    } catch (err) {
-      console.error("Request OTP error:", err);
-      setError("Failed to send OTP. Please try again.");
-      setIsLoading(false);
-    }
+    setForm({ fullName: "", username: "", email: "", password: "" });
+    setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" });
+    setShowForgotPassword(false);
+    setShowAdminPassword(false);
+    setShowRegisterPassword(false);
+    setShowRegisterConfirm(false);
+    setShowLoginPassword(false);
+    setIsRegister(true);
   };
 
-  const handleResetPassword = async (e) => {
+  const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!forgotForm.otp.trim()) {
-      setError("Please enter the OTP code");
+    if (!forgotForm.username.trim() || !/^[a-zA-Z0-9_]{3,20}$/.test(forgotForm.username.trim())) {
+      setError("Username must be 3-20 characters long and contain only letters, numbers, or underscores");
       return;
     }
     if (!forgotForm.newPassword || forgotForm.newPassword.length < 6) {
@@ -171,37 +147,29 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      const res = await authApi.resetPasswordWithOtp({
+      const res = await authApi.forgotPassword({
         username: forgotForm.username,
-        otp: forgotForm.otp,
         newPassword: forgotForm.newPassword,
+        confirmNewPassword: forgotForm.confirmNewPassword,
       });
       if (!res.success) {
         setError(res.message);
         setIsLoading(false);
         return;
       }
-      setForgotSuccess(true);
-      setForgotForm({ username: "", otp: "", newPassword: "", confirmNewPassword: "" });
-      setIsLoading(false);
+      setError("");
+      setShowForgotPassword(false);
+      setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" });
+      setIsRegister(false);
+      setError("");
     } catch (err) {
       console.error("Password reset error:", err);
       setError("Password reset failed. Please try again.");
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
-  const handleTabSwitch = (tab) => {
-    setActiveTab(tab);
-    setError("");
-    setForm({ fullName: "", username: "", email: "", password: "", confirmPassword: "" });
-    setForgotForm({ username: "", otp: "", newPassword: "", confirmNewPassword: "" });
-    setShowForgotPassword(false);
-    setForgotSuccess(false);
-    setForgotStep("request");
-    setOtpSent(false);
-    setIsRegister(true);
-  };
+  const setForgotField = (k) => (e) => setForgotForm((p) => ({ ...p, [k]: e.target.value }));
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative" style={{ background: "#F5F7F2" }}>
@@ -212,7 +180,7 @@ export default function LoginPage() {
 
       <div className="card w-full max-w-md p-8 shadow-2xl relative z-10 border-t-4" style={{ borderTopColor: "#5E7A5A" }}>
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="AskSam Logo" className="w-20 h-20 mx-auto mb-4 object-contain rounded-full shadow-sm" />
+          <img src={logo} alt="AskSam Logo" className="w-20 h-20 mx-auto mb-4 object-contain rounded-full shadow-sm" />
           <h1 className="text-2xl font-bold" style={{ color: "#1F2937" }}>Welcome to AskSam</h1>
           <p className="text-sm mt-1.5" style={{ color: "#6B7280" }}>Your Samagama knowledge hub.</p>
         </div>
@@ -265,8 +233,70 @@ export default function LoginPage() {
             <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
               {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Logging in...</> : "Login to Dashboard"}
             </button>
-          </form>
-        ) : (
+</form>
+              ) : (
+                showForgotPassword ? (
+                  <form onSubmit={handleForgotPassword} className="space-y-4 animate-fade-in">
+                    <div className="text-center mb-4">
+                      <h3 className="text-base font-bold" style={{ color: "#1F2937" }}>Reset Password</h3>
+                      <p className="text-xs mt-1" style={{ color: "#6B7280" }}>Enter your username and new password</p>
+                    </div>
+                    <div>
+                      <label className="label">Username</label>
+                      <input type="text" className="input py-2.5" value={forgotForm.username} onChange={setForgotField("username")}
+                        placeholder="your username" autoFocus />
+                    </div>
+                    <div>
+                      <label className="label">New Password</label>
+                      <div className="relative">
+                        <input type={showForgotNew ? "text" : "password"} className="input py-2.5 pr-10" value={forgotForm.newPassword} onChange={setForgotField("newPassword")}
+                          placeholder="Min. 6 characters" />
+                        <button type="button" aria-label="Toggle password" onClick={() => setShowForgotNew(s => !s)} onMouseDown={(e) => e.preventDefault()}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
+                          {showForgotNew ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Confirm New Password</label>
+                      <div className="relative">
+                        <input type={showForgotConfirm ? "text" : "password"} className="input py-2.5 pr-10" value={forgotForm.confirmNewPassword} onChange={setForgotField("confirmNewPassword")}
+                          placeholder="Repeat new password" />
+                        <button type="button" aria-label="Toggle confirm password" onClick={() => setShowForgotConfirm(s => !s)} onMouseDown={(e) => e.preventDefault()}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
+                          {showForgotConfirm ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
+                      {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Resetting...</> : "Reset Password"}
+                    </button>
+                    <div className="text-center">
+                      <button type="button" onClick={() => { setShowForgotPassword(false); setForgotForm({ username: "", newPassword: "", confirmNewPassword: "" }); setError(""); }}
+                        className="text-sm hover:underline" style={{ color: "#5E7A5A" }}>
+                        Back to Login
+                      </button>
+                    </div>
+                  </form>
+                ) : (
           <div className="animate-fade-in">
             {isRegister ? (
               <form onSubmit={handleStudentSubmit} className="space-y-4">
@@ -279,7 +309,6 @@ export default function LoginPage() {
                   <label className="label">Username</label>
                   <input type="text" className="input py-2.5" value={form.username} onChange={setField("username")}
                     placeholder="e.g. arjun_sharma" />
-                  <p className="input-hint">Letters, numbers, and underscores only</p>
                 </div>
                 <div>
                   <label className="label">Password</label>
@@ -301,136 +330,12 @@ export default function LoginPage() {
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label className="label">Confirm Password</label>
-                  <div className="relative">
-                    <input type={showRegisterConfirm ? "text" : "password"} className="input py-2.5 pr-10" value={form.confirmPassword} onChange={setField("confirmPassword")}
-                      placeholder="Repeat password" />
-                    <button type="button" aria-label="Toggle confirm password" onClick={() => setShowRegisterConfirm(s => !s)} onMouseDown={(e) => e.preventDefault()}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
-                      {showRegisterConfirm ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
                 <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
                   {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creating account...</> : "Create Account"}
                 </button>
               </form>
             ) : (
               <div>
-                {showForgotPassword ? (
-                  forgotSuccess ? (
-                    <div className="text-center py-4 animate-fade-in">
-                      <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: "#f0f4ef" }}>
-                        <svg className="w-7 h-7" style={{ color: "#5E7A5A" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <h3 className="text-lg font-bold mb-2" style={{ color: "#1F2937" }}>Password Reset!</h3>
-                      <p className="text-sm mb-4" style={{ color: "#6B7280" }}>Your password has been changed successfully.</p>
-                      <button onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setForgotForm({ username: "", otp: "", newPassword: "", confirmNewPassword: "" }); setForgotStep("request"); setOtpSent(false); setError(""); }}
-                        className="btn-primary w-full py-2.5 justify-center">
-                        Back to Login
-                      </button>
-                    </div>
-                  ) : forgotStep === "request" ? (
-                    <form onSubmit={handleRequestOtp} className="space-y-4 animate-fade-in">
-                      <div className="text-center mb-4">
-                        <h3 className="text-base font-bold" style={{ color: "#1F2937" }}>Reset Password</h3>
-                        <p className="text-xs mt-1" style={{ color: "#6B7280" }}>Enter your username and we'll send you an OTP</p>
-                      </div>
-                      <div>
-                        <label className="label">Username</label>
-                        <input type="text" className="input py-2.5" value={forgotForm.username} onChange={setForgotField("username")}
-                          placeholder="your username" autoFocus />
-                      </div>
-                      <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
-                        {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending OTP...</> : "Send OTP"}
-                      </button>
-                      <div className="text-center">
-                        <button type="button" onClick={() => { setShowForgotPassword(false); setForgotStep("request"); setForgotForm({ username: "", otp: "", newPassword: "", confirmNewPassword: "" }); setError(""); }}
-                          className="text-sm hover:underline" style={{ color: "#5E7A5A" }}>
-                          Back to Login
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <form onSubmit={handleResetPassword} className="space-y-4 animate-fade-in">
-                      <div className="text-center mb-4">
-                        <h3 className="text-base font-bold" style={{ color: "#1F2937" }}>Enter OTP</h3>
-                        <p className="text-xs mt-1" style={{ color: "#6B7280" }}>Check your email for the 6-digit code</p>
-                      </div>
-                      <div>
-                        <label className="label">Username</label>
-                        <input type="text" className="input py-2.5" value={forgotForm.username} onChange={setForgotField("username")}
-                          placeholder="your username" />
-                      </div>
-                      <div>
-                        <label className="label">OTP Code</label>
-                        <input type="text" className="input py-2.5 tracking-widest font-mono" value={forgotForm.otp} onChange={(e) => setForgotForm((p) => ({ ...p, otp: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
-                          placeholder="000000" maxLength={6} autoFocus />
-                      </div>
-                      <div>
-                        <label className="label">New Password</label>
-                        <div className="relative">
-                          <input type={showForgotNew ? "text" : "password"} className="input py-2.5 pr-10" value={forgotForm.newPassword} onChange={setForgotField("newPassword")}
-                            placeholder="Min. 6 characters" />
-                          <button type="button" aria-label="Toggle password" onClick={() => setShowForgotNew(s => !s)} onMouseDown={(e) => e.preventDefault()}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
-                            {showForgotNew ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
-                              </svg>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="label">Confirm New Password</label>
-                        <div className="relative">
-                          <input type={showForgotConfirm ? "text" : "password"} className="input py-2.5 pr-10" value={forgotForm.confirmNewPassword} onChange={setForgotField("confirmNewPassword")}
-                            placeholder="Repeat new password" />
-                          <button type="button" aria-label="Toggle confirm password" onClick={() => setShowForgotConfirm(s => !s)} onMouseDown={(e) => e.preventDefault()}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 bg-transparent border-0 p-0 flex items-center justify-center cursor-pointer">
-                            {showForgotConfirm ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.963 9.963 0 012.175-5.625M3 3l18 18" />
-                              </svg>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                      <button type="submit" disabled={isLoading} className="btn-primary w-full py-2.5 justify-center">
-                        {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Resetting...</> : "Reset Password"}
-                      </button>
-                      <div className="text-center">
-                        <button type="button" onClick={() => { setForgotStep("request"); setForgotForm((p) => ({ ...p, otp: "", newPassword: "", confirmNewPassword: "" })); setError(""); }}
-                          className="text-sm hover:underline" style={{ color: "#5E7A5A" }}>
-                          Request new OTP
-                        </button>
-                      </div>
-                    </form>
-                  )
-                ) : (
                   <form onSubmit={handleStudentSubmit} className="space-y-4">
                     <div>
                       <label className="label">Username</label>
@@ -461,13 +366,12 @@ export default function LoginPage() {
                       {isLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Logging in...</> : "Login"}
                     </button>
                     <div className="text-center">
-                      <button type="button" onClick={() => setShowForgotPassword(true)}
+                      <button type="button" onClick={() => { setShowForgotPassword(true); setIsRegister(false); setError(""); }}
                         className="text-sm hover:underline" style={{ color: "#5E7A5A" }}>
                         Forgot Password?
                       </button>
                     </div>
                   </form>
-                )}
               </div>
             )}
 
@@ -481,7 +385,7 @@ export default function LoginPage() {
               </p>
             </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

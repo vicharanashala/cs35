@@ -1,18 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import mongoose from 'mongoose';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT', 3000);
-
-  // Global prefix so frontend /api/* proxy routes work correctly
   app.setGlobalPrefix('api');
-
-  // Allow cross-origin requests (needed if frontend ever calls backend directly)
   app.enableCors();
-
+  
+  const configService = app.get(ConfigService);
+  
+  const mongoUri = configService.get<string>('MONGODB_URI');
+  if (mongoUri) {
+    try {
+      await mongoose.connect(mongoUri);
+      console.log('Successfully connected to MongoDB.');
+    } catch (err) {
+      console.error('MongoDB connection error:', err);
+    }
+  }
+  
+  const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
 }
-void bootstrap();
+bootstrap();

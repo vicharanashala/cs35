@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { questionApi } from "../services/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { questionApi, bookmarkApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
 function timeAgo(d) {
@@ -58,7 +58,7 @@ function QuestionRow({ question, onDelete }) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
-            to={`/question/${question._id}`}
+            to={`/questions/${question._id}`}
             className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
             style={{ background: "#f0f4ef", color: "#5E7A5A" }}
           >
@@ -99,28 +99,42 @@ const TABS = [
   { key: "answered", label: "Answered" },
   { key: "verified", label: "Verified" },
   { key: "closed", label: "Closed" },
+  { key: "bookmarked", label: "Bookmarked" },
 ];
 
 export default function MyQuestionsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("open");
   const [search, setSearch] = useState("");
 
-  const { data: allQuestions = [], isLoading } = useQuery({
-    queryKey: ["my-questions", user?.name],
-    queryFn: () => questionApi.list({ contributor: user?.name }),
-    enabled: !!user?.name,
+  const { data: allQuestions = [], isLoading: isQuestionsLoading } = useQuery({
+    queryKey: ["my-questions", user?._id],
+    queryFn: () => questionApi.list({ contributorId: user?._id }),
+    enabled: !!user?._id,
     staleTime: 1000 * 30,
   });
 
+  const { data: bookmarkedQuestions = [], isLoading: isBookmarksLoading } = useQuery({
+    queryKey: ["bookmarked-questions", user?._id],
+    queryFn: () => bookmarkApi.list(user?._id),
+    enabled: !!user?._id,
+    staleTime: 1000 * 30,
+  });
+
+  const isLoading = isQuestionsLoading || isBookmarksLoading;
+
   const filtered = useMemo(() => {
-    let list = [...allQuestions];
+    let list = activeTab === "bookmarked" ? [...bookmarkedQuestions] : [...allQuestions];
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((qs) =>
         qs.question?.toLowerCase().includes(q) ||
         qs.category?.toLowerCase().includes(q)
       );
+    }
+    if (activeTab === "bookmarked") {
+      return list;
     }
     if (activeTab === "verified") {
       return list.filter((qs) => qs.status === "answered" && qs.answers?.some((a) => a.isVerified));
@@ -129,10 +143,10 @@ export default function MyQuestionsPage() {
       return list.filter((qs) => qs.status === "closed");
     }
     return list.filter((qs) => qs.status === activeTab);
-  }, [allQuestions, activeTab, search]);
+  }, [allQuestions, bookmarkedQuestions, activeTab, search]);
 
   const tabCounts = useMemo(() => {
-    const counts = { open: 0, answered: 0, verified: 0, closed: 0 };
+    const counts = { open: 0, answered: 0, verified: 0, closed: 0, bookmarked: bookmarkedQuestions.length };
     allQuestions.forEach((qs) => {
       if (qs.status === "closed") counts.closed++;
       else if (qs.status === "answered" && qs.answers?.some((a) => a.isVerified)) counts.verified++;
@@ -140,12 +154,13 @@ export default function MyQuestionsPage() {
       else if (qs.status === "open" || qs.status === "reopened") counts.open++;
     });
     return counts;
-  }, [allQuestions]);
+  }, [allQuestions, bookmarkedQuestions]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this question? This cannot be undone.")) return;
     try {
       await questionApi.delete(id);
+      queryClient.invalidateQueries({ queryKey: ["my-questions"] });
     } catch (err) {
       console.error("Failed to delete question:", err);
     }
