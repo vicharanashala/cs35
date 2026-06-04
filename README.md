@@ -29,20 +29,7 @@ The architecture is built for high availability, utilizing modern server-state m
 
 ## 🏗️ System Architecture
 
-### 🔄 Platform Workflow
 
-```mermaid
-flowchart TD
-    A([User Login / Signup]) --> B{Search Existing?}
-    B -- Found --> C([View FAQ])
-    B -- Not Found --> D([Ask New Question])
-    D --> E[(Moderation Queue)]
-    E --> F[Community Submits Answers]
-    F --> G{Mark Best Answer?}
-    G -- Verified --> H[Promoted to Canonical FAQ ✅]
-    G -- Incorrect --> I[Flagged for Re-evaluation 🔄]
-    I --> E
-```
 
 ### ⚙️ Technical Topology
 
