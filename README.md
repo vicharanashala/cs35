@@ -1,8 +1,9 @@
 
-# AskSam — Samagama Collaborative FAQ Platform
+
 
 <div align="center">
-
+# AskSam — Samagama Collaborative FAQ Platform
+    
 ![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-flat-square&logo=nestjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-flat-square&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-flat-square&logo=typescript&logoColor=white)
@@ -10,10 +11,10 @@
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-flat-square&logo=socket.io&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-flat-square&logo=tailwindcss&logoColor=white)
 
-**A highly scalable, collaborative FAQ and Q&A platform built for Samagama students at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).**
+
 
 </div>
-
+**A highly scalable, collaborative FAQ and Q&A platform built for Samagama students at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).**
 ---
 
 ## 📌 Executive Summary
