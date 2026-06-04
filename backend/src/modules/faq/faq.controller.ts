@@ -216,6 +216,7 @@ export class FaqController {
 
   // ── Categories ────────────────────────────────────────────
 
+  @Public()
   @Get('categories')
   listCategories() {
     return this.faqService.getCategories();
@@ -234,6 +235,11 @@ export class FaqController {
   @Patch('categories/confirm')
   confirmCategory(@Body() body: { name: string }) {
     return this.faqService.confirmCategory(body.name);
+  }
+
+  @Patch('categories/rename')
+  renameCategory(@Body() body: { oldName: string; newName: string }) {
+    return this.faqService.renameCategory(body.oldName, body.newName);
   }
 
   @Patch('users/:userId/bookmark/:questionId')
@@ -344,7 +350,7 @@ export class FaqController {
 
   @Delete('users/:id')
   deleteUser(@Param('id') id: string) {
-    return { deleted: true, _id: id };
+    return this.faqService.deleteUser(id);
   }
 
 

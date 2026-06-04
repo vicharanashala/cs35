@@ -412,8 +412,25 @@ export default function HomePage() {
                 </div>
               ))
             ) : categories.length > 0 ? (
-              categories.map((cat) => {
-                const catName = typeof cat === 'string' ? cat : cat.name;
+              (() => {
+                const uniqueCats = new Map();
+                categories.forEach(cat => {
+                   const catName = typeof cat === 'string' ? cat : cat.name;
+                   if (catName.startsWith("Others - ")) {
+                      if (!uniqueCats.has("Others")) {
+                          uniqueCats.set("Others", "Others");
+                      }
+                   } else {
+                      uniqueCats.set(catName, catName);
+                   }
+                });
+                const catsArr = Array.from(uniqueCats.values());
+                return catsArr.sort((a, b) => {
+                   if (a === "Others") return 1;
+                   if (b === "Others") return -1;
+                   return 0; // maintain original relative order otherwise
+                });
+              })().map((catName) => {
                 return (
                   <Link key={catName} to={`/faqs?category=${encodeURIComponent(catName)}`} className="card-hover p-2 text-center flex flex-col items-center justify-center aspect-square">
                     <div className="flex justify-center items-center mb-1 text-brand text-base">

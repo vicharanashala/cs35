@@ -41,6 +41,102 @@ function SuccessModal({ show, question, onClose }) {
   );
 }
 
+function CustomCategorySelect({ categories, value, onChange, hasError }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [hoveredOther, setHoveredOther] = useState(false);
+  const dropRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setHoveredOther(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const normalCats = [];
+  const otherCats = [];
+  categories.forEach(c => {
+    const name = typeof c === 'string' ? c : c.name;
+    if (name.startsWith("Others - ")) otherCats.push(name);
+    else normalCats.push(name);
+  });
+
+  return (
+    <div className="relative" ref={dropRef}>
+      <div 
+        className={`input cursor-pointer flex justify-between items-center bg-white ${hasError ? "border-red-500" : ""}`}
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ padding: "0.5rem 0.75rem", minHeight: "42px" }}
+      >
+        <span className={value ? "text-slate-800" : "text-slate-500"}>{value || "Select a category"}</span>
+        <svg className="w-4 h-4 text-slate-400 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-[#E2E8DE] shadow-xl rounded-xl z-50 py-1 flex flex-col max-h-72 overflow-y-auto">
+          {normalCats.map(cat => (
+            <div 
+              key={cat}
+              className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${value === cat ? "bg-[#f0f4ef] text-[#5E7A5A] font-semibold" : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"}`}
+              onClick={() => { onChange(cat); setIsOpen(false); }}
+            >
+              {cat}
+            </div>
+          ))}
+          
+          {otherCats.length > 0 && (
+            <div 
+              className="relative group"
+              onMouseEnter={() => setHoveredOther(true)}
+              onMouseLeave={() => setHoveredOther(false)}
+            >
+              <div 
+                className="px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer flex justify-between items-center"
+                onClick={(e) => { e.stopPropagation(); setHoveredOther(!hoveredOther); }}
+              >
+                <span>Others</span>
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </div>
+              
+              {hoveredOther && (
+                <div className="absolute left-[98%] top-0 ml-1 w-64 bg-white border border-[#E2E8DE] shadow-xl rounded-xl z-50 py-1 max-h-64 overflow-y-auto hidden sm:block">
+                  {otherCats.map(cat => (
+                    <div 
+                      key={cat}
+                      className={`px-4 py-2.5 text-sm cursor-pointer border-l-2 ${value === cat ? "border-[#5E7A5A] bg-[#f0f4ef] text-[#5E7A5A] font-semibold" : "border-transparent text-slate-700 hover:border-[#5E7A5A] hover:bg-slate-50"}`}
+                      onClick={() => { onChange(cat); setIsOpen(false); }}
+                    >
+                      {cat.replace("Others - ", "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Fallback for mobile */}
+              {hoveredOther && (
+                <div className="sm:hidden bg-slate-50 pl-4 py-1 border-y border-slate-100">
+                  {otherCats.map(cat => (
+                    <div 
+                      key={cat}
+                      className={`px-4 py-2.5 text-sm cursor-pointer ${value === cat ? "text-[#5E7A5A] font-semibold" : "text-slate-700 hover:bg-white"}`}
+                      onClick={() => { onChange(cat); setIsOpen(false); }}
+                    >
+                      {cat.replace("Others - ", "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AskPage() {
   const navigate      = useNavigate();
   const location = useLocation();
@@ -129,18 +225,6 @@ export default function AskPage() {
     setIsListening(true);
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target.result;
-      const imageMarkdown = `\n![Image](${base64})\n`;
-      setDetails((prev) => prev + imageMarkdown);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
 
   const addTag = (value) => {
     const trimmed = value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "");
@@ -169,11 +253,14 @@ export default function AskPage() {
   const isValid       = title.trim().length >= 4 && !!finalCategory;
 
 
-  const { data: categories = [] } = useQuery({
+  const { data: categoriesData = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: () => faqApi.listCategories(),
     staleTime: 1000 * 60 * 5,
   });
+  const categories = useMemo(() => {
+    return Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
+  }, [categoriesData]);
 
   // Semantic duplicate detection using React Query
   const { data: similarFaqs = [], isLoading: isCheckingSimilar } = useQuery({
@@ -367,31 +454,13 @@ export default function AskPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="label">Category <span style={{ color: "#dc2626" }}>*</span></label>
-                    <select
+                    <CustomCategorySelect 
+                      categories={categories}
                       value={category}
-                      onChange={(e) => { setCategory(e.target.value); setTouched((t) => ({ ...t, category: true })); }}
-                      className={`input ${categoryError ? "input-error" : ""}`}
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map((c) => {
-                        const catName = typeof c === 'string' ? c : c.name;
-                        return <option key={catName}>{catName}</option>;
-                      })}
-                      <option value="new_category">+ Add New Category</option>
-                    </select>
+                      onChange={(val) => { setCategory(val); setTouched((t) => ({ ...t, category: true })); }}
+                      hasError={categoryError}
+                    />
                   </div>
-                  {category === "new_category" && (
-                    <div className="animate-fade-in">
-                      <input
-                        type="text"
-                        value={customCategory}
-                        onChange={(e) => { setCustomCategory(e.target.value); setError(""); }}
-                        onBlur={() => setTouched((t) => ({ ...t, category: true }))}
-                        placeholder="Type new category name..."
-                        className={`input ${categoryError ? "input-error" : ""}`}
-                      />
-                    </div>
-                  )}
                   {categoryError && <p className="input-hint" style={{ color: "#dc2626" }}>Please provide a category</p>}
 
 

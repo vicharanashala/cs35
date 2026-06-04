@@ -602,6 +602,15 @@ export class LocalDataService {
     return inMemoryUsers.map(({ password: _pw, ...u }) => u as SafeUser);
   }
 
+  deleteUser(userId: string): { deleted: boolean } | null {
+    const idx = inMemoryUsers.findIndex(u => u._id === userId);
+    if (idx !== -1) {
+      inMemoryUsers.splice(idx, 1);
+      return { deleted: true };
+    }
+    return null;
+  }
+
   // ─── User Profile / Stats ───────────────────────────────────
 
   getUserProfile(): SafeUser {

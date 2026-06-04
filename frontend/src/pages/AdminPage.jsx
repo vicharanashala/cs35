@@ -70,101 +70,101 @@ function Toast({ message, type = "success", onClose }) {
 
 function CategoryConfirmModal({ pendingCategory, existingCategories, onConfirm, onCancel }) {
   const [selected, setSelected] = useState("");
-  const [customName, setCustomName] = useState("");
-  const [mode, setMode] = useState("select"); // "select" | "create"
+  const [customName, setCustomName] = useState(pendingCategory || "");
+  const [showCustom, setShowCustom] = useState(false);
 
-  // Auto-fill with the student's pending category suggestion
+  // Set default selection to first category
   useEffect(() => {
-    if (pendingCategory) {
-      setCustomName(pendingCategory);
+    if (existingCategories && existingCategories.length > 0) {
+      const first = existingCategories[0];
+      setSelected(typeof first === "string" ? first : first.name);
     }
-  }, [pendingCategory]);
+  }, [existingCategories]);
 
   const handleConfirm = () => {
-    if (mode === "create") {
+    if (showCustom) {
       onConfirm(customName.trim());
     } else {
       onConfirm(selected);
     }
   };
 
-  const displayName = mode === "create" ? customName : selected;
+  const isNewCategory = showCustom && !existingCategories.some(c => {
+    const name = typeof c === "string" ? c : c.name;
+    return name.toLowerCase() === customName.trim().toLowerCase();
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
-      <div className="card p-6 max-w-md w-full mx-4 animate-scale-in">
+      <div className="card p-6 max-w-md w-full mx-4 animate-scale-in bg-white rounded-2xl border border-slate-100 shadow-2xl">
         <div className="flex items-center gap-3 mb-4">
           <span className="text-2xl">🏷️</span>
           <div>
-            <h3 className="font-bold text-lg" style={{ color: "#1F2937" }}>New Category Detected</h3>
-            <p className="text-sm" style={{ color: "#6B7280" }}>Student suggested a category not in the list. Confirm or choose one.</p>
+            <h3 className="font-extrabold text-base text-slate-800">Confirm Category</h3>
+            <p className="text-xs text-slate-400 font-semibold">Assign verified category for this question:</p>
           </div>
         </div>
 
         {pendingCategory && (
           <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
-            <p className="text-xs font-bold text-amber-700 mb-1">Student suggested:</p>
+            <p className="text-xxs font-bold text-amber-700 uppercase tracking-wider mb-1">Student suggested:</p>
             <p className="text-sm font-semibold text-amber-800">"{pendingCategory}"</p>
           </div>
         )}
 
-        {/* Mode toggle */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setMode("select")}
-            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-all cursor-pointer ${mode === "select" ? "bg-[#5E7A5A] text-white border-[#5E7A5A]" : "bg-white text-slate-600 border-[#E2E8DE] hover:border-[#bdd4ba]"}`}
+        <div className="mb-4 space-y-3">
+          <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400">Select Category</label>
+          <select
+            value={showCustom ? "__custom__" : selected}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "__custom__") {
+                setShowCustom(true);
+              } else {
+                setShowCustom(false);
+                setSelected(val);
+              }
+            }}
+            className="input w-full rounded-xl py-2.5 px-3 text-sm border border-[#E2E8DE] focus:outline-none focus:border-[#5E7A5A] transition-all bg-white font-medium cursor-pointer shadow-xs text-slate-800"
           >
-            Choose existing
-          </button>
-          <button
-            onClick={() => setMode("create")}
-            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-all cursor-pointer ${mode === "create" ? "bg-[#5E7A5A] text-white border-[#5E7A5A]" : "bg-white text-slate-600 border-[#E2E8DE] hover:border-[#bdd4ba]"}`}
-          >
-            + Create new
-          </button>
-        </div>
-
-        {mode === "select" ? (
-          <div className="mb-4 max-h-48 overflow-y-auto space-y-1.5">
             {existingCategories.map(cat => {
               const name = typeof cat === "string" ? cat : cat.name;
-              return (
-                <button
-                  key={name}
-                  onClick={() => setSelected(name)}
-                  className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all cursor-pointer ${
-                    selected === name
-                      ? "bg-[#f0f4ef] border-[#5E7A5A] text-[#3a4f38]"
-                      : "bg-white border-[#E2E8DE] text-slate-600 hover:border-[#bdd4ba]"
-                  }`}
-                >
-                  <span className="mr-2">{typeof cat === "object" && cat.icon ? cat.icon : "📁"}</span>
-                  {name}
-                </button>
-              );
+              return <option key={name} value={name}>{name}</option>;
             })}
-          </div>
-        ) : (
-          <div className="mb-4">
-            <input
-              type="text"
-              value={customName}
-              onChange={e => setCustomName(e.target.value)}
-              placeholder="New category name..."
-              className="input w-full"
-            />
-          </div>
-        )}
+            <option value="__custom__" className="text-[#5E7A5A] font-semibold">+ Add Custom Category...</option>
+          </select>
 
-        <div className="flex gap-3 justify-end mt-2">
-          <button onClick={onCancel} className="btn-secondary px-4 py-2">Skip (keep General)</button>
+          {showCustom && (
+            <div className="space-y-2 animate-fade-in">
+              <input
+                type="text"
+                value={customName}
+                onChange={e => setCustomName(e.target.value)}
+                placeholder="Type custom category name..."
+                className={`input w-full rounded-xl py-2 px-3 text-sm border focus:outline-none focus:border-[#5E7A5A] transition-all bg-white font-medium ${isNewCategory ? "border-amber-300 ring-2 ring-amber-300/20" : "border-[#E2E8DE]"}`}
+              />
+              {isNewCategory && customName.trim().length > 0 && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-relaxed flex items-start gap-2">
+                  <span className="text-sm">⚠️</span>
+                  <div>
+                    <strong className="font-bold">New Category Detected!</strong>
+                    <p className="mt-0.5 text-amber-700/90 font-medium">"{customName}" is a new category. It will be added to the system and visible on the home page.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 justify-end mt-6">
+          <button onClick={onCancel} className="btn-secondary px-4 py-2 text-xs rounded-xl font-bold">Skip</button>
           <button
             onClick={handleConfirm}
-            disabled={!displayName.trim()}
-            className="btn-primary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={showCustom ? !customName.trim() : !selected}
+            className="btn-primary px-4 py-2 text-xs rounded-xl font-bold disabled:opacity-50 text-white"
             style={{ background: "#5E7A5A" }}
           >
-            {mode === "create" ? "Create & Confirm" : "Confirm Category"}
+            Confirm Category
           </button>
         </div>
       </div>
@@ -174,30 +174,126 @@ function CategoryConfirmModal({ pendingCategory, existingCategories, onConfirm, 
 
 // ── Tab: Dashboard ────────────────────────────────────────────
 
-function DashboardTab() {
+function DashboardTab({ setActiveTab, setPreselectedQuestionId }) {
   const { data: stats } = useQuery({ queryKey: ["admin-stats"], queryFn: adminApi.getStats, refetchInterval: 30000 });
+  const { data: questions = [], isLoading } = useQuery({
+    queryKey: ["admin-questions-queue"],
+    queryFn: () => questionApi.list(),
+    refetchInterval: 15000,
+  });
+
+  const pendingQuestions = useMemo(() => {
+    return questions.filter(q => 
+      (q.status === "open" || q.status === "reopened") &&
+      q.answers &&
+      q.answers.length > 0 &&
+      !q.answers.some(a => a.isVerified)
+    );
+  }, [questions]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 animate-fade-in">
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: "Open Questions", value: stats?.openQuestions ?? "—", icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.007 2.917-.546.086-.99.622-1.16 1.21 M12 17v.01", bg: "#FFFBEB", color: "#D97706" },
-          { label: "Verified FAQs", value: stats?.totalFaqs ?? "—", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253", bg: "#FAF5FF", color: "#9333EA" },
-          { label: "Total Users", value: stats?.totalUsers ?? "—", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", bg: "#F0F9FF", color: "#0284C7" },
+          { 
+            label: "Open Questions", 
+            value: stats?.openQuestions ?? "—", 
+            icon: "M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z", 
+            bg: "#FFFBEB", 
+            color: "#D97706" 
+          },
+          { 
+            label: "Verified FAQs", 
+            value: stats?.totalFaqs ?? "—", 
+            icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", 
+            bg: "#FAF5FF", 
+            color: "#9333EA" 
+          },
+          { 
+            label: "Total Users", 
+            value: stats?.totalUsers ?? "—", 
+            icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z", 
+            bg: "#F0F9FF", 
+            color: "#0284C7" 
+          },
         ].map(({ label, value, icon, bg, color }) => (
-          <div key={label} className="card p-5 flex items-center gap-4 border border-[#E2E8DE]/80 hover:shadow-md transition-all">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg, color: color }}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div key={label} className="card p-4 flex items-center gap-3.5 border border-[#E2E8DE]/80 hover:shadow-xs transition-all bg-white rounded-xl">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: bg, color: color }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
               </svg>
             </div>
             <div>
-              <p className="text-2xl font-bold" style={{ color: "#1F2937" }}>{value}</p>
-              <p className="text-sm font-medium" style={{ color: "#6B7280" }}>{label}</p>
+              <p className="text-xl font-extrabold" style={{ color: "#1F2937" }}>{value}</p>
+              <p className="text-xs font-semibold" style={{ color: "#6B7280" }}>{label}</p>
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Pending Verification Queue */}
+      <div className="card p-5 bg-white border border-[#E2E8DE]/80 shadow-sm rounded-xl flex flex-col gap-3">
+        <div className="flex justify-between items-center pb-2 border-b border-[#E2E8DE]/40">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-50 border border-slate-100 text-slate-500 shrink-0">
+              <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="font-extrabold text-xs tracking-wider uppercase text-slate-700">Verification Queue</h2>
+              <p className="text-[10px] text-slate-400 font-medium">Answers waiting for administrative verification.</p>
+            </div>
+          </div>
+          {pendingQuestions.length > 0 && (
+            <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60 uppercase tracking-wider animate-pulse">
+              {pendingQuestions.length} pending
+            </span>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2 py-2">
+            {[1, 2].map(i => (
+              <div key={i} className="skeleton h-12 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : pendingQuestions.length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-400 font-semibold bg-slate-50/20 rounded-xl border border-dashed border-slate-200/80">
+            ✨ All community answers are reviewed. Good job!
+          </div>
+        ) : (
+          <div className="divide-y divide-[#E2E8DE]/30 pr-1">
+            {pendingQuestions.map(q => (
+              <div key={q._id} className="py-2.5 flex items-center justify-between gap-4 transition-all duration-200 hover:bg-slate-50/50 rounded-lg px-2 -mx-2">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <span className="font-bold text-xs text-slate-800 hover:text-[#5E7A5A] transition-colors truncate block">{q.question}</span>
+                  <div className="flex items-center gap-2 text-[10px] text-slate-400 flex-wrap font-medium">
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38]"># {q.category}</span>
+                    <span>· by <strong className="text-slate-500 font-semibold">{q.contributorName || "Student"}</strong></span>
+                    <span>· {timeAgo(q.createdAt)}</span>
+                    <span className="inline-flex items-center gap-0.5 text-amber-700 bg-amber-50/60 px-1.5 py-0.2 rounded border border-amber-100/60 font-bold text-[9px]">
+                      💬 {q.answers.length} {q.answers.length === 1 ? "answer" : "answers"}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setPreselectedQuestionId(q._id);
+                    setActiveTab("questions");
+                  }}
+                  className="btn-secondary text-[10px] px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all hover:bg-[#5E7A5A] hover:text-white hover:border-[#5E7A5A] active:scale-95 flex items-center gap-1 shrink-0 border-[#E2E8DE] text-slate-600 bg-white"
+                >
+                  Review
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -205,7 +301,7 @@ function DashboardTab() {
 
 // ── Tab: Questions ────────────────────────────────────────────
 
-function QuestionsTab() {
+function QuestionsTab({ preselectedQuestionId, setPreselectedQuestionId, setActiveTab }) {
   const qc = useQueryClient();
   const [filter, setFilter] = useState({ status: "", category: "", search: "" });
   const [selected, setSelected] = useState(null);
@@ -214,6 +310,28 @@ function QuestionsTab() {
   const [confirm, setConfirm] = useState(null);
   const [categoryConfirmModal, setCategoryConfirmModal] = useState(null); // { pendingCategory, questionId }
   const detailPanelRef = useRef(null);
+
+  // Verification Confirm Category Modal
+  const [verifyConfirm, setVerifyConfirm] = useState(null); // { answerId, pendingCategory }
+  const [verifyCategoryInput, setVerifyCategoryInput] = useState("");
+  const [isNewVerifyCategory, setIsNewVerifyCategory] = useState(false);
+  const [isWritingAnswer, setIsWritingAnswer] = useState(false);
+
+  useEffect(() => {
+    if (preselectedQuestionId) {
+      questionApi.getById(preselectedQuestionId)
+        .then(q => {
+          if (q) {
+            setSelected(q);
+            setPreselectedQuestionId(null);
+          }
+        })
+        .catch(err => {
+          console.error("Failed to fetch preselected question:", err);
+          setPreselectedQuestionId(null);
+        });
+    }
+  }, [preselectedQuestionId, setPreselectedQuestionId]);
 
   useEffect(() => {
     if (selected && window.innerWidth < 1024) {
@@ -234,6 +352,7 @@ function QuestionsTab() {
       qc.invalidateQueries({ queryKey: ["admin-questions"] });
       qc.invalidateQueries({ queryKey: ["question-detail"] });
       qc.invalidateQueries({ queryKey: ["admin-stats"] });
+      qc.invalidateQueries({ queryKey: ["category-stats"] });
     };
     socket.on("questionAdded", handleUpdate);
     socket.on("statusUpdated", handleUpdate);
@@ -245,7 +364,10 @@ function QuestionsTab() {
     };
   }, [qc]);
 
-  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: faqApi.listCategories });
+  const { data: rawCategories = [] } = useQuery({ queryKey: ["categories"], queryFn: faqApi.listCategories });
+  const categories = useMemo(() => {
+    return Array.isArray(rawCategories) ? rawCategories : (Array.isArray(rawCategories?.data) ? rawCategories.data : []);
+  }, [rawCategories]);
 
   const { data: detail } = useQuery({
     queryKey: ["question-detail", selected?._id],
@@ -285,24 +407,12 @@ function QuestionsTab() {
     setIsListening(true);
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target.result;
-      const imageMarkdown = `\n![Image](${base64})\n`;
-      setAnswerDraft((prev) => prev + imageMarkdown);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
   const updateCategoryMut = useMutation({
     mutationFn: ({ id, category }) => questionApi.update(id, { category }),
     onSuccess: (res) => {
       qc.invalidateQueries(["question-detail"]);
       qc.invalidateQueries(["admin-questions"]);
+      qc.invalidateQueries(["category-stats"]);
       setToast("Category updated successfully!");
       if (selected && selected._id === res?._id) {
         setSelected(prev => ({ ...prev, category: res.category }));
@@ -310,18 +420,120 @@ function QuestionsTab() {
     }
   });
 
-  const answerMut = useMutation({ mutationFn: ({ id, data }) => questionApi.addAnswer(id, data), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Answer submitted!"); } });
-  const verifyMut = useMutation({ mutationFn: ({ id, verified }) => answerApi.verify(id, verified), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); qc.invalidateQueries({ queryKey: ["user-profile"] }); } });
+  const answerMut = useMutation({
+    mutationFn: ({ id, data }) => questionApi.addAnswer(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries(["question-detail"]);
+      qc.invalidateQueries(["admin-questions"]);
+      qc.invalidateQueries(["category-stats"]);
+      setToast("Answer submitted!");
+    }
+  });
+
+  const verifyMut = useMutation({
+    // Pass questionId to verification mutation so that the backend can mark the question answered, update the status, and link it
+    mutationFn: ({ id, verified, questionId }) => answerApi.verify(id, verified, questionId),
+    onSuccess: () => {
+      qc.invalidateQueries(["question-detail"]);
+      qc.invalidateQueries(["admin-questions"]);
+      qc.invalidateQueries(["category-stats"]);
+      qc.invalidateQueries({ queryKey: ["user-profile"] });
+    }
+  });
+
   const closeMut = useMutation({ mutationFn: (id) => questionApi.close(id), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Question closed."); } });
   const reopenMut = useMutation({ mutationFn: (id) => questionApi.reopen(id), onSuccess: () => { qc.invalidateQueries(["question-detail"]); qc.invalidateQueries(["admin-questions"]); setToast("Question reopened."); } });
-  const deleteMut = useMutation({ mutationFn: (id) => questionApi.delete(id), onSuccess: () => { setSelected(null); qc.invalidateQueries(["admin-questions"]); setToast("Question deleted."); } });
-  const convertMut = useMutation({ mutationFn: ({ id, answerId }) => questionApi.convertToFaq(id, answerId), onSuccess: () => { qc.invalidateQueries(["admin-questions"]); qc.invalidateQueries(["admin-stats"]); setToast("Converted to FAQ!"); } });
+  const deleteMut = useMutation({ mutationFn: (id) => questionApi.delete(id), onSuccess: () => { setSelected(null); qc.invalidateQueries(["admin-questions"]); qc.invalidateQueries(["category-stats"]); setToast("Question deleted."); } });
+  const convertMut = useMutation({
+    mutationFn: ({ id, answerId, category }) => questionApi.convertToFaq(id, { answerId, category }),
+    onSuccess: () => {
+      qc.invalidateQueries(["admin-questions"]);
+      qc.invalidateQueries(["admin-stats"]);
+      qc.invalidateQueries(["category-stats"]);
+      qc.invalidateQueries(["admin-faqs"]);
+      setToast("Converted to FAQ!");
+    }
+  });
 
   const handleSubmitAnswer = () => {
     if (!answerDraft.trim() || !selected) return;
     answerMut.mutate({ id: selected._id, data: { content: answerDraft, contributorName: "Admin" } });
     setAnswerDraft("");
-  };  return (
+    setIsWritingAnswer(false);
+  };
+
+  const handleVerifyClick = (answerId, currentCategory) => {
+    const targetCat = currentCategory || (selected && selected.category) || "";
+    // Check if targetCat exists in our active categories list (case-insensitive)
+    const matched = categories && Array.isArray(categories) ? categories.find(c => {
+      const name = typeof c === "string" ? c : (c?.name || "");
+      return name && name.toLowerCase() === targetCat.toLowerCase();
+    }) : null;
+    
+    // If it exists in categories list, use its exact casing. Otherwise, default to the first category in the list or "General"
+    let defaultCatInput = "General";
+    if (matched) {
+      defaultCatInput = typeof matched === "string" ? matched : (matched?.name || "General");
+    } else if (targetCat) {
+      defaultCatInput = targetCat;
+    } else if (categories && categories.length > 0) {
+      const first = categories[0];
+      defaultCatInput = typeof first === "string" ? first : (first?.name || "General");
+    }
+
+    setVerifyConfirm({ answerId, category: defaultCatInput });
+    setVerifyCategoryInput(defaultCatInput || "General");
+    
+    const isNew = !categories || !Array.isArray(categories) || !categories.some(c => {
+      const name = typeof c === "string" ? c : (c?.name || "");
+      return name && name.toLowerCase() === (defaultCatInput || "General").toLowerCase();
+    });
+    setIsNewVerifyCategory(isNew);
+  };
+
+  const handleVerifyConfirmSubmit = async () => {
+    if (!verifyConfirm) return;
+    const catName = (verifyCategoryInput || "").trim() || "General";
+    try {
+      const isNew = !categories.some(c => {
+        const name = typeof c === "string" ? c : (c?.name || "");
+        return name && name.toLowerCase() === catName.toLowerCase();
+      });
+      
+      let finalCatName = catName;
+      if (isNew && !finalCatName.startsWith("Others - ")) {
+        finalCatName = `Others - ${finalCatName}`;
+      }
+      
+      if (isNew) {
+        await categoryApi.confirm(finalCatName);
+      }
+      
+      await verifyMut.mutateAsync({ id: verifyConfirm.answerId, verified: true, questionId: selected._id });
+      await convertMut.mutateAsync({ id: selected._id, answerId: verifyConfirm.answerId, category: finalCatName });
+      
+      setVerifyConfirm(null);
+      setSelected(null);
+      setToast(`Verified & converted to FAQ under category "${catName}"`);
+      if (typeof setActiveTab === "function") {
+        setActiveTab("faqs");
+      }
+    } catch (err) {
+      setToast("Verification process failed.");
+    }
+  };
+
+  const handleVerifyCategoryInputChange = (val) => {
+    const safeVal = val || "";
+    setVerifyCategoryInput(safeVal);
+    const isNew = !categories.some(c => {
+      const name = typeof c === "string" ? c : (c?.name || "");
+      return name && name.toLowerCase() === safeVal.trim().toLowerCase();
+    });
+    setIsNewVerifyCategory(isNew && safeVal.trim().length > 0);
+  };
+
+  return (
     <div className="h-full flex flex-col">
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       {confirm && <ConfirmModal message={confirm.message} onConfirm={() => { confirm.action(); setConfirm(null); }} onCancel={() => setConfirm(null)} />}
@@ -335,6 +547,7 @@ function QuestionsTab() {
               await questionApi.update(categoryConfirmModal.questionId, { category: confirmedName, pendingCategory: undefined });
               qc.invalidateQueries(["admin-questions"]);
               qc.invalidateQueries(["categories"]);
+              qc.invalidateQueries(["category-stats"]);
               setSelected(null);
               setToast(`Category "${confirmedName}" confirmed!`);
             } catch {
@@ -346,18 +559,135 @@ function QuestionsTab() {
         />
       )}
 
+      {verifyConfirm && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+          <div className="card p-6 max-w-md w-full mx-4 animate-scale-in border border-slate-100/80 shadow-2xl bg-white rounded-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">⚡</span>
+              <div>
+                <h3 className="font-extrabold text-base text-slate-800">Confirm Category for FAQ</h3>
+                <p className="text-xs text-slate-400 font-medium">Verify answer and add question to FAQ under category:</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xxs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Category Name</label>
+              <div className="relative">
+                <select
+                  value={categories && categories.some(c => (typeof c === "string" ? c : (c?.name || "")) === verifyCategoryInput) ? verifyCategoryInput : "__custom__"}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__custom__") {
+                      handleVerifyCategoryInputChange("");
+                    } else {
+                      handleVerifyCategoryInputChange(val);
+                    }
+                  }}
+                  className="input w-full rounded-xl py-2.5 px-3 text-sm border border-[#E2E8DE] focus:outline-none focus:border-[#5E7A5A] transition-all bg-white font-medium cursor-pointer shadow-xs text-slate-800"
+                >
+                  {categories && categories.map(c => {
+                    const name = typeof c === "string" ? c : (c?.name || "");
+                    if (!name) return null;
+                    return <option key={name} value={name} className="text-slate-800 bg-white py-1">{name}</option>;
+                  })}
+                  <option value="__custom__" className="text-[#5E7A5A] font-semibold bg-white py-1">+ Add Custom Category...</option>
+                </select>
+
+                {(!categories || !categories.some(c => (typeof c === "string" ? c : (c?.name || "")) === verifyCategoryInput) || !verifyCategoryInput) && (
+                  <input
+                    type="text"
+                    value={verifyCategoryInput}
+                    onChange={e => handleVerifyCategoryInputChange(e.target.value)}
+                    placeholder="Enter custom category name..."
+                    className={`input w-full rounded-xl py-2 px-3 text-sm border focus:outline-none focus:border-[#5E7A5A] transition-all bg-white font-medium mt-2.5 ${isNewVerifyCategory ? "border-amber-300 ring-2 ring-amber-300/20" : "border-[#E2E8DE]"}`}
+                  />
+                )}
+              </div>
+
+              {isNewVerifyCategory && (
+                <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-relaxed flex items-start gap-2 animate-fade-in">
+                  <span className="text-sm">⚠️</span>
+                  <div>
+                    <strong className="font-bold">New Category Detected!</strong>
+                    <p className="mt-0.5 text-amber-700/90 font-medium">"{verifyCategoryInput}" does not match any current active category. It will be added as a new category and listed on the home/FAQ pages.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button onClick={() => setVerifyConfirm(null)} className="btn-secondary px-4 py-2 text-xs rounded-xl font-bold cursor-pointer">Cancel</button>
+              <button
+                onClick={handleVerifyConfirmSubmit}
+                disabled={!verifyCategoryInput || !verifyCategoryInput.trim()}
+                className="btn-primary px-4 py-2 text-xs rounded-xl font-bold disabled:opacity-50 cursor-pointer text-white"
+                style={{ background: "#5E7A5A" }}
+              >
+                Verify & Add to FAQ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isWritingAnswer && selected && (
+        <div className="fixed inset-0 z-[105] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col p-6 mx-4 animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 shrink-0">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-800">Write Administrative Answer</h3>
+                <p className="text-xxs text-slate-400 mt-0.5 font-semibold">Adding an official administrative reply to this question</p>
+              </div>
+              <button onClick={() => setIsWritingAnswer(false)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-700 cursor-pointer">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="py-4 space-y-4">
+              <div className="bg-[#f0f4ef]/30 border border-[#dde8db] rounded-xl p-3.5 text-xs text-slate-700 leading-relaxed font-semibold">
+                {selected.question}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
+                  className="w-8 h-8 rounded-xl transition-colors flex items-center justify-center relative border cursor-pointer hover:bg-gray-50 border-slate-200"
+                  style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent" }}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                  </svg>
+                  {isListening && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                    </span>
+                  )}
+                </button>
+                <span className="text-xxs text-slate-400 font-bold uppercase tracking-wider">Speech-to-Text</span>
+              </div>
+
+              <div className="border border-slate-200 rounded-xl overflow-hidden focus-within:border-[#5E7A5A] transition-all bg-white">
+                <textarea
+                  className="w-full min-h-[140px] p-3 text-sm focus:outline-none border-0 text-slate-700 bg-white"
+                  placeholder="Write the official administrative answer..."
+                  value={answerDraft}
+                  onChange={(e) => setAnswerDraft(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center gap-2 pt-4 border-t border-slate-100 flex-wrap">
+              <button onClick={() => { setIsWritingAnswer(false); setSelected(selected); }} className="btn-secondary text-xs px-4 py-2 cursor-pointer rounded-xl font-bold">Back to Question</button>
+              <button onClick={handleSubmitAnswer} disabled={!answerDraft.trim() || answerMut.isPending} className="btn-primary text-xs px-5 py-2.5 cursor-pointer rounded-xl font-bold transition-transform active:scale-95 text-white" style={{ background: "#5E7A5A" }}>
+                {answerMut.isPending ? "Submitting..." : "Submit Answer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-3 mb-5 flex-wrap items-center">
-        <select className="input py-2.5 text-sm bg-white border border-[#E2E8DE] rounded-xl hover:border-[#bdd4ba] focus:border-[#5E7A5A] transition-all cursor-pointer font-medium text-slate-700 shadow-xs" value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))} style={{ maxWidth: 160 }}>
-          <option value="">All Statuses</option>
-          <option value="open">Open</option>
-          <option value="answered">Answered</option>
-          <option value="reopened">Reopened</option>
-          <option value="closed">Closed</option>
-        </select>
-        <select className="input py-2.5 text-sm bg-white border border-[#E2E8DE] rounded-xl hover:border-[#bdd4ba] focus:border-[#5E7A5A] transition-all cursor-pointer font-medium text-slate-700 shadow-xs" value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))} style={{ maxWidth: 160 }}>
-          <option value="">All Categories</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
         <div className="search-wrap flex-1 max-w-[320px]">
           <svg className="search-icon w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -369,17 +699,17 @@ function QuestionsTab() {
       <div className="flex-1 card overflow-hidden flex flex-col min-h-0 h-full shadow-md rounded-2xl border border-[#E2E8DE] bg-white">
         <div className="p-5 border-b shrink-0 flex justify-between items-center bg-[#F5F7F2]/80 backdrop-blur-xs" style={{ borderColor: "#E2E8DE" }}>
           <div>
-            <h2 className="font-bold text-sm text-slate-800">Questions ({questions.length})</h2>
+            <h2 className="font-bold text-sm text-slate-800">Questions ({questions.filter(q => q.status === "open" || q.status === "reopened").length})</h2>
             <p className="text-[11px] text-slate-400 mt-0.5">Click a question to view details, verify answers, or write administrative replies.</p>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto divide-y divide-[#E2E8DE]/60">
           {qLoad ? (
             <div className="p-5 space-y-4">{[1,2,3].map(i => <div key={i} className="skeleton h-20 w-full rounded-2xl" />)}</div>
-          ) : questions.length === 0 ? (
+          ) : questions.filter(q => q.status === "open" || q.status === "reopened").length === 0 ? (
             <div className="p-12 text-center text-sm text-slate-400 font-medium">No questions found matching your filter criteria.</div>
           ) : (
-            questions.map(q => (
+            questions.filter(q => q.status === "open" || q.status === "reopened").map(q => (
               <button key={q._id} onClick={() => { setSelected(q); setAnswerDraft(""); }}
                 className="w-full text-left p-5 transition-all duration-200 hover:bg-[#f0f4ef]/20 cursor-pointer border-l-4 border-transparent flex flex-col gap-2" style={selected?._id === q._id ? { background: "#f0f4ef/40", borderLeftColor: "#5E7A5A" } : {}}>
                 <div className="flex justify-between items-start gap-4 w-full">
@@ -400,14 +730,14 @@ function QuestionsTab() {
         </div>
       </div>
 
-      {selected && createPortal(
-        <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setSelected(null)}>
-          <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col border-l border-slate-100/80 animate-slide-in-right" onClick={e => e.stopPropagation()}>
+      {selected && !isWritingAnswer && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setSelected(null)}>
+          <div className="w-full max-w-2xl bg-white max-h-[85vh] rounded-2xl shadow-2xl flex flex-col border border-slate-100/80 animate-scale-in m-4 overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="p-6 border-b flex justify-between items-start bg-gradient-to-r from-[#f0f4ef]/60 to-white shrink-0 border-[#E2E8DE]">
               <div className="flex-1 min-w-0 pr-6">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <StatusBadge status={selected.status} />
+                  {selected.status !== "reopened" && <StatusBadge status={selected.status} />}
                   <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38]"># {selected.category}</span>
                   {selected.pendingCategory && (
                     <button
@@ -427,9 +757,10 @@ function QuestionsTab() {
                       }}
                       className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38] focus:outline-none cursor-pointer shadow-xs"
                     >
-                      {categories.map(c => (
-                        <option key={c} value={c}># {c}</option>
-                      ))}
+                      {categories.map(c => {
+                        const name = typeof c === "string" ? c : c.name;
+                        return <option key={name} value={name}># {name}</option>;
+                      })}
                     </select>
                   )}
                 </div>
@@ -446,7 +777,7 @@ function QuestionsTab() {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-slate-50/40">
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-slate-50/40 min-h-0">
               {selected.tags?.length > 0 && (
                 <div>
                   <h3 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-400">Tags</h3>
@@ -476,7 +807,7 @@ function QuestionsTab() {
                           </div>
                           <div className="flex gap-1.5">
                             {!a.isVerified ? (
-                              <button onClick={() => verifyMut.mutate({ id: a._id, verified: true })} className="text-xxs font-bold px-2.5 py-1 rounded bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 transition-colors cursor-pointer">Verify</button>
+                              <button onClick={() => handleVerifyClick(a._id, selected.category)} className="text-xxs font-bold px-2.5 py-1 rounded bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 transition-colors cursor-pointer">Verify</button>
                             ) : (
                               <button onClick={() => verifyMut.mutate({ id: a._id, verified: false })} className="text-xxs font-bold px-2.5 py-1 rounded bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer">Unverify</button>
                             )}
@@ -492,67 +823,21 @@ function QuestionsTab() {
                   <p className="text-xs text-slate-400 italic py-2">No answers posted yet by the community.</p>
                 )}
               </div>
+            </div>
 
-              {/* Editor Section */}
-              <div className="mt-auto pt-6 border-t border-slate-200/80 bg-white p-6 -mx-6 -mb-6 shadow-xs" style={{ boxShadow: "0 -4px 10px -2px rgba(0,0,0,0.03)" }}>
-                <h3 className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-400">Write Administrative Answer</h3>
-                
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="flex items-center gap-2">
-                    {/* Speech to Text */}
-                    <button type="button" onClick={toggleListen} title="Dictate (Speech to Text)"
-                      className="w-8 h-8 rounded transition-colors flex items-center justify-center relative border cursor-pointer hover:bg-gray-50"
-                      style={{ color: isListening ? "#fff" : "#374151", background: isListening ? "#ef4444" : "transparent", borderColor: "#E2E8DE" }}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                        <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-                      </svg>
-                      {isListening && (
-                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                        </span>
-                      )}
-                    </button>
-                    <span className="text-xs text-slate-500">Dictate</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <label className="w-8 h-8 rounded transition-colors flex items-center justify-center border cursor-pointer hover:bg-gray-50 bg-white"
-                      style={{ color: "#374151", borderColor: "#E2E8DE" }} title="Upload Screenshot/Image">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                    </label>
-                    <span className="text-xs text-slate-500">Upload Image</span>
-                  </div>
-                </div>
-
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs focus-within:border-[#5E7A5A] transition-all bg-white mb-4">
-                  <textarea
-                    className="w-full min-h-[120px] p-3 text-sm focus:outline-none border-0 text-slate-700 bg-white"
-                    placeholder="Write the official administrative answer..."
-                    value={answerDraft}
-                    onChange={(e) => setAnswerDraft(e.target.value)}
-                  />
-                </div>
-                <div className="flex justify-between items-center gap-2 flex-wrap">
-                  <div className="flex gap-2">
-                    {selected.status !== "closed" ? (
-                      <button onClick={() => closeMut.mutate(selected._id)} className="btn-secondary text-xs px-3 py-2 cursor-pointer rounded-xl">Close Question</button>
-                    ) : (
-                      <button onClick={() => reopenMut.mutate(selected._id)} className="btn-secondary text-xs px-3 py-2 cursor-pointer rounded-xl">Reopen Question</button>
-                    )}
-                    <button onClick={() => setConfirm({ message: "Are you sure you want to delete this question permanently? This will also delete all replies.", action: () => deleteMut.mutate(selected._id) })} className="btn-secondary text-xs px-3 py-2 text-red-600 border-red-200 hover:bg-red-50 cursor-pointer rounded-xl">Delete</button>
-                    <button onClick={() => setConfirm({ message: "Create an official FAQ from this question + verified answer?", action: () => convertMut.mutate({ id: selected._id }) })} className="btn-secondary text-xs px-3 py-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 cursor-pointer rounded-xl">Convert to FAQ</button>
-                  </div>
-                  <button onClick={handleSubmitAnswer} disabled={!answerDraft.trim() || answerMut.isPending} className="btn-primary text-xs px-5 py-2.5 cursor-pointer rounded-xl font-bold transition-transform active:scale-95">
-                    {answerMut.isPending ? "Submitting..." : "Submit Answer"}
-                  </button>
-                </div>
+            {/* Footer Options */}
+            <div className="p-6 border-t border-slate-200 bg-white shrink-0 flex justify-between items-center gap-4 flex-wrap">
+              <div className="flex gap-2">
+                <button onClick={() => setConfirm({ message: "Are you sure you want to delete this question permanently? This will also delete all replies.", action: () => deleteMut.mutate(selected._id) })} className="btn-secondary text-xs px-3 py-2 text-red-600 border-red-200 hover:bg-red-50 cursor-pointer rounded-xl">Delete</button>
               </div>
+
+              <button
+                onClick={() => setIsWritingAnswer(true)}
+                className="btn-primary text-xs px-5 py-2.5 cursor-pointer rounded-xl font-bold transition-transform active:scale-95 text-white"
+                style={{ background: "#5E7A5A" }}
+              >
+                Write Administrative Answer
+              </button>
             </div>
           </div>
         </div>,
@@ -579,10 +864,14 @@ function FaqsTab() {
   });
 
   const faqList = useMemo(() => {
-    return Array.isArray(faqs) ? faqs : (Array.isArray(faqs?.data) ? faqs.data : []);
+    const arr = Array.isArray(faqs) ? faqs : (Array.isArray(faqs?.data) ? faqs.data : []);
+    return [...arr].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [faqs]);
 
-  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: faqApi.listCategories });
+  const { data: rawCategories = [] } = useQuery({ queryKey: ["categories"], queryFn: faqApi.listCategories });
+  const categories = useMemo(() => {
+    return Array.isArray(rawCategories) ? rawCategories : (Array.isArray(rawCategories?.data) ? rawCategories.data : []);
+  }, [rawCategories]);
 
   const updateMut = useMutation({ mutationFn: ({ id, data }) => faqAdminApi.update(id, data), onSuccess: () => { qc.invalidateQueries(["admin-faqs"]); setEditing(null); setToast("FAQ updated!"); } });
   const deleteMut = useMutation({ mutationFn: (id) => faqAdminApi.delete(id), onSuccess: () => { qc.invalidateQueries(["admin-faqs"]); setToast("FAQ deleted."); } });
@@ -596,7 +885,7 @@ function FaqsTab() {
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <select className="input py-2 text-sm" value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))} style={{ maxWidth: 160 }}>
           <option value="">All Categories</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          {categories.map(c => { const name = typeof c === "string" ? c : c.name; return <option key={name} value={name}>{name}</option>; })}
         </select>
         <div className="search-wrap flex-1" style={{ maxWidth: 300 }}>
           <svg className="search-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -616,8 +905,30 @@ function FaqsTab() {
           {faqList.map(faq => (
             <div key={faq._id} className="card p-4" style={faq.isPinned ? { borderLeft: "3px solid #5E7A5A" } : {}}>
               {editing?._id === faq._id ? (
-                <div className="space-y-3">
-                  <input className="input text-sm" defaultValue={editing.question} onChange={e => setEditing(p => ({ ...p, question: e.target.value }))} />
+                <div className="space-y-3 mt-2">
+                  <input className="input text-sm font-medium w-full" value={editing.question || ""} onChange={e => setEditing(p => ({ ...p, question: e.target.value }))} placeholder="Question" />
+                  
+                  <select 
+                    className="input text-sm py-2 w-full" 
+                    value={editing.category || ""} 
+                    onChange={e => setEditing(p => ({ ...p, category: e.target.value }))}
+                  >
+                    <option value="">Select Category...</option>
+                    {(() => {
+                       const arr = Array.from(categories);
+                       return arr.sort((a, b) => {
+                         const nameA = typeof a === "string" ? a : a.name;
+                         const nameB = typeof b === "string" ? b : b.name;
+                         if (nameA === "Others") return 1;
+                         if (nameB === "Others") return -1;
+                         return nameA.localeCompare(nameB);
+                       });
+                    })().map(c => { 
+                      const name = typeof c === "string" ? c : c.name; 
+                      return <option key={name} value={name}>{name}</option>; 
+                    })}
+                  </select>
+
                   <textarea
                     className="w-full min-h-[120px] p-3 text-sm border rounded-lg focus:outline-none border-slate-200 text-slate-700 bg-white"
                     placeholder="Write the official administrative answer..."
@@ -644,24 +955,6 @@ function FaqsTab() {
                     >
                       🎙️ Dictate
                     </button>
-                    <label className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded border border-[#E2E8DE] hover:bg-gray-50 bg-white cursor-pointer">
-                      📷 Upload Image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const base64 = event.target.result;
-                            setEditing(p => ({ ...p, answer: (p.answer || "") + `\n![Image](${base64})\n` }));
-                          };
-                          reader.readAsDataURL(file);
-                        }}
-                        className="hidden"
-                      />
-                    </label>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => updateMut.mutate({ id: faq._id, data: { question: editing.question, answer: editing.answer, category: editing.category } })} className="btn-primary text-xs px-3 py-1.5">Save</button>
@@ -737,30 +1030,12 @@ function FaqCreateModal({ onClose, onCreate, isCreating, categories }) {
               >
                 🎙️ Dictate
               </button>
-              <label className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded border border-[#E2E8DE] hover:bg-gray-50 bg-white cursor-pointer">
-                📷 Upload Image
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const base64 = event.target.result;
-                      setForm(f => ({ ...f, answer: f.answer + `\n![Image](${base64})\n` }));
-                    };
-                    reader.readAsDataURL(file);
-                  }}
-                  className="hidden"
-                />
-              </label>
             </div>
           </div>
           <div>
             <label className="label">Category</label>
             <input className="input py-2" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Category name..." list="cat-list" />
-            <datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist>
+            <datalist id="cat-list">{categories.map(c => { const name = typeof c === "string" ? c : c.name; return <option key={name} value={name} />; })}</datalist>
           </div>
         </div>
         <div className="flex gap-3 justify-end mt-5">
@@ -780,10 +1055,23 @@ function CategoriesTab() {
   const qc = useQueryClient();
   const [toast, setToast] = useState(null);
   const [newCat, setNewCat] = useState("");
+  const [expandedOthers, setExpandedOthers] = useState(false);
+  const [editingCat, setEditingCat] = useState(null);
+  const [editName, setEditName] = useState("");
 
   const { data: cats = [], isLoading } = useQuery({ queryKey: ["category-stats"], queryFn: categoryApi.getStats });
 
   const createMut = useMutation({ mutationFn: (name) => categoryApi.create(name), onSuccess: (res) => { qc.invalidateQueries(["category-stats"]); setNewCat(""); setToast(res?.alreadyExists ? "Category already exists." : "Category added!"); } });
+  
+  const renameMut = useMutation({
+    mutationFn: ({ oldName, newName }) => categoryApi.rename(oldName, newName),
+    onSuccess: () => {
+      qc.invalidateQueries(["category-stats"]);
+      qc.invalidateQueries(["admin-stats"]);
+      setEditingCat(null);
+      setToast("Category renamed!");
+    }
+  });
 
   return (
     <div className="h-full flex flex-col min-h-0">
@@ -791,10 +1079,23 @@ function CategoriesTab() {
 
       <div className="flex gap-3 mb-4">
         <input className="input py-2 text-sm flex-1" value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New category name..." />
-        <button onClick={() => newCat.trim() && createMut.mutate(newCat.trim())} className="btn-primary text-sm px-4 py-2 shrink-0" disabled={!newCat.trim()}>
+        <button onClick={() => {
+           let catName = newCat.trim();
+           if (catName && !catName.startsWith("Others - ") && catName.toLowerCase() !== "others") {
+              catName = `Others - ${catName}`;
+           }
+           if (catName) createMut.mutate(catName);
+        }} className="btn-primary text-sm px-4 py-2 shrink-0" disabled={!newCat.trim()}>
           Add Category
         </button>
       </div>
+
+      {expandedOthers && (
+        <button onClick={() => setExpandedOthers(false)} className="inline-flex items-center gap-1.5 text-xs mb-3 text-slate-500 hover:text-slate-700 transition-colors self-start">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          Back to all categories
+        </button>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-16 w-full" />)}</div>
@@ -802,25 +1103,83 @@ function CategoriesTab() {
         <div className="text-center py-12 text-sm" style={{ color: "#9CA3AF" }}>No categories found.</div>
       ) : (
         <div className="flex-1 overflow-y-auto">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[400px]">
-              <thead>
-                <tr className="border-b" style={{ borderColor: "#E2E8DE" }}>
-                  <th className="text-left p-3 font-semibold" style={{ color: "#6B7280" }}>Category</th>
-                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>FAQs</th>
-                  <th className="text-center p-3 font-semibold" style={{ color: "#6B7280" }}>Questions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cats.map(cat => (
-                  <tr key={cat.name} className="border-b" style={{ borderColor: "#F5F7F2" }}>
-                    <td className="p-3 font-medium" style={{ color: "#1F2937" }}>{cat.name}</td>
-                    <td className="p-3 text-center" style={{ color: "#6B7280" }}>{cat.faqCount}</td>
-                    <td className="p-3 text-center" style={{ color: "#6B7280" }}>{cat.questionCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            {(() => {
+              const normalCats = [];
+              const otherCats = [];
+              let otherFaqCount = 0;
+              let otherQuestionCount = 0;
+
+              cats.forEach(cat => {
+                if (cat.name.startsWith("Others - ")) {
+                  otherCats.push(cat);
+                  otherFaqCount += cat.faqCount || 0;
+                  otherQuestionCount += cat.questionCount || 0;
+                } else {
+                  normalCats.push(cat);
+                }
+              });
+
+              let displayCats = [];
+              if (expandedOthers) {
+                 displayCats = [...otherCats];
+              } else {
+                 displayCats = [...normalCats];
+                 if (otherCats.length > 0) {
+                    displayCats.push({
+                      name: "Others",
+                      faqCount: otherFaqCount,
+                      questionCount: otherQuestionCount,
+                      isOthersGroup: true
+                    });
+                 }
+              }
+
+              return displayCats.map(cat => (
+                <div 
+                  key={cat.name} 
+                  onClick={() => {
+                    if (cat.isOthersGroup) setExpandedOthers(true);
+                  }}
+                  className={`card p-3 flex flex-col justify-between gap-2.5 bg-white border border-[#E2E8DE]/80 hover:border-[#bdd4ba] rounded-lg hover:shadow-xs transition-all relative overflow-hidden group ${cat.isOthersGroup ? 'cursor-pointer' : ''}`}
+                >
+                  <div className="absolute top-0 left-0 w-full h-[3px] bg-[#5E7A5A]/10 group-hover:bg-[#5E7A5A] transition-all shrink-0" />
+                  
+                  {editingCat === cat.name ? (
+                    <div className="pt-1 flex flex-col gap-1" onClick={e => e.stopPropagation()}>
+                      <input 
+                        className="input text-[11px] py-1 px-1.5 font-semibold text-slate-800" 
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="flex gap-1 justify-end">
+                        <button onClick={() => setEditingCat(null)} className="text-[9px] px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 hover:bg-gray-200">Cancel</button>
+                        <button onClick={() => editName.trim() && renameMut.mutate({ oldName: cat.name, newName: editName.trim() })} className="text-[9px] px-1.5 py-0.5 bg-[#5E7A5A] rounded text-white hover:bg-[#4a6247]" disabled={!editName.trim()}>Save</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-start pt-1">
+                      <h4 className="font-semibold text-[11px] text-slate-800 line-clamp-2 leading-tight flex-1 pr-2" title={cat.name}>{cat.name}</h4>
+                      {!cat.isOthersGroup && (
+                        <button onClick={(e) => { e.stopPropagation(); setEditingCat(cat.name); setEditName(cat.name); }} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[#5E7A5A] transition-opacity shrink-0">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2.5 text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+                    <span className="inline-flex items-center gap-0.5" title={`${cat.faqCount} FAQs`}>
+                      📖 {cat.faqCount}
+                    </span>
+                    <span className="inline-flex items-center gap-0.5" title={`${cat.questionCount} Questions`}>
+                      ❓ {cat.questionCount}
+                    </span>
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         </div>
       )}
@@ -919,85 +1278,6 @@ function UsersTab() {
   );
 }
 
-// ── Tab: Feedback ──────────────────────────────────────────────
-
-function FeedbackTab() {
-  const { data: feedbacks = [], isLoading } = useQuery({
-    queryKey: ["admin-unhelpful-feedback"],
-    queryFn: () => faqApi.listUnhelpfulFeedback(),
-    refetchInterval: 30000,
-  });
-
-  return (
-    <div className="space-y-6">
-      <div className="card p-6 bg-white shadow-md rounded-2xl border border-[#E2E8DE]">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">📢</span>
-          <h2 className="font-extrabold text-base text-slate-800">
-            Feedback ({feedbacks.length})
-          </h2>
-        </div>
-        <p className="text-xs text-slate-400 mb-6">
-          Students submitted these comments explaining why a verified FAQ was not helpful. Use this to revise answers or fill knowledge gaps!
-        </p>
-
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="skeleton h-20 w-full rounded-2xl" />
-            ))}
-          </div>
-        ) : feedbacks.length === 0 ? (
-          <div className="p-12 text-center text-sm text-slate-400 font-medium bg-white rounded-2xl border border-slate-100">
-            ✨ No unhelpful feedback comments yet! Your FAQs are super clear and helpful!
-          </div>
-        ) : (
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1 animate-fade-in">
-            {feedbacks.map((fb, idx) => (
-              <div key={idx} className="p-5 rounded-2xl border bg-white shadow-xs border-[#E2E8DE] hover:border-[#bdd4ba] transition-all flex flex-col gap-2">
-                <div className="flex justify-between items-start gap-4 flex-wrap">
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-800">
-                      FAQ: {fb.question}
-                    </h3>
-                    <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded border border-[#dde8db] bg-[#f0f4ef] text-[#3a4f38] mt-1">
-                      {fb.category}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap font-medium">
-                    {timeAgo(fb.createdAt)}
-                  </span>
-                </div>
-                
-                <div className="p-4 rounded-xl bg-red-50/40 border border-red-100 mt-2">
-                  <p className="text-xs font-semibold text-red-600 mb-1">
-                    Feedback comment:
-                  </p>
-                  <p className="text-sm text-slate-700 font-medium italic">
-                    &ldquo;{fb.reason}&rdquo;
-                  </p>
-                </div>
-                
-                <div className="flex items-center justify-between text-xs text-slate-400 mt-1">
-                  <span>
-                    Submitted by: <strong className="text-slate-600">{fb.userLabel}</strong>
-                  </span>
-                  <Link
-                    to={`/faqs?category=${encodeURIComponent(fb.category)}`}
-                    className="text-xs font-bold hover:underline"
-                    style={{ color: "#5E7A5A" }}
-                  >
-                    View FAQ →
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ── Main AdminPage ────────────────────────────────────────────
 
@@ -1006,8 +1286,7 @@ const NAV = [
   { id: "questions", label: "Questions", icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.007 2.917-.546.086-.99.622-1.16 1.21 M12 17v.01" },
   { id: "faqs", label: "FAQ Management", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
   { id: "categories", label: "Categories", icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" },
-  { id: "users", label: "Users", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
-  { id: "feedback", label: "Feedback", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" }
+  { id: "users", label: "Users", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" }
 ];
 
 export default function AdminPage() {
@@ -1015,6 +1294,8 @@ export default function AdminPage() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const [preselectedQuestionId, setPreselectedQuestionId] = useState(null);
 
   useEffect(() => {
     if (user && user.role !== "admin") {
@@ -1029,16 +1310,15 @@ export default function AdminPage() {
 
   const renderTab = () => {
     switch (activeTab) {
-      case "dashboard": return <DashboardTab />;
-      case "questions": return <QuestionsTab />;
+      case "dashboard": return <DashboardTab setActiveTab={setActiveTab} setPreselectedQuestionId={setPreselectedQuestionId} />;
+      case "questions": return <QuestionsTab preselectedQuestionId={preselectedQuestionId} setPreselectedQuestionId={setPreselectedQuestionId} setActiveTab={setActiveTab} />;
       case "faqs": return <FaqsTab />;
       case "categories": return <CategoriesTab />;
       case "users": return <UsersTab />;
-      case "feedback": return <FeedbackTab />;
-      default: return <DashboardTab />;
+      default: return <DashboardTab setActiveTab={setActiveTab} setPreselectedQuestionId={setPreselectedQuestionId} />;
     }
   };  return (
-    <div className="min-h-screen flex font-sans" style={{ background: "#F5F7F2" }}>
+    <div className="h-screen flex font-sans overflow-hidden" style={{ background: "#F5F7F2" }}>
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r shrink-0 flex flex-col hidden md:flex" style={{ borderColor: "#E2E8DE" }}>
         <div className="h-16 flex items-center px-6 border-b bg-gradient-to-r from-[#f0f4ef]/60 to-white" style={{ borderColor: "#E2E8DE" }}>

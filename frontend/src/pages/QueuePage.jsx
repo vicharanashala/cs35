@@ -338,11 +338,14 @@ export default function QueuePage() {
     status !== "All",
   ].filter(Boolean).length;
 
-  const { data: categories = [], isLoading: areCategoriesLoading } = useQuery({
+  const { data: categoriesData = [], isLoading: areCategoriesLoading } = useQuery({
     queryKey: ["categories"],
     queryFn: () => faqApi.listCategories(),
     staleTime: 1000 * 60 * 5,
   });
+  const categories = useMemo(() => {
+    return Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
+  }, [categoriesData]);
 
   const { data: questions = [], isLoading, isError } = useQuery({
     queryKey: ["questions-open"],

@@ -296,11 +296,16 @@ export class FaqService implements OnModuleInit {
     }
     try {
       const cats = await this.categoryModel.find({ isActive: true }).select('name icon').lean().exec();
-      if (cats.length > 0) {
-        return cats.map((c: { name: string; icon?: string }) => ({ name: c.name, icon: c.icon || this.generateCategoryIcon(c.name) }));
+      const validCats = cats.filter((c: any) => c && c.name && typeof c.name === 'string' && c.name.trim() !== '');
+      if (validCats.length > 0) {
+        return validCats.map((c: { name: string; icon?: string }) => ({ name: c.name, icon: c.icon || this.generateCategoryIcon(c.name) }));
       }
       const distinctCats = await this.faqModel.distinct('category').exec();
-      return (distinctCats.filter(Boolean) as string[]).map(name => ({ name, icon: this.generateCategoryIcon(name) }));
+      const filteredCats = distinctCats.filter(Boolean) as string[];
+      if (filteredCats.length > 0) {
+        return filteredCats.map(name => ({ name, icon: this.generateCategoryIcon(name) }));
+      }
+      return this.localData.getCategories().map(name => ({ name, icon: this.generateCategoryIcon(name) }));
     } catch {
       return this.localData.getCategories().map(name => ({ name, icon: this.generateCategoryIcon(name) }));
     }
@@ -612,14 +617,25 @@ export class FaqService implements OnModuleInit {
       
       if (!answer) throw new Error('No verified answer found for this question');
 
-      const faq = await this.faqModel.create({
+      let faq = await this.faqModel.findOne({ originalQuestionId: new Types.ObjectId(questionId) }).exec();
+      
+      const updateData = {
         question: question.question,
         answer: answer.content,
         category: category || question.category,
         tags: question.tags,
         originalQuestionId: new Types.ObjectId(questionId),
         isAnswered: true
-      });
+      };
+
+      if (faq) {
+        faq = await this.faqModel.findByIdAndUpdate(faq._id, updateData, { new: true }).exec();
+      } else {
+        faq = await this.faqModel.create(updateData);
+      }
+
+      question.status = 'closed';
+      await question.save();
 
       return faq;
     } catch (e) {
@@ -1145,6 +1161,37 @@ export class FaqService implements OnModuleInit {
     }
   }
 
+  async renameCategory(oldName: string, newName: string) {
+    if (!this.hasMongoDB || !this.categoryModel) {
+      return { success: true };
+    }
+    try {
+      // 1. Update the category doc itself
+      await this.categoryModel.updateOne(
+        { name: oldName },
+        { name: newName }
+      ).exec();
+
+      // 2. Update all questions and faqs that use this category
+      if (this.questionModel) {
+        await this.questionModel.updateMany(
+          { category: oldName },
+          { category: newName }
+        ).exec();
+      }
+      if (this.faqModel) {
+        await this.faqModel.updateMany(
+          { category: oldName },
+          { category: newName }
+        ).exec();
+      }
+      return { success: true, newName };
+    } catch (err) {
+      console.error('renameCategory error:', err);
+      return { success: false };
+    }
+  }
+
   async getCategoryStats() {
     if (!this.hasMongoDB || !this.faqModel || !this.questionModel) {
       const stats = this.localData.getCategoryStats();
@@ -1233,6 +1280,7 @@ export class FaqService implements OnModuleInit {
 
   async deleteUser(id: string) {
     if (!this.hasMongoDB || !this.userModel) {
+      this.localData.deleteUser(id);
       return { deleted: true, _id: id };
     }
     try {

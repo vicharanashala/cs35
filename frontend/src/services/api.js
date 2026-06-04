@@ -58,6 +58,7 @@ export const categoryApi = {
   getStats: () => safeRequest(client.get("/categories/stats").then((r) => r.data)),
   create: (name) => safeRequest(client.post("/categories", { name }).then((r) => r.data)),
   confirm: (name) => safeRequest(client.patch("/categories/confirm", { name }).then((r) => r.data)),
+  rename: (oldName, newName) => safeRequest(client.patch("/categories/rename", { oldName, newName }).then((r) => r.data)),
 };
 
 // ── Question API ─────────────────────────────────────────────
@@ -83,7 +84,7 @@ export const questionApi = {
 export const answerApi = {
   update: (id, data) => safeRequest(client.patch(`/answers/${id}`, data).then((r) => r.data)),
   delete: (id) => safeRequest(client.delete(`/answers/${id}`).then((r) => r.data)),
-  verify: (id, verified) => safeRequest(client.patch(`/answers/${id}/verify`, { verified }).then((r) => r.data)),
+  verify: (id, verified, questionId) => safeRequest(client.patch(`/answers/${id}/verify`, { verified, questionId }).then((r) => r.data)),
   accept: (id, accepted, questionId) =>
     safeRequest(client.patch(`/answers/${id}/accept`, { accepted, questionId }).then((r) => r.data)),
 };

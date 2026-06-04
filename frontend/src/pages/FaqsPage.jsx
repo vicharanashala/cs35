@@ -346,7 +346,11 @@ export default function FaqsPage() {
   const filtered = useMemo(() => {
     let arr = Array.isArray(faqs) ? [...faqs] : Array.isArray(faqs?.data) ? [...faqs.data] : [];
     if (activeCategory !== "All Categories") {
-      arr = arr.filter(f => f.category === activeCategory);
+      if (activeCategory === "Others") {
+         arr = arr.filter(f => f.category && f.category.startsWith("Others - "));
+      } else {
+         arr = arr.filter(f => f.category === activeCategory);
+      }
     }
     if (search.trim()) {
       const q = search.trim();
@@ -442,10 +446,23 @@ export default function FaqsPage() {
                 }}
               >
                 <option>All Categories</option>
-                {(Array.isArray(categories) ? categories : (categories?.data || [])).map((c) => {
-                  const catName = typeof c === 'string' ? c : c.name;
-                  return <option key={catName} value={catName}>{catName}</option>;
-                })}
+                {(() => {
+                   const opts = new Set();
+                   (Array.isArray(categories) ? categories : (categories?.data || [])).forEach(c => {
+                      const catName = typeof c === 'string' ? c : c.name;
+                      if (catName.startsWith("Others - ")) {
+                         opts.add("Others");
+                      } else {
+                         opts.add(catName);
+                      }
+                   });
+                   const arr = Array.from(opts);
+                   return arr.sort((a, b) => {
+                     if (a === "Others") return 1;
+                     if (b === "Others") return -1;
+                     return a.localeCompare(b);
+                   });
+                })().map(catName => <option key={catName} value={catName}>{catName}</option>)}
               </select>
             </div>
           </div>
