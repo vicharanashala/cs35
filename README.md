@@ -1,31 +1,35 @@
-# AskSam
+<p align="center">
+  <img src="./assets/banner.svg" alt="AskSam Banner" width="100%"/>
+</p>
 
-AskSam is a collaborative FAQ and Q&A platform built for Samagama students at the Vicharanashala Lab for Education Design, IIT Ropar. The platform allows students to ask questions, provides community answers, and automatically promotes verified answers into canonical FAQs.
+<div align="center">
 
-## Features
+![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-flat-square&logo=nestjs&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?style=for-flat-square&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-flat-square&logo=typescript&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-flat-square&logo=mongodb&logoColor=white)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-flat-square&logo=socket.io&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-flat-square&logo=tailwindcss&logoColor=white)
+
+**A collaborative FAQ and Q&A platform built for Samagama students at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).**
+
+</div>
+
+---
+
+## 📌 Features
 
 - **Knowledge Discovery:** Full-text search across FAQs and open questions.
 - **Q&A Workflow:** Moderation queue with oldest-first routing for open questions.
-- **Answer Verification:** Authors and admins can verify the best answer, which automatically generates a canonical FAQ.
+- **Answer Verification:** Authors and admins can verify the best answer, generating a canonical FAQ automatically.
 - **Reopen Flow:** Verified answers can be flagged as incorrect to re-enter the moderation queue.
 - **Real-Time Notifications:** Live updates via Socket.IO for new answers and status changes.
 - **Access Control:** Role-based access for students and administrators.
 - **Offline Resilience:** Falls back to a read-only JSON representation if the primary database is offline.
 
-## Tech Stack
+---
 
-**Frontend:**
-- React 19, Vite 8
-- Tailwind CSS v4
-- TanStack Query v5, React Router v7
-- Socket.IO Client
-
-**Backend:**
-- NestJS 11, TypeScript
-- MongoDB (Mongoose 9)
-- Socket.IO
-
-## Architecture Workflow
+## 🏗️ Architecture Workflow
 
 ```text
   [Login / Signup] -> [Search] -> [Ask Question] -> [Queue (Open)]
@@ -39,7 +43,15 @@ AskSam is a collaborative FAQ and Q&A platform built for Samagama students at th
                                              [Back to Queue]
 ```
 
-## Project Structure
+<br/>
+
+<div align="center">
+  <img src="./assets/tech-radar.svg" alt="Tech Radar" width="100%" max-width="600px"/>
+</div>
+
+---
+
+## 📂 Project Structure
 
 ```text
 cs35/
@@ -53,7 +65,9 @@ cs35/
 └── README.md         # Project documentation
 ```
 
-## Getting Started
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -104,29 +118,33 @@ The application will be available at `http://localhost:5173`.
 
 ### Running Tests
 
-To verify the integrity of the application, you can run the automated test suites:
-
 ```bash
-# In the backend directory
-npm run test
+# Backend
+cd backend && npm run test
 
-# In the frontend directory
-npm run test
+# Frontend
+cd frontend && npm run test
 ```
 
-## Core API Endpoints
+---
+
+## 🔌 Core API Endpoints
 
 The API is prefixed with `/api`. Protected routes require a Bearer token in the `Authorization` header.
 
-- `POST /api/auth/login` - Authenticate and retrieve JWT
-- `GET /api/faqs` - Retrieve canonical FAQs
-- `GET /api/questions` - List questions based on filters
-- `POST /api/questions` - Submit a new question
-- `PATCH /api/questions/:id/answer` - Submit an answer to a question
-- `POST /api/questions/:id/convert-to-faq` - (Admin) Promote verified answer
-- `GET /api/search/full` - Full-text search across all content
+| Endpoint | Method | Description |
+| :--- | :---: | :--- |
+| `/api/auth/login` | `POST` | Authenticate and retrieve JWT |
+| `/api/faqs` | `GET` | Retrieve canonical FAQs |
+| `/api/questions` | `GET` | List questions based on filters |
+| `/api/questions` | `POST` | Submit a new question |
+| `/api/questions/:id/answer` | `PATCH` | Submit an answer to a question |
+| `/api/questions/:id/convert-to-faq`| `POST` | (Admin) Promote verified answer |
+| `/api/search/full` | `GET` | Full-text search across all content |
 
-## Contributors
+---
+
+## 👥 Contributors
 
 - Mano Shruthi S
 - Pavan Kumar M
@@ -139,6 +157,8 @@ The API is prefixed with `/api`. Protected routes require a Bearer token in the 
 - Putta Sri Tejaswi
 - Akshaya Boggarapu
 
-## License
+---
+
+## 📜 License
 
 This project is licensed under the MIT License.
