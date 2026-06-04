@@ -1,6 +1,5 @@
-<p align="center">
-  <img src="assets/banner.svg" alt="AskSam Banner" />
-</p>
+# CS35 – Crowdsourced FAQ Repository
+# AskSam — Samagama Collaborative FAQ Platform
 
 <div align="center">
 
