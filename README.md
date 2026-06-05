@@ -178,6 +178,27 @@ VITE_API_URL=http://localhost:3000/api
 
 The application is now actively running at `http://localhost:5173`.
 
+### Database seeding & maintenance
+
+The backend includes utility scripts to seed and clean the MongoDB database located in `backend/scripts`.
+
+- Seed FAQs from `faqData.json`:
+
+```bash
+# Ensure MONGODB_URI (and optionally MONGODB_DB) are set in backend/.env
+node backend/scripts/seed_faqs.mjs
+```
+
+Note: `seed_faqs.mjs` currently references an absolute path to `faqData.json` inside the script. Either copy your `faqData.json` to the path expected by the script or edit the `faqsPath` variable in `backend/scripts/seed_faqs.mjs` to point to `./faqData.json` in the repo root.
+
+- Clear selected collections and create a default admin user:
+
+```bash
+node backend/scripts/clear_db.mjs
+```
+
+These scripts use ES modules; run them with a recent Node.js (v18+).
+
 ---
 
 ## 🔌 API Gateway (Core Endpoints)
