@@ -12,7 +12,7 @@
 
 ```text
 Login/Signup → Search FAQ → Ask Question → Queue → Community Answers → Verified Answer → FAQ
-Incorrect answer → Reopen Question → Queue again
+Incorrect answer → Reopen Question → Queue again.
 ```
 
 ---
