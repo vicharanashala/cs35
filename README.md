@@ -113,13 +113,26 @@ backend/
 
 ## ✨ Platform Features
 
-- **Knowledge Discovery:** Lightning-fast full-text search indexing across verified FAQs and active open questions.
-- **Intelligent Routing:** A dynamic moderation queue that routes questions using an oldest-first algorithm.
-- **Answer Verification Engine:** Proprietary logic that allows authorized users to verify answers, seamlessly converting them into canonical database entries.
-- **Reopen & Flagging Flow:** A self-correcting community mechanism where verified answers can be challenged and sent back to the queue.
-- **Real-Time WebSockets:** Live data pushing via Socket.IO ensures clients are updated instantly without manual polling.
-- **Role-Based Access Control (RBAC):** Granular permissions ensuring only authorized admins can finalize canonical data.
-- **Fault Tolerance:** Built-in offline resilience that falls back to a localized JSON structure if the primary document store is temporarily unavailable.
+- **Knowledge Discovery:** Fast full-text and semantic search (keyword + embeddings) across canonical FAQs and open questions.
+- **Intelligent Moderation Queue:** Priority routing, AI pre-moderation, and configurable workflows to triage incoming questions.
+- **Answer Verification & Promotion:** Verified answers can be promoted to canonical FAQs with versioning, changelogs, and rollback.
+- **Reopen & Flagging Flow:** Community flags, dispute resolution, and automatic re-queuing for contested content.
+- **Real-Time Collaboration:** WebSockets (Socket.IO) push updates for new answers, votes, notifications, and admin actions.
+- **Role-Based Access Control (RBAC):** Fine-grained roles (user, contributor, moderator, admin) with audit logging.
+- **Media & Screenshot Support:** Store and display image/video attachments; automatic OCR and metadata extraction for screenshots.
+- **Screenshot Analysis & OCR Pipeline:** Extract text from screenshots, index OCR results for search, and attach OCR transcripts to questions.
+- **Semantic Similarity & Clustering:** Embed questions/answers for near-duplicate detection, suggested merges, and cluster-based master-FAQ synthesis.
+- **AI-Assisted Tools:** Yaksha pre-moderation, automatic question rephrase suggestions, and master FAQ generation from similar threads.
+- **Content Quality Scoring:** Automated scoring of answers (helpfulness, verification, recency) to surface high-quality content.
+- **Export & Aggregation:** Generate aggregated README/knowledge-briefs from selected FAQs for onboarding or support docs.
+- **Analytics Dashboard:** Search analytics, failed-search reporting, contributor metrics, and activity heatmaps.
+- **Pluggable Storage & CDN:** Support for S3-compatible object storage for media and optional CDN integration.
+- **SSO & Webhooks:** OAuth/OpenID Connect for SSO and webhooks for integration with external tools (Slack, MS Teams).
+- **Rate Limiting & Throttling:** Per-IP and per-user throttling to prevent abuse and automated spam.
+- **Scheduled Jobs & Backups:** Cron jobs for periodic aggregation, backup, and index maintenance.
+- **Compliance & Audit Trails:** Immutable audit logs for admin actions and data exports for compliance needs.
+
+**Advanced Add-ons (optional / enterprise):** multi-language support with translation, A/B testing for UI/helpful-answer ordering, plagiarism detection for answers, integrated fuzz-testing of search relevance, and interactive guided-answer wizards for new contributors.
 
 ---
 
