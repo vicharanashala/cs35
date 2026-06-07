@@ -184,135 +184,30 @@ NPTEL_Samagama_FAQ_portal/
 
 ## 🗃️ Database Schemas
 
-### Question Schema (`backend/src/schemas/question.schema.ts`)
-Tracks student-submitted queries, status indicators, and upvotes/downvotes:
-```typescript
-@Schema({ timestamps: { createdAt: true, updatedAt: false } })
-export class Question extends Document {
-  @Prop({ required: true }) question: string;
-  @Prop({ required: true }) category: string;
-  @Prop() pendingCategory: string; // custom category awaiting admin approval
-  @Prop({ type: [String], default: [] }) tags: string[];
-  @Prop() screenshotUrl: string;
-  @Prop({ enum: ['open', 'answered', 'reopened'], default: 'open' }) status: 'open' | 'answered' | 'reopened';
-  @Prop({ type: Types.ObjectId, ref: 'User' }) contributorId: Types.ObjectId;
-  @Prop() contributorName: string;
-  @Prop({ default: 0 }) upvotes: number;
-  @Prop({ default: 0 }) downvotes: number;
-  @Prop({ default: 0 }) views: number;
-  @Prop({ default: false }) isReopened: boolean;
-  @Prop() reopenReason: string;
-  createdAt: Date;
-}
-```
-
-### FAQ Schema (`backend/src/schemas/faq.schema.ts`)
-Stores the canonical knowledge library, containing verified answers:
-```typescript
-@Schema({ timestamps: { createdAt: true, updatedAt: true } })
-export class Faq extends Document {
-  @Prop({ required: true }) question: string;
-  @Prop({ required: true }) answer: string;
-  @Prop({ required: true }) category: string;
-  @Prop({ type: [String], default: [] }) tags: string[];
-  @Prop({ default: 0 }) views: number;
-  @Prop({ type: [Number], required: false }) embedding?: number[];
-  @Prop({ default: false }) isAnswered: boolean;
-  @Prop({ default: 0 }) upvotes: number;
-  @Prop({ default: false }) isPinned: boolean;
-  @Prop({ default: 0 }) helpfulCount: number;
-  @Prop({ default: 0 }) unhelpfulCount: number;
-  @Prop({ type: Types.ObjectId, ref: 'Question', required: false }) originalQuestionId?: Types.ObjectId;
-  @Prop({
-    type: [{
-      reason: { type: String, required: true },
-      userLabel: { type: String, required: false },
-      createdAt: { type: Date, default: Date.now }
-    }],
-    default: [],
-  })
-  unhelpfulFeedbacks: { reason: string; userLabel?: string; createdAt?: Date }[];
-}
-```
+The MongoDB schemas track student-submitted queries, status indicators, upvotes/downvotes, and the canonical knowledge library (FAQs).
+* **Question Schema (`question.schema.ts`)**: Handles open, answered, or reopened student questions along with contributor details, views, and upvotes/downvotes.
+* **FAQ Schema (`faq.schema.ts`)**: Stores permanent, verified community FAQs, pinned statuses, search embeddings, and detailed unhelpful feedback logs.
 
 ---
 
 ## 📚 API Endpoints
 
-All endpoints are prefixed with `/api`. Protected routes require `Authorization: Bearer <token>` header.
-
-### Authentication
-* `POST /api/auth/signup` - Register a student using email and username.
-* `POST /api/auth/login` - Authenticate an existing student or admin.
-* `POST /api/auth/forgot-password` - Trigger reset password link (rate-limited).
-* `GET /api/auth/me` - Get current authenticated user details from token.
-
-### FAQs & Knowledge Treasury
-* `GET /api/faqs` - Fetch all canonical FAQs (supports `?category=`, `?search=`, `?page=`, `?limit=`).
-* `GET /api/faqs/:id` - Retrieve detailed information for a single FAQ.
-* `POST /api/faqs` - Manually create a new canonical FAQ (Admin only).
-* `PATCH /api/faqs/:id` - Edit fields of an existing FAQ (Admin only).
-* `DELETE /api/faqs/:id` - Remove an FAQ from the treasury (Admin only).
-* `PATCH /api/faqs/:id/view` - Increment the view counter.
-* `PATCH /api/faqs/:id/feedback` - Log helpful/unhelpful feedback.
-* `PATCH /api/faqs/:id/pin` - Toggle FAQ pinned status on homepage (Admin only).
-* `GET /api/faqs/similar` - Get similar FAQs relative to a search query (Semantic Search).
-
-### Questions & Moderation Queue
-* `GET /api/questions` - List all student questions.
-* `GET /api/questions/open` - Retrieve all open & reopened questions (unresolved queue).
-* `POST /api/questions` - Submit a new question (status defaults to `open`).
-* `PATCH /api/questions/:id` - Edit a submitted question (Owner only).
-* `DELETE /api/questions/:id` - Delete a question (Owner or Admin).
-* `PATCH /api/questions/:id/close` - Manually mark a question as closed (Owner or Admin).
-* `PATCH /api/questions/:id/reopen` - Flag a verified answer as incorrect, providing a reason, moving it back to `reopened` queue status (Owner only).
-* `PATCH /api/questions/:id/answer` - Post an answer to a question (Student/Peer).
-* `PATCH /api/questions/:id/vote` - Upvote or downvote a question or specific answer.
-* `POST /api/questions/:id/convert-to-faq` - Promote a verified answer into a canonical FAQ (Admin only).
-
-### Answers
-* `PATCH /api/answers/:id` - Edit an answer (Owner only).
-* `DELETE /api/answers/:id` - Delete an answer (Owner or Admin).
-* `PATCH /api/answers/:id/verify` - Mark an answer as verified/unverified (Admin only).
-* `PATCH /api/answers/:id/accept` - Mark an answer as accepted (Question Author only).
-
-### Categories
-* `GET /api/categories` - Fetch all categories.
-* `GET /api/categories/stats` - Fetch category stats including FAQ and question counts.
-* `POST /api/categories` - Create a custom category.
-* `PATCH /api/categories/confirm` - Confirm a pending category (Admin only).
-* `PATCH /api/categories/rename` - Rename a category (Admin only).
-
-### Users & Social Actions
-* `GET /api/users` - List all users (Admin only).
-* `GET /api/users/:userId` - Get user profile details.
-* `PATCH /api/users/:userId` - Update user settings and profile.
-* `PATCH /api/users/:userId/bookmark/:questionId` - Toggle bookmark on a question.
-* `GET /api/users/:userId/bookmarks` - Fetch all bookmarked questions.
-* `GET /api/users/:userId/activity` - Get user activity heatmap data.
-* `PATCH /api/users/:followerId/follow/:followingId` - Toggle follow state for another user.
-
-### Notifications
-* `GET /api/notifications/:userId` - Fetch real-time notification list.
-* `PATCH /api/notifications/:id/read` - Mark a notification as read.
+All API endpoints are prefixed with `/api`. Protected routes require a valid `Authorization: Bearer <token>` header.
+* **Authentication**: Signup, login, forgot-password, and current session/profile retrieval.
+* **FAQs**: Retrieval, creation, updates, and helpful/unhelpful feedback logging.
+* **Questions**: Queue queries, thread discussions, answer submissions, voting, and converting verified answers to FAQs.
+* **Users & Socials**: Follow relationships, statistics, profiles, and bookmarks.
+* **Categories**: Creation, approval/confirmation, and renaming.
+* **Notifications**: Retrieval and mark-as-read updates.
 
 ---
 
 ## 🖥️ Pages & Routes
 
-| Route | Page | Access | Description |
-|---|---|---|---|
-| `/` | HomePage | Public | Hero search, structural tracks, highlighted stories & FAQs. |
-| `/login` | LoginPage | Public | User authentication gateway (Sign-In / Sign-Up form). |
-| `/faqs` | FAQsPage | Student | Complete canonical FAQ list with filtering. |
-| `/faq/:id` | FAQPage | Student | Single FAQ detail view with upvote/downvote and feedback counters. |
-| `/ask` | AskPage | Student | Multi-step wizard to post questions with reviews and guidelines. |
-| `/queue` | QueuePage | Student | The peer review queue sorting unanswered threads oldest-first. |
-| `/question/:id` | QuestionPage | Student | Question discussion feed, answer forms, and verified markers. |
-| `/my-questions`| MyQuestionsPage | Student | Dashboard tracking user-specific asked questions. |
-| `/profile` | ProfilePage | Student | User profile cards, contribution heatmap, and bookmarks. |
-| `/notifications`| NotificationsPage | Student | Notification dashboard populated by real-time WebSocket events. |
-| `/admin` | AdminPage | Admin | Admin panel managing categories, failed searches, and feedbacks. |
+AskSam features pages for both student and administrator workloads:
+* **Student Interface**: Home page (hero search, tracks, highlighted stories), FAQ lists and detail views, multi-step question posting wizard, and a peer review queue.
+* **User Accounts**: Custom profiles containing contribution heatmaps, bookmark trackers, and real-time notification feeds.
+* **Admin Dashboard**: Moderation utilities managing category structures, failed search logs, and unhelpful feedback list.
 
 ---
 
@@ -402,26 +297,7 @@ cd frontend && npm run build
 
 ## 🌿 Design System & Aesthetics
 
-AskSam uses a bespoke **Sage Green Academic Theme** styled natively in Tailwind CSS v4 variables:
-
-```css
-/* Brand Sage Greens */
---color-brand-50:  #f0f4ef;
---color-brand-100: #dde8db;
---color-brand-500: #5E7A5A;  /* Primary Brand Sage */
---color-brand-900: #1f2b1e;
-
-/* Warm Accents (Sand/Cream) */
---color-warm-50:   #fdf9f3;
---color-warm-500:  #c9b082;
---color-warm-600:  #b09363;
-
-/* Layout & Cards */
---color-sage-bg:    #F5F7F2;
---color-sage-card:  #FFFFFF;
---color-sage-border:#E2E8DE;
-```
-All micro-animations (`fadeIn`, `slideUp`, `float`, and `pulseGlow`) are coded using vanilla CSS keyframes inside `index.css` to align with Tailwind CSS v4's direct CSS configurations.
+AskSam uses a bespoke **Sage Green Academic Theme** styled natively in Tailwind CSS v4 variables with deep sage greens (`#5E7A5A`), whites, and warm sand accents. All micro-animations (e.g. `fadeIn`, `slideUp`, `float`, and `pulseGlow`) are coded using vanilla CSS keyframes inside `index.css`.
 
 ---
 
