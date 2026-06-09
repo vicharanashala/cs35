@@ -475,16 +475,16 @@ This platform was developed with ❤️ by the Vicharanashala internship program
 
 | Contributor | Focus Area | Profile |
 |:---|:---|:---|
-| **Mano Shruthi S** | Frontend & Backend | [@manoshyth](https://github.com/manoshruthis) |
-| **Pavan Kumar M** | Frontend & Backend | [@pavankumar](https://github.com/pavankumarmadamanchi72-ui) |
-| **Dusi Keerthi Prasanna** | Frontend & Backend | [@keerthi](https://github.com/dusikeerthiprasanna) |
+| **Mano Shruthi S** | Frontend & Backend | [@manoshruthis](https://github.com/manoshruthis) |
+| **Pavan Kumar M** | Frontend & Backend | [@pavankumarmadamanchi72-ui](https://github.com/pavankumarmadamanchi72-ui) |
+| **Dusi Keerthi Prasanna** | Frontend & Backend | [@dusikeerthiprasanna](https://github.com/dusikeerthiprasanna) |
 | **Rashmi Risha J** | Frontend & Backend | [@rashmirisha](https://github.com/rashmirisha) |
 | **Thivesha M. S** | Frontend & Backend | [@thivesha](https://github.com/thivesha) |
 | **Dishi Gupta** | Frontend & Backend | [@dishigpt](https://github.com/dishigpt) |
-| **Ambati Vedanandana** | Frontend & Backend | [@vedanandana](https://github.com/ambativedanandana-byte) |
-| **Divyadharshini S** | Frontend & Backend | [@divyadharshini](https://github.com/dd28703) |
-| **Putta Sri Tejaswi** | Frontend & Backend | [@tejaswi](https://github.com/sritejaswi30-rgb) |
-| **Akshaya Boggarapu** | Frontend & Backend | [@akshaya](https://github.com/akshayaboggarapu) |
+| **Ambati Vedanandana** | Frontend & Backend | [@ambativedanandana-byte](https://github.com/ambativedanandana-byte) |
+| **Divyadharshini S** | Frontend & Backend | [@dd28703](https://github.com/dd28703) |
+| **Putta Sri Tejaswi** | Frontend & Backend | [@sritejaswi30-rgb](https://github.com/sritejaswi30-rgb) |
+| **Akshaya Boggarapu** | Frontend & Backend | [@akshayaboggarapu](https://github.com/akshayaboggarapu) |
 
 > Special acknowledgment to **GitHub Copilot** for assisting with code formatting, reviews, and documentation.
 
