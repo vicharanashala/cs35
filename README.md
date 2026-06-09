@@ -475,16 +475,16 @@ This platform was developed with ❤️ by the Vicharanashala internship program
 
 | Contributor | Focus Area | Profile |
 |:---|:---|:---|
-| **Mano Shruthi S** | Frontend & Backend | [@manoshruthis](https://github.com/manoshruthis) |
-| **Pavan Kumar M** | Frontend & Backend | [@pavankumarmadamanchi72-ui](https://github.com/pavankumarmadamanchi72-ui) |
-| **Dusi Keerthi Prasanna** | Frontend & Backend | [@dusikeerthiprasanna](https://github.com/dusikeerthiprasanna) |
-| **Rashmi Risha J** | Frontend & Backend | [@rashmirisha](https://github.com/rashmirisha) |
-| **Thivesha M. S** | Frontend & Backend | [@thivesha](https://github.com/thivesha) |
-| **Dishi Gupta** | Frontend & Backend | [@dishigpt](https://github.com/dishigpt) |
+| **Mano Shruthi S** | Team Lead | [@manoshruthis](https://github.com/manoshruthis) |
+| **Pavan Kumar M** | Documentation | [@pavankumarmadamanchi72-ui](https://github.com/pavankumarmadamanchi72-ui) |
+| **Dusi Keerthi Prasanna** | Documentation | [@dusikeerthiprasanna](https://github.com/dusikeerthiprasanna) |
+| **Rashmi Risha J** | Documentation | [@rashmirisha](https://github.com/rashmirisha) |
+| **Thivesha M. S** | Documentation | [@thivesha](https://github.com/thivesha) |
+| **Dishi Gupta** | Database Architecture | [@dishigpt](https://github.com/dishigpt) |
 | **Ambati Vedanandana** | Frontend & Backend | [@ambativedanandana-byte](https://github.com/ambativedanandana-byte) |
-| **Divyadharshini S** | Frontend & Backend | [@dd28703](https://github.com/dd28703) |
-| **Putta Sri Tejaswi** | Frontend & Backend | [@sritejaswi30-rgb](https://github.com/sritejaswi30-rgb) |
-| **Akshaya Boggarapu** | Frontend & Backend | [@akshayaboggarapu](https://github.com/akshayaboggarapu) |
+| **Divyadharshini S** | Documentation | [@dd28703](https://github.com/dd28703) |
+| **Putta Sri Tejaswi** | Documentation | [@sritejaswi30-rgb](https://github.com/sritejaswi30-rgb) |
+| **Akshaya Boggarapu** | Documentation | [@akshayaboggarapu](https://github.com/akshayaboggarapu) |
 
 > Special acknowledgment to **GitHub Copilot** for assisting with code formatting, reviews, and documentation.
 
