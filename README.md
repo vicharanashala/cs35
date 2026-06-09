@@ -173,6 +173,17 @@ AskSam was designed with a massive suite of features tailored for a perfect acad
 * **Mark as Read**: Users can clear their notification badges by clicking to acknowledge they've seen the updates.
 </details>
 
+<details>
+<summary><b>🔐 9. Authentication & Login Hub (`/login`)</b></summary>
+<br/>
+<b>The Goal:</b> A highly polished, secure, and intuitive gateway for both students and administrators.
+
+* **Dual-Tab Interface**: Instantly toggle between "Student" login (username-based) and "Admin" login (email-based) without loading a new page.
+* **Client-Side Validation**: Real-time regex validation ensures usernames contain valid characters and passwords meet length requirements before ever hitting the server.
+* **Password Recovery Flow**: A built-in "Forgot Password" state that allows users to securely reset their credentials directly within the same UI component.
+* **UX Polish**: Features smooth CSS fade-in animations, inline password visibility toggles, loading spinners to prevent double-submissions, and a beautiful glowing blurred-orb aesthetic background.
+</details>
+
 ---
 
 ## 🔔 Real-Time Notifications
