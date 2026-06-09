@@ -155,6 +155,35 @@ AskSam was designed with a massive suite of features tailored for a perfect acad
 * **"My Questions" Tab**: A dashboard showing the status (`open`, `answered`, `reopened`) of all the questions the user has asked.
 </details>
 
+<details>
+<summary><b>📚 7. Browse FAQs (`/faqs`)</b></summary>
+<br/>
+<b>The Goal:</b> A dedicated hub to explore the entire permanent knowledge base.
+
+* **Category Filters**: Users can dynamically filter the entire library by specific tracks (e.g., Offers, ViBe).
+* **Tag System**: FAQs display visual tags indicating their context, making it easy to skim large amounts of information.
+</details>
+
+<details>
+<summary><b>🔔 8. Notification Center (`/notifications`)</b></summary>
+<br/>
+<b>The Goal:</b> A centralized history of all platform alerts.
+
+* **Activity Log**: While real-time toast notifications eventually disappear, this page provides a permanent ledger of all interactions (answers, verifications, upvotes) related to the user.
+* **Mark as Read**: Users can clear their notification badges by clicking to acknowledge they've seen the updates.
+</details>
+
+<details>
+<summary><b>🔐 9. Authentication & Login Hub (`/login`)</b></summary>
+<br/>
+<b>The Goal:</b> A highly polished, secure, and intuitive gateway for both students and administrators.
+
+* **Dual-Tab Interface**: Instantly toggle between "Student" login (username-based) and "Admin" login (email-based) without loading a new page.
+* **Client-Side Validation**: Real-time regex validation ensures usernames contain valid characters and passwords meet length requirements before ever hitting the server.
+* **Password Recovery Flow**: A built-in "Forgot Password" state that allows users to securely reset their credentials directly within the same UI component.
+* **UX Polish**: Features smooth CSS fade-in animations, inline password visibility toggles, loading spinners to prevent double-submissions, and a beautiful glowing blurred-orb aesthetic background.
+</details>
+
 ---
 
 ## 🔔 Real-Time Notifications
