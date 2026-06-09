@@ -284,60 +284,92 @@ All API endpoints are prefixed with `/api`. Protected routes utilize NestJS JWT 
 
 ## ⚙️ Environment Setup
 
-### Backend — `backend/.env`
-Create a `.env` file inside the `backend/` folder:
+To ensure security, environment variables are not committed to this repository. You must manually create these configuration files before starting the servers.
+
+### 1. Backend Configuration (`backend/.env`)
+Navigate to the `backend/` directory and create a new file exactly named `.env`. Paste the following configuration:
 ```env
+# The port the NestJS API will run on
 PORT=3000
+
+# The connection string for your MongoDB database.
+# If you are running MongoDB locally, use the string below.
+# If you are using MongoDB Atlas, replace this with your Atlas SRV string.
 MONGODB_URI=mongodb://localhost:27017/samagama
-JWT_SECRET=your_super_secret_jwt_key_here
+
+# The cryptographic key used to sign JSON Web Tokens for authentication.
+# In a production environment, this should be a long, randomly generated string.
+JWT_SECRET=samagama_development_secret_key_123!
 ```
 
-### Frontend — `frontend/.env`
-Create a `.env` file inside the `frontend/` folder:
+### 2. Frontend Configuration (`frontend/.env`)
+Navigate to the `frontend/` directory and create a new file exactly named `.env`. Paste the following configuration:
 ```env
+# The base URL where the Vite frontend will send API requests.
+# This must match the PORT defined in your backend .env file.
 VITE_API_URL=http://localhost:3000/api
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (Step-by-Step Guide)
 
-### Prerequisites
-* **Node.js** (v18 or higher)
-* **MongoDB** (Local database instance or Atlas connection URL)
-* **npm** (v9 or higher)
+We have designed AskSam to be extremely easy to spin up in a local development environment. Follow this foolproof guide to get the platform running.
 
-### Setup & Dev Server Run
-Follow these steps to run AskSam locally:
+### Prerequisites Check
+Before you begin, verify that your machine has the following installed:
+* **Node.js** (v18.x or higher) — *Verify by running `node -v` in your terminal.*
+* **npm** (v9.x or higher) — *Verify by running `npm -v` in your terminal.*
+* **MongoDB** (v6.x or higher) — *Must be actively running on your machine (default port 27017), or you must have a cloud Atlas URI.*
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd AskSam
-   ```
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/vicharanashala/cs35.git
+cd cs35
+```
+*(Make sure you have completed the **Environment Setup** section above before proceeding to Step 2).*
 
-2. **Launch Backend Server:**
-   ```bash
-   cd backend
-   npm install
-   npm run start:dev
-   ```
+### Step 2: Initialize the Backend (NestJS API)
+The backend acts as the brain of AskSam, handling database reads, writes, and WebSocket broadcasts.
+```bash
+# 1. Enter the backend directory
+cd backend
 
-3. **Launch Frontend Development Server:**
-   Open a new terminal tab/window:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   Open your browser and navigate to `http://localhost:5173`.
+# 2. Install all strict TypeScript and NestJS dependencies
+npm install
 
-### Seeding FAQ Data (Optional)
-To pre-seed the database with structured FAQ documents:
+# 3. Start the NestJS development server in watch mode
+npm run start:dev
+```
+*Wait until you see the message `[NestApplication] Nest application successfully started` in your terminal.*
+
+### Step 3: Initialize the Frontend (React SPA)
+Open a **new, completely separate terminal window** (do not close the backend terminal).
+```bash
+# 1. Enter the frontend directory
+cd frontend
+
+# 2. Install all React, Vite, and Tailwind dependencies
+npm install
+
+# 3. Start the Lightning-fast Vite dev server
+npm run dev
+```
+*The terminal will display a local URL. Open your browser and navigate to `http://localhost:5173` to interact with AskSam!*
+
+---
+
+### Step 4: Seeding Mock Data (Recommended for Evaluators)
+If you are evaluating this project and want to instantly see what a populated knowledge base looks like without typing it all manually, we have included a seeding script.
+
+Open a third terminal window:
 ```bash
 cd backend/scripts
+
+# Run the Node.js module to inject structured FAQ documents into MongoDB
 node seed_faqs.mjs
 ```
+*You will see a success message indicating how many records were inserted. Refresh your browser at `http://localhost:5173` and you will immediately see populated categories and FAQs.*
 
 Other available backend scripts:
 * `node clear_db.mjs` - Clears all Mongoose collections (⚠️ Destructive)
