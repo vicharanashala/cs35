@@ -1,48 +1,139 @@
-<p align="center">
-  <img src="assets/banner.svg" alt="AskSam Banner" />
-</p>
+# AskSam — Samagama Collaborative FAQ Platform
 
 <div align="center">
 
-![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-flat-square&logo=nestjs&logoColor=white)
-![React](https://img.shields.io/badge/React-61DAFB?style=for-flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-flat-square&logo=typescript&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-flat-square&logo=mongodb&logoColor=white)
-![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-flat-square&logo=socket.io&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-flat-square&logo=tailwindcss&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-10.x-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
+![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-8.x-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-**A highly scalable, collaborative FAQ and Q&A platform built for Samagama students at the [Vicharanashala Lab for Education Design, IIT Ropar](https://vicharanashala.ai).**
+> **AskSam is a lightweight, crowdsourced FAQ and Q&A portal for Samagama students** — built at the Vicharanashala Lab for Education Design, IIT Ropar.
+>
+> Students search once. If an answer doesn't exist, they post it to a peer-review queue. Verified peers resolve it, categorize it under structural tracks like ViBe (Vikram Betal), and promote the definitive response straight into the permanent knowledge treasury.
 
 </div>
 
 ---
 
-## 📌 Executive Summary
+## 📋 Table of Contents
 
-AskSam is a next-generation knowledge management portal engineered to prevent information loss in student communities. By leveraging automated moderation queues, verified answer tracking, and real-time community engagement, AskSam transforms chaotic forum discussions into a clean, canonical FAQ database. 
-
-The architecture is built for high availability, utilizing modern server-state management on the client and a robust, event-driven micro-service architecture on the backend.
+- [🌟 Standout Innovations](#-standout-innovations)
+- [📱 Interactive Project Walkthrough \& Demo](#-interactive-project-walkthrough--demo)
+- [🔔 Real-Time Notifications](#-real-time-notifications)
+- [🎨 UI \& Design System](#-ui--design-system)
+- [System Architecture \& Workflow](#-system-architecture--workflow)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Database Schemas](#-database-schemas)
+- [API Endpoints](#-api-endpoints)
+- [Getting Started](#-getting-started)
+- [FAQ](#-faq)
+- [Contributors](#-contributors)
 
 ---
 
-## 🏗️ System Architecture
+## 🌟 Standout Innovations (Why AskSam Stands Out)
 
-### 🔄 Platform Workflow
+When building AskSam, we focused heavily on enterprise-grade reliability and frictionless User Experience (UX):
 
-```mermaid
-flowchart TD
-    A([User Login / Signup]) --> B{Search Existing?}
-    B -- Found --> C([View FAQ])
-    B -- Not Found --> D([Ask New Question])
-    D --> E[(Moderation Queue)]
-    E --> F[Community Submits Answers]
-    F --> G{Mark Best Answer?}
-    G -- Verified --> H[Promoted to Canonical FAQ ✅]
-    G -- Incorrect --> I[Flagged for Re-evaluation 🔄]
-    I --> E
-```
+1. **High-Availability Offline Fallback**: We engineered the NestJS backend to be fault-tolerant. If the primary MongoDB cluster ever goes down, the system gracefully falls back to a read-only `faqData.json` file. The app survives crashes that would normally take down standard student projects.
+2. **Zero-Friction State Persistence (Auth Gates)**: If an unauthenticated user types a detailed question and tries to submit, they aren't aggressively redirected. Instead, a smooth modal overlays the screen, allows them to log in or sign up, and *immediately* posts their saved query upon success without losing a single keystroke.
+3. **Self-Correcting Data Lifecycle**: Answers aren't just posted into the void. They enter a peer-review queue, get answered, and must be explicitly **verified** by an admin to elevate into a Canonical FAQ. If an answer is found to be incorrect later, the community can flag it, invoking our `reopenReason` flow to push it back into the queue for correction.
+4. **Performance-First Animations**: We achieved beautiful, fluid UI micro-animations (fade-ins, slide-ups, pulse-glows) natively using CSS keyframes in Tailwind v4, entirely avoiding heavy JavaScript animation libraries that bloat the client bundle.
 
-### ⚙️ Technical Topology
+---
+
+## 📱 Interactive Project Walkthrough & Demo
+
+*Click the dropdowns below to take a virtual tour of the platform and understand exactly what every page and button does!*
+
+<details>
+<summary><b>🏠 1. Home Page & Search Experience</b></summary>
+<br/>
+<b>The Goal:</b> To help students find answers instantly without cluttering the database with duplicate questions.
+
+* **"Search FAQs" Bar**: A predictive, Google-style smart search. As the user types, it dynamically filters through the database and displays matching questions in a dropdown list.
+* **"Browse Tracks" Buttons**: Quick-filter buttons (e.g., NOC, Offer Letter, ViBe) that instantly load verified FAQs belonging to that specific category.
+* **"Ask a Question" Button**: If the search yields no results, clicking this button smoothly transitions the user into the Ask Workflow.
+</details>
+
+<details>
+<summary><b>📝 2. The Ask Workflow (Question Submission)</b></summary>
+<br/>
+<b>The Goal:</b> To capture detailed questions while preventing duplicates.
+
+* **Title & Description Inputs**: Users type their question. The form supports rich text and allows pasting image URLs for screenshots.
+* **Live Deflection Panel**: As the user types their title, the right sidebar automatically queries the database and says: *"Hey, are any of these FAQs what you're looking for?"*
+* **"Submit to Queue" Button**: 
+  * If the user is logged in, it posts the question to MongoDB with an `open` status.
+  * If the user is NOT logged in, a **Login Modal** smoothly pops up. Once they authenticate, the system remembers what they typed and posts it automatically.
+</details>
+
+<details>
+<summary><b>📥 3. The Moderation Queue</b></summary>
+<br/>
+<b>The Goal:</b> A dedicated workspace for community peers to find and answer open questions.
+
+* **Oldest-First Routing**: The queue list automatically sorts questions so that the oldest unanswered questions are at the top, preventing anyone from being ignored.
+* **"Answer this Question" Button**: Clicking a card opens the Question Thread so a peer can write a response.
+* **Live Updates**: Thanks to Socket.IO, if someone else answers a question while you are looking at the queue, the card instantly vanishes from your screen!
+</details>
+
+<details>
+<summary><b>💬 4. Question Thread & Community Answers</b></summary>
+<br/>
+<b>The Goal:</b> Where the actual collaboration happens.
+
+* **React Quill Editor**: A rich-text box where peers type their answers.
+* **"Submit Answer" Button**: Posts the answer to the thread and sends a real-time notification to the student who asked it.
+* **Upvote / Downvote Buttons**: The community can vote on which answer is the most accurate.
+* **"Flag as Incorrect" Button**: If an answer is wrong, users can flag it. This changes the question's status to `reopened` and sends it back to the Moderation Queue.
+</details>
+
+<details>
+<summary><b>👑 5. Admin Dashboard & Verification</b></summary>
+<br/>
+<b>The Goal:</b> Ensuring only 100% accurate information becomes a permanent FAQ.
+
+* **"Verify & Convert to FAQ" Button**: This is the most powerful button in the app. When an Admin clicks this on an answer, the NestJS backend extracts the question and the verified answer, and creates a permanent entry in the Canonical FAQ database. The original thread is marked as `answered`.
+* **Category Manager**: Text inputs where admins can rename categories, approve new ones, or delete irrelevant tags.
+* **Failed Search Logs**: A table showing exactly what students searched for but couldn't find, giving admins ideas for new FAQs to write.
+</details>
+
+<details>
+<summary><b>👤 6. User Profile & Bookmarks</b></summary>
+<br/>
+<b>The Goal:</b> Keeping users engaged and allowing them to track their progress.
+
+* **Contribution Heatmap**: A visual chart showing how active the user has been in answering questions.
+* **"My Bookmarks" Tab**: A list of FAQs the user has clicked the "Bookmark" icon on for quick reference later.
+* **"My Questions" Tab**: A dashboard showing the status (`open`, `answered`, `reopened`) of all the questions the user has asked.
+</details>
+
+---
+
+## 🔔 Real-Time Notifications
+
+To ensure the community feels alive and responsive, AskSam utilizes a **WebSocket Architecture** via `Socket.IO`.
+* **Instant Delivery**: Users receive live toast notifications the exact moment someone answers their question, upvotes their response, or an admin verifies their answer.
+* **State Propagation**: The Moderation Queue updates in real-time. If a question is answered by one user, it instantly visually updates for all other users viewing the queue, preventing duplicated effort.
+
+---
+
+## 🎨 UI & Design System
+
+* 🌿 **Sage Academic Palette**: A clean, scholarly layout built on Tailwind CSS v4 featuring deep sage greens (`#5E7A5A`), crisp whites (`#FFFFFF`), and warm sand/cream accent tones.
+* ✨ **Interactive Modals**: We heavily utilize overlay modals for authentication and profile checkpoints to prevent jarring page reloads or routing interruptions.
+
+---
+
+## 🏗️ System Architecture & Workflow
+
+### Technical Topology
 
 ```mermaid
 flowchart LR
@@ -56,171 +147,245 @@ flowchart LR
     style JSON fill:#F7DF1E,stroke:#333,stroke-width:2px,color:#000
 ```
 
----
-
-## 📂 Project Structure
-
-To maintain separation of concerns and scale efficiently, the monorepo is divided into specialized modules. Specific proprietary algorithms regarding FAQ promotion and AI moderation have been abstracted into black-box core modules.
-
-<details>
-<summary><b>🌍 Frontend Architecture (React / Vite)</b></summary>
+### Platform Life-Cycle
 
 ```text
-frontend/
-├── src/
-│   ├── assets/           # Static media, icons, and SVGs
-│   ├── components/       # Reusable UI components
-│   │   ├── common/       # Buttons, Modals, Inputs
-│   │   └── layout/       # Navbars, Sidebars, Footers
-│   ├── hooks/            # Custom React hooks (TanStack Query wrappers)
-│   ├── pages/            # View-level route components
-│   ├── router/           # React Router v7 configuration & lazy loading
-│   ├── services/         # API client & Socket.IO event listeners
-│   ├── store/            # Client-side state management context
-│   ├── styles/           # Tailwind CSS theme configuration (v4)
-│   ├── types/            # TypeScript interfaces and shared DTOs
-│   └── utils/            # Helper functions and formatters
-├── public/               # Raw static assets
-├── index.html            # Application entry point
-├── package.json          # Dependency definitions
-└── vite.config.ts        # Vite build and proxy configurations
+  ┌──────────┐     ┌────────────┐     ┌─────────┐     ┌──────────────┐
+  │  Login / │ ──▶ │  Search    │ ──▶ │  Ask    │ ──▶ │    Queue     │
+  │  Signup  │     │  Existing  │     │  New Q  │     │  (Open / Reopen)
+  └──────────┘     └────────────┘     └─────────┘     └──────┬───────┘
+                                                             │
+                            ┌────────────────────────────────┘
+                            ▼
+                     ┌──────────────┐     ┌─────────────────────┐
+                     │  Community   │ ──▶ │  Best Answer        │
+                     │  Answers     │     │  Marked & Verified  │
+                     └──────────────┘     └──────────┬──────────┘
+                                                     │
+                              ┌──────────────────────┴──────────────┐
+                              ▼                                     ▼
+                       ┌─────────────┐                      ┌──────────────┐
+                       │  Promoted   │                      │  Flagged as  │
+                       │  to FAQ     │                      │  Incorrect   │
+                       │  ✅ FAQ     │                      │  🔄 Reopen   │
+                       └─────────────┘                      └──────┬───────┘
+                                                                   │
+                                                              ┌────▼────┐
+                                                              │ Back to │
+                                                              │  Queue  │
+                                                              └─────────┘
 ```
-</details>
-
-<details>
-<summary><b>🛠️ Backend Architecture (NestJS)</b></summary>
-
-```text
-backend/
-├── src/
-│   ├── common/           # Shared guards, interceptors, and decorators
-│   ├── config/           # Environment variable validation schemas
-│   ├── core/             # 🔒 Proprietary Business Logic & Algorithms
-│   ├── modules/          # Feature-based domain modules
-│   │   ├── auth/         # JWT generation and validation
-│   │   ├── users/        # User profile and role management
-│   │   ├── questions/    # Moderation queue and answer lifecycle
-│   │   ├── faqs/         # Canonical FAQ generation handlers
-│   │   └── search/       # Full-text indexing and query analytics
-│   ├── database/         # Mongoose schemas and connection factories
-│   ├── events/           # Socket.IO Gateway definitions
-│   ├── app.module.ts     # Root dependency injection container
-│   └── main.ts           # Server bootstrap and middleware setup
-├── scripts/              # Database seeding and migration utilities
-├── package.json          # Dependency definitions
-└── tsconfig.json         # Strict TypeScript compiler options
-```
-</details>
 
 ---
 
-## ✨ Platform Features
+## 🛠️ Tech Stack
 
-- **Knowledge Discovery:** Lightning-fast full-text search indexing across verified FAQs and active open questions.
-- **Intelligent Routing:** A dynamic moderation queue that routes questions using an oldest-first algorithm.
-- **Answer Verification Engine:** Proprietary logic that allows authorized users to verify answers, seamlessly converting them into canonical database entries.
-- **Reopen & Flagging Flow:** A self-correcting community mechanism where verified answers can be challenged and sent back to the queue.
-- **Real-Time WebSockets:** Live data pushing via Socket.IO ensures clients are updated instantly without manual polling.
-- **Role-Based Access Control (RBAC):** Granular permissions ensuring only authorized admins can finalize canonical data.
-- **Fault Tolerance:** Built-in offline resilience that falls back to a localized JSON structure if the primary document store is temporarily unavailable.
+### Frontend
+* **React 18** - UI components utilizing state hooks and concurrent rendering features.
+* **Vite 5** - Lightning-fast frontend build tool and hot-module replacement dev server.
+* **Tailwind CSS v4** - Utility-first styling with `@theme` CSS variables and custom animations.
+* **TanStack Query v5** - Server-state manager, handling caching, background refetching, and mutations.
+* **React Router v6** - Client-side SPA routing with lazy-loaded page routes.
+* **Socket.IO Client** - Real-time WebSocket event handling for notifications and live updates.
+* **React Quill New** - Rich text editor for questions and answers.
+* **Axios** - Promise-based HTTP client with request/response interceptors and `safeRequest` wrapper.
+
+### Backend
+* **NestJS 10** - Progressive Node.js backend framework providing reliable, structured architecture.
+* **TypeScript** - Strict type-safe programming across schemas, controllers, and services.
+* **Mongoose 8** - MongoDB object modeling schema library.
+* **MongoDB** - Primary document database (local instance or Atlas connection cluster).
+* **JWT & Guards** - Stateless token-based cookie authentication and role-based access control (RBAC).
+* **Socket.IO** - WebSocket gateway for live notifications and queue state propagation.
+* **Rate Limiting** - API rate limiting via `@nestjs/throttler` (e.g. 10 req/min on auth endpoints).
+* **Bcrypt** - Password hashing and secure encryption.
+
+---
+
+## 📁 Project Structure
+
+```text
+AskSam/
+├── backend/
+│   ├── src/
+│   │   ├── common/           # Shared guards, decorators, and interceptors
+│   │   ├── modules/          # Core NestJS modules (auth, faq, notification)
+│   │   ├── schemas/          # Mongoose database schemas (user, question, faq, etc.)
+│   │   ├── app.module.ts     # Root application module
+│   │   └── main.ts           # NestJS entry point
+│   ├── scripts/              # Migration and seeding utilities
+│   ├── nest-cli.json         # NestJS CLI configuration
+│   ├── tsconfig.json         # TypeScript configuration
+│   └── package.json          # Backend dependencies
+│
+├── frontend/
+│   ├── public/               # Static assets
+│   ├── src/
+│   │   ├── components/       # Reusable UI building blocks (FloatingBubbles, Footer, etc.)
+│   │   ├── context/          # Global React state contexts (Theme, User)
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── layouts/          # Core structural page layouts
+│   │   ├── pages/            # View pages (HomePage, LoginPage, AdminPage, QueuePage, etc.)
+│   │   ├── services/         # Axios client setup and API module wrappers
+│   │   ├── utils/            # Shared helper functions
+│   │   ├── App.jsx           # Main router and lazy routes setup
+│   │   └── index.css         # Styling, keyframe animations, & Tailwind v4 theme variables
+│   ├── tailwind.config.js    # Tailwind configurations
+│   ├── vite.config.js        # Vite compilation configuration
+│   └── package.json          # Frontend dependencies
+│
+└── README.md
+```
+
+---
+
+## 🗃️ Database Schemas
+
+The MongoDB schemas track student-submitted queries, status indicators, upvotes/downvotes, and the canonical knowledge library (FAQs).
+* **Question Schema (`question.schema.ts`)**: Handles open, answered, or reopened student questions along with contributor details, views, and upvotes/downvotes.
+* **FAQ Schema (`faq.schema.ts`)**: Stores permanent, verified community FAQs, pinned statuses, search embeddings, and detailed unhelpful feedback logs.
+
+---
+
+## 📚 API Endpoints
+
+All API endpoints are prefixed with `/api`. Protected routes require a valid `Authorization: Bearer <token>` header.
+* **Authentication**: Signup, login, forgot-password, and current session/profile retrieval.
+* **FAQs**: Retrieval, creation, updates, and helpful/unhelpful feedback logging.
+* **Questions**: Queue queries, thread discussions, answer submissions, voting, and converting verified answers to FAQs.
+* **Users & Socials**: Follow relationships, statistics, profiles, and bookmarks.
+* **Categories**: Creation, approval/confirmation, and renaming.
+* **Notifications**: Retrieval and mark-as-read updates.
+
+---
+
+## ⚙️ Environment Setup
+
+### Backend — `backend/.env`
+Create a `.env` file inside the `backend/` folder:
+```env
+PORT=3000
+MONGODB_URI=mongodb://localhost:27017/samagama
+JWT_SECRET=your_super_secret_jwt_key_here
+```
+
+### Frontend — `frontend/.env`
+Create a `.env` file inside the `frontend/` folder:
+```env
+VITE_API_URL=http://localhost:3000/api
+```
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- MongoDB Server
-- npm (v9 or higher)
+* **Node.js** (v18 or higher)
+* **MongoDB** (Local database instance or Atlas connection URL)
+* **npm** (v9 or higher)
 
-### Environment Configuration
-
-For security, create `.env` files in both directories based on these templates:
-
-<details>
-<summary><b>Backend Environment (<code>backend/.env</code>)</b></summary>
-
-```env
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/samagama
-JWT_SECRET=your_secure_jwt_secret_key
-# Core algorithmic services
-GROQ_API_KEY=optional_key_for_advanced_moderation
-```
-</details>
-
-<details>
-<summary><b>Frontend Environment (<code>frontend/.env</code>)</b></summary>
-
-```env
-VITE_API_URL=http://localhost:3000/api
-```
-</details>
-
-### Local Installation
+### Setup & Dev Server Run
+Follow these steps to run AskSam locally:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/vicharanashala/cs35.git
-   cd cs35
+   git clone <repository-url>
+   cd AskSam
    ```
 
-2. **Boot the API Server:**
+2. **Launch Backend Server:**
    ```bash
    cd backend
    npm install
    npm run start:dev
    ```
 
-3. **Boot the Client Application:**
+3. **Launch Frontend Development Server:**
+   Open a new terminal tab/window:
    ```bash
-   cd ../frontend
+   cd frontend
    npm install
    npm run dev
    ```
+   Open your browser and navigate to `http://localhost:5173`.
 
-The application is now actively running at `http://localhost:5173`.
+### Seeding FAQ Data (Optional)
+To pre-seed the database with structured FAQ documents:
+```bash
+cd backend/scripts
+node seed_faqs.mjs
+```
 
----
+Other available backend scripts:
+* `node clear_db.mjs` - Clears all Mongoose collections (⚠️ Destructive)
+* `node echo_env.mjs` - Validates and prints active environment variables
+* `node recreate_email_index.mjs` - Drops and rebuilds MongoDB indices on email fields
 
-## 🔌 API Gateway (Core Endpoints)
+### Production Build
+```bash
+# Backend compilation
+cd backend && npm run build && npm run start:prod
 
-The API is fully guarded. Protected routes demand a valid Bearer token within the `Authorization` header.
-
-| Domain | Endpoint | Method | Action |
-| :--- | :--- | :---: | :--- |
-| **Auth** | `/api/auth/login` | `POST` | Authenticate and issue JWT payload |
-| **FAQs** | `/api/faqs` | `GET` | Fetch canonical knowledge base |
-| **Queue** | `/api/questions` | `GET` | Query the active moderation queue |
-| **Ask** | `/api/questions` | `POST` | Dispatch a new question to the queue |
-| **Answer** | `/api/questions/:id/answer` | `PATCH` | Submit a community answer |
-| **Verify** | `/api/questions/:id/convert-to-faq` | `POST` | *(Admin)* Finalize and promote answer |
-| **Search** | `/api/search/full` | `GET` | Execute full-text index query |
-
----
-
-## 👥 Engineering Team
-
-Developed and maintained by the 2026 cohort at the Vicharanashala internship program, IIT Ropar.
-
-- Mano Shruthi S
-- Pavan Kumar M
-- Dusi Keerthi Prasanna
-- Rashmi Risha J
-- Thivesha M. S
-- Dishi Gupta
-- Ambati Vedanandana
-- Divyadharshini S
-- Putta Sri Tejaswi
-- Akshaya Boggarapu
+# Frontend static asset build
+cd frontend && npm run build
+```
 
 ---
 
-## 📜 License
+## 📊 Build & Test Status
 
-This project is licensed under the MIT License.
+| Scope | Command / Suite | Status |
+|---|---|---|
+| Frontend build | `npm run build` | ✅ Passing |
+| Backend build | `npm run build` | ✅ Passing |
+| E2E QA (Puppeteer) | `node qa_audit.mjs` | ✅ Passing (10/10 Audits) |
+
+---
+
+## 💬 FAQ
+
+**Q: Does the application work if MongoDB is offline?**
+> Yes, the backend includes an automated fallback mechanism that serves static FAQ content in read-only mode from `faqData.json` when the database cannot be reached.
+
+**Q: How does the reopen flow work?**
+> If a verified answer is incorrect, the question author flags it. This flips the question's status back to `reopened` and lists it in the queue for peers to answer again, logging a `reopenReason`.
+
+**Q: How does a peer-reviewed answer elevate to a canonical FAQ?**
+> An administrator verifies the student-submitted answer and hits "Convert to FAQ". This prompts the NestJS API to push the question and verified answer directly into the permanent FAQ feed.
+
+---
+
+## 👥 Contributors
+
+This platform was developed with ❤️ by the Vicharanashala internship program students at IIT Ropar:
+
+| Contributor | Focus Area | Profile |
+|:---|:---|:---|
+| **Mano Shruthi S** | Frontend & Backend | [@manoshyth](https://github.com/manoshruthis) |
+| **Pavan Kumar M** | Frontend & Backend | [@pavankumar](https://github.com/pavankumarmadamanchi72-ui) |
+| **Dusi Keerthi Prasanna** | Frontend & Backend | [@keerthi](https://github.com/dusikeerthiprasanna) |
+| **Rashmi Risha J** | Frontend & Backend | [@rashmirisha](https://github.com/rashmirisha) |
+| **Thivesha M. S** | Frontend & Backend | [@thivesha](https://github.com/thivesha) |
+| **Dishi Gupta** | Frontend & Backend | [@dishigpt](https://github.com/dishigpt) |
+| **Ambati Vedanandana** | Frontend & Backend | [@vedanandana](https://github.com/ambativedanandana-byte) |
+| **Divyadharshini S** | Frontend & Backend | [@divyadharshini](https://github.com/dd28703) |
+| **Putta Sri Tejaswi** | Frontend & Backend | [@tejaswi](https://github.com/sritejaswi30-rgb) |
+| **Akshaya Boggarapu** | Frontend & Backend | [@akshaya](https://github.com/akshayaboggarapu) |
+
+> Special acknowledgment to **GitHub Copilot** for assisting with code formatting, reviews, and documentation.
+
+---
+
+## 📝 License
+
+Distributed under the **MIT License**. Feel free to use, modify, and distribute this repository with attribution.
+
+[![Vicharanashala Lab](https://img.shields.io/badge/Built%20at-Vicharanashala%20Lab%20IIT%20Ropar-blue?style=for-the-badge)](https://vicharanashala.ai)
+
+---
 
 <div align="center">
-  <br/>
-  <b>Built for scalability. Designed for students.</b>
+
+**If this project helped you, consider giving it a ⭐ — it means a lot to the team!**
+
 </div>
