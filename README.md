@@ -114,6 +114,24 @@ When building AskSam, we focused heavily on enterprise-grade reliability and fri
 * **"My Questions" Tab**: A dashboard showing the status (`open`, `answered`, `reopened`) of all the questions the user has asked.
 </details>
 
+<details>
+<summary><b>📚 7. Browse FAQs (`/faqs`)</b></summary>
+<br/>
+<b>The Goal:</b> A dedicated hub to explore the entire permanent knowledge base.
+
+* **Category Filters**: Users can dynamically filter the entire library by specific tracks (e.g., Offers, ViBe).
+* **Tag System**: FAQs display visual tags indicating their context, making it easy to skim large amounts of information.
+</details>
+
+<details>
+<summary><b>🔔 8. Notification Center (`/notifications`)</b></summary>
+<br/>
+<b>The Goal:</b> A centralized history of all platform alerts.
+
+* **Activity Log**: While real-time toast notifications eventually disappear, this page provides a permanent ledger of all interactions (answers, verifications, upvotes) related to the user.
+* **Mark as Read**: Users can clear their notification badges by clicking to acknowledge they've seen the updates.
+</details>
+
 ---
 
 ## 🔔 Real-Time Notifications
