@@ -241,21 +241,44 @@ AskSam/
 
 ## 🗃️ Database Schemas
 
-The MongoDB schemas track student-submitted queries, status indicators, upvotes/downvotes, and the canonical knowledge library (FAQs).
-* **Question Schema (`question.schema.ts`)**: Handles open, answered, or reopened student questions along with contributor details, views, and upvotes/downvotes.
-* **FAQ Schema (`faq.schema.ts`)**: Stores permanent, verified community FAQs, pinned statuses, search embeddings, and detailed unhelpful feedback logs.
+The core data structures powering AskSam in MongoDB:
+
+| Schema Name | File Location | Purpose & Key Fields |
+|:---|:---|:---|
+| **Question** | `question.schema.ts` | Tracks student submissions. Statuses: `open`, `answered`, `reopened`. Stores author ID, views, upvote/downvote counts, and references to community answers. |
+| **FAQ** | `faq.schema.ts` | The canonical library. Stores verified questions, confirmed answers, `categoryId`, `isPinned` flags, and an array of `unhelpfulFeedback` logs. |
+| **User** | `user.schema.ts` | Handles authentication. Stores email, hashed passwords, roles (`user`, `admin`), contribution stats, reputation points, and saved bookmark references. |
+| **Category** | `category.schema.ts` | The structural tracks (e.g., ViBe). Stores category names, slug URLs, and whether the category is `approved` by an admin. |
+| **Notification** | `notification.schema.ts` | Stores live event triggers for Socket.IO (e.g., "Your question was answered"). Tracks `isRead` status. |
+| **SearchAnalytics** | `search-analytics.schema.ts` | Logs search queries that yielded zero results, allowing admins to track content gaps. |
 
 ---
 
 ## 📚 API Endpoints
 
-All API endpoints are prefixed with `/api`. Protected routes require a valid `Authorization: Bearer <token>` header.
-* **Authentication**: Signup, login, forgot-password, and current session/profile retrieval.
-* **FAQs**: Retrieval, creation, updates, and helpful/unhelpful feedback logging.
-* **Questions**: Queue queries, thread discussions, answer submissions, voting, and converting verified answers to FAQs.
-* **Users & Socials**: Follow relationships, statistics, profiles, and bookmarks.
-* **Categories**: Creation, approval/confirmation, and renaming.
-* **Notifications**: Retrieval and mark-as-read updates.
+All API endpoints are prefixed with `/api`. Protected routes utilize NestJS JWT Guards (`Authorization: Bearer <token>`).
+
+### Auth & User (`/api/auth`, `/api/users`)
+* `POST /api/auth/register` - Create new student account
+* `POST /api/auth/login` - Authenticate and receive JWT
+* `GET /api/auth/me` - Get current session profile
+* `GET /api/users/:id/stats` - Fetch contribution heatmap & rep
+
+### Questions & Queue (`/api/questions`)
+* `POST /api/questions` - Submit a new question (deflection workflow)
+* `GET /api/questions/queue` - Fetch open/reopened questions (oldest-first)
+* `POST /api/questions/:id/answers` - Submit peer answer
+* `PATCH /api/questions/:id/vote` - Upvote or downvote
+
+### FAQs (`/api/faqs`)
+* `GET /api/faqs` - Search and filter verified knowledge
+* `POST /api/faqs/convert` - **(Admin Only)** Extract verified answer and promote to FAQ
+* `POST /api/faqs/:id/feedback` - Log helpful/unhelpful metrics
+
+### Platform Management (`/api/admin`, `/api/notifications`)
+* `GET /api/admin/failed-searches` - Fetch gap analytics
+* `PATCH /api/categories/:id/approve` - **(Admin Only)** Verify new category
+* `GET /api/notifications` - Fetch WebSocket notification history
 
 ---
 
