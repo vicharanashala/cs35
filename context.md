@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**AskSam** is a crowdsourced FAQ and Q&A portal for Samagama students, built with React 19 (frontend) and NestJS 11 (backend).
+**AskSam** is a crowdsourced FAQ and Q&A portal for Samagama students, built with React 18.3 (frontend) and NestJS 10.4 (backend).
 
 **Purpose:** Enable students to search existing FAQs, ask new questions, get community answers, and have verified answers highlighted. Incorrect answers can be flagged to reopen questions back into the queue.
 
@@ -21,9 +21,9 @@ Incorrect answer → Reopen Question → Queue again
 
 ### Frontend
 - **Location:** `C:\Users\manos\OneDrive\Desktop\AskSam\frontend\`
-- **React 19** + **Vite 8** + **Tailwind CSS v4**
+- **React 18.3** + **Vite 5.3** + **Tailwind CSS v4**
 - **TanStack Query v5** for data fetching
-- **react-router-dom v7** for routing
+- **react-router-dom v6** for routing
 - **socket.io-client** for real-time updates
 - **react-quill-new** for rich text editing
 - **axios** for HTTP
@@ -31,10 +31,9 @@ Incorrect answer → Reopen Question → Queue again
 
 ### Backend
 - **Location:** `C:\Users\manos\OneDrive\Desktop\AskSam\backend\`
-- **NestJS 11** + **Mongoose 9** + **@nestjs/config**
+- **NestJS 10.4** + **Mongoose 8.5** + **@nestjs/config**
 - **JWT & Guards** for Authentication and Authorization
 - **Socket.IO** for real-time events (WebSockets)
-- **AI Integration** via `@xenova/transformers` and `groq-sdk`
 - **Port:** `3000`
 - Fallback mode reads from `faqData.json` when MongoDB unavailable (though MongoDB is now integrated).
 
@@ -91,14 +90,13 @@ frontend/src/
 2. **Real-time Updates** — Integrated Socket.IO for real-time notifications and queue updates.
 3. **Mongoose Schemas & DTOs** — Fully defined schemas (`user`, `question`, `answer`, `faq`, `notification`, `search-analytics`) replacing the previous schema-less design.
 4. **try/catch fallback pattern** — MongoDB wrapped in try/catch, falls back to LocalDataService if offline.
-5. **AI Module** — Included for smart search and similar question detection.
-6. **Status auto-update** — verified answer triggers `answered` status.
-7. **TanStack Query** for all server state.
-8. **react-router-dom** used for routing.
-9. **CSS-only animations** — keyframes defined in index.css, component styles use inline style objects.
-10. **Skeleton classes use raw CSS** — no `@apply` chains due to Tailwind v4 processing constraints.
-11. **Lazy loading** — pages loaded via `React.lazy()` + `Suspense` for code splitting.
-12. **safeRequest wrapper** — all API calls wrapped to prevent unhandled rejections.
+5. **Status auto-update** — verified answer triggers `answered` status.
+6. **TanStack Query** for all server state.
+7. **react-router-dom** used for routing.
+8. **CSS-only animations** — keyframes defined in index.css, component styles use inline style objects.
+9. **Skeleton classes use raw CSS** — no `@apply` chains due to Tailwind v4 processing constraints.
+10. **Lazy loading** — pages loaded via `React.lazy()` + `Suspense` for code splitting.
+11. **safeRequest wrapper** — all API calls wrapped to prevent unhandled rejections.
 
 ---
 
