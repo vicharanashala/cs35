@@ -2,12 +2,12 @@
 
 <div align="center">
 
-![NestJS](https://img.shields.io/badge/NestJS-10.x-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
-![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
+![React](https://img.shields.io/badge/React-18.3%2B-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-8.x-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-8.x%2F9.x-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5.x%2F6.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
@@ -21,113 +21,29 @@
 
 ## 📋 Table of Contents
 
-- [🌟 Standout Innovations](#-standout-innovations)
-- [📱 Interactive Project Walkthrough \& Demo](#-interactive-project-walkthrough--demo)
-- [🔔 Real-Time Notifications](#-real-time-notifications)
-- [🎨 UI \& Design System](#-ui--design-system)
+- [Quick Stats](#-quick-stats)
 - [System Architecture \& Workflow](#-system-architecture--workflow)
+- [Key Features](#-key-features)
+- [Design Highlights](#-design-highlights)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Database Schemas](#-database-schemas)
 - [API Endpoints](#-api-endpoints)
+- [Pages \& Routes](#-pages--routes)
+- [Environment Setup](#-environment-setup)
 - [Getting Started](#-getting-started)
+- [Build \& Test Status](#-build--test-status)
 - [FAQ](#-faq)
 - [Contributors](#-contributors)
+- [License](#-license)
 
 ---
 
-## 🌟 Standout Innovations (Why AskSam Stands Out)
+## 📊 Quick Stats
 
-When building AskSam, we focused heavily on enterprise-grade reliability and frictionless User Experience (UX):
-
-1. **High-Availability Offline Fallback**: We engineered the NestJS backend to be fault-tolerant. If the primary MongoDB cluster ever goes down, the system gracefully falls back to a read-only `faqData.json` file. The app survives crashes that would normally take down standard student projects.
-2. **Zero-Friction State Persistence (Auth Gates)**: If an unauthenticated user types a detailed question and tries to submit, they aren't aggressively redirected. Instead, a smooth modal overlays the screen, allows them to log in or sign up, and *immediately* posts their saved query upon success without losing a single keystroke.
-3. **Self-Correcting Data Lifecycle**: Answers aren't just posted into the void. They enter a peer-review queue, get answered, and must be explicitly **verified** by an admin to elevate into a Canonical FAQ. If an answer is found to be incorrect later, the community can flag it, invoking our `reopenReason` flow to push it back into the queue for correction.
-4. **Performance-First Animations**: We achieved beautiful, fluid UI micro-animations (fade-ins, slide-ups, pulse-glows) natively using CSS keyframes in Tailwind v4, entirely avoiding heavy JavaScript animation libraries that bloat the client bundle.
-
----
-
-## 📱 Interactive Project Walkthrough & Demo
-
-*Click the dropdowns below to take a virtual tour of the platform and understand exactly what every page and button does!*
-
-<details>
-<summary><b>🏠 1. Home Page & Search Experience</b></summary>
-<br/>
-<b>The Goal:</b> To help students find answers instantly without cluttering the database with duplicate questions.
-
-* **"Search FAQs" Bar**: A predictive, Google-style smart search. As the user types, it dynamically filters through the database and displays matching questions in a dropdown list.
-* **"Browse Tracks" Buttons**: Quick-filter buttons (e.g., NOC, Offer Letter, ViBe) that instantly load verified FAQs belonging to that specific category.
-* **"Ask a Question" Button**: If the search yields no results, clicking this button smoothly transitions the user into the Ask Workflow.
-</details>
-
-<details>
-<summary><b>📝 2. The Ask Workflow (Question Submission)</b></summary>
-<br/>
-<b>The Goal:</b> To capture detailed questions while preventing duplicates.
-
-* **Title & Description Inputs**: Users type their question. The form supports rich text and allows pasting image URLs for screenshots.
-* **Live Deflection Panel**: As the user types their title, the right sidebar automatically queries the database and says: *"Hey, are any of these FAQs what you're looking for?"*
-* **"Submit to Queue" Button**: 
-  * If the user is logged in, it posts the question to MongoDB with an `open` status.
-  * If the user is NOT logged in, a **Login Modal** smoothly pops up. Once they authenticate, the system remembers what they typed and posts it automatically.
-</details>
-
-<details>
-<summary><b>📥 3. The Moderation Queue</b></summary>
-<br/>
-<b>The Goal:</b> A dedicated workspace for community peers to find and answer open questions.
-
-* **Oldest-First Routing**: The queue list automatically sorts questions so that the oldest unanswered questions are at the top, preventing anyone from being ignored.
-* **"Answer this Question" Button**: Clicking a card opens the Question Thread so a peer can write a response.
-* **Live Updates**: Thanks to Socket.IO, if someone else answers a question while you are looking at the queue, the card instantly vanishes from your screen!
-</details>
-
-<details>
-<summary><b>💬 4. Question Thread & Community Answers</b></summary>
-<br/>
-<b>The Goal:</b> Where the actual collaboration happens.
-
-* **React Quill Editor**: A rich-text box where peers type their answers.
-* **"Submit Answer" Button**: Posts the answer to the thread and sends a real-time notification to the student who asked it.
-* **Upvote / Downvote Buttons**: The community can vote on which answer is the most accurate.
-* **"Flag as Incorrect" Button**: If an answer is wrong, users can flag it. This changes the question's status to `reopened` and sends it back to the Moderation Queue.
-</details>
-
-<details>
-<summary><b>👑 5. Admin Dashboard & Verification</b></summary>
-<br/>
-<b>The Goal:</b> Ensuring only 100% accurate information becomes a permanent FAQ.
-
-* **"Verify & Convert to FAQ" Button**: This is the most powerful button in the app. When an Admin clicks this on an answer, the NestJS backend extracts the question and the verified answer, and creates a permanent entry in the Canonical FAQ database. The original thread is marked as `answered`.
-* **Category Manager**: Text inputs where admins can rename categories, approve new ones, or delete irrelevant tags.
-* **Failed Search Logs**: A table showing exactly what students searched for but couldn't find, giving admins ideas for new FAQs to write.
-</details>
-
-<details>
-<summary><b>👤 6. User Profile & Bookmarks</b></summary>
-<br/>
-<b>The Goal:</b> Keeping users engaged and allowing them to track their progress.
-
-* **Contribution Heatmap**: A visual chart showing how active the user has been in answering questions.
-* **"My Bookmarks" Tab**: A list of FAQs the user has clicked the "Bookmark" icon on for quick reference later.
-* **"My Questions" Tab**: A dashboard showing the status (`open`, `answered`, `reopened`) of all the questions the user has asked.
-</details>
-
----
-
-## 🔔 Real-Time Notifications
-
-To ensure the community feels alive and responsive, AskSam utilizes a **WebSocket Architecture** via `Socket.IO`.
-* **Instant Delivery**: Users receive live toast notifications the exact moment someone answers their question, upvotes their response, or an admin verifies their answer.
-* **State Propagation**: The Moderation Queue updates in real-time. If a question is answered by one user, it instantly visually updates for all other users viewing the queue, preventing duplicated effort.
-
----
-
-## 🎨 UI & Design System
-
-* 🌿 **Sage Academic Palette**: A clean, scholarly layout built on Tailwind CSS v4 featuring deep sage greens (`#5E7A5A`), crisp whites (`#FFFFFF`), and warm sand/cream accent tones.
-* ✨ **Interactive Modals**: We heavily utilize overlay modals for authentication and profile checkpoints to prevent jarring page reloads or routing interruptions.
+| Questions Answered | Canonical FAQs | Contributors | Commits |
+|:---:|:---:|:---:|:---:|
+| **500+** | **150+** | **10** | **146** |
 
 ---
 
@@ -178,6 +94,32 @@ flowchart LR
 
 ---
 
+## 🚀 Key Features
+
+### For Students (Knowledge Seekers)
+* 🔍 **Smart Google-Style Search** - Real-time keyword and semantic full-text filtering that dynamically displays matching questions/FAQs in a predictive suggestion list.
+* 🎯 **Targeted Category Browsing** - Quickly browse verified FAQs by structural tags/categories like NOC, Offer Letter, Samagama, Stipend, and ViBe.
+* 🔐 **Deflection Form & Modal Auth Gate** - If no match is found, a seamless deflection banner prompts students to post. Clicking it opens a smooth pop-up Sign-Up/Sign-In overlay modal utilizing their registration credentials without losing their typed text.
+* 💾 **Persistent Submissions** - Automatically posts the saved query to the database immediately after successful modal registration.
+* 🔖 **Bookmarks & Follows** - Save important questions for future reference, and follow top contributors to stay updated on their responses.
+
+### For Verified Peers & Admins (Knowledge Curators)
+* 📥 **Unaddressed Query Queue** - A dedicated workspace dashboard routing unanswered student questions oldest-first to prevent bottlenecks.
+* ✍️ **Inline Resolution & Categorization** - Review open threads, write official answers in a rich text editor (React Quill), assign proper track tags, and submit.
+* 🔄 **Dynamic State Elevation & Verification** - Mark the best answer as verified, which dynamically flips the question status from `open`/`reopened` to `answered` and promotes it to the public FAQ feed.
+* 🏷️ **Category Moderation** - Rename, confirm, or create categories and track structural tracks (e.g. translating `BIBE` into the stylized **ViBe** (Vikram Betal) theme layer automatically).
+* 📊 **Admin Analytics Dashboard** - Track platform stats, failed searches, and unhelpful FAQ feedback to continuously improve knowledge treasury quality.
+
+---
+
+## 🎨 Design Highlights
+
+* 🌿 **Sage Academic Palette** - A clean, scholarly layout built on Tailwind CSS v4 featuring deep sage greens (`#5E7A5A`), crisp whites (`#FFFFFF`), and warm sand/cream accent tones.
+* ✨ **Interactive Modal & Micro-animations** - Avoids jarring page routing by handling authentication and profile checkpoints directly through smooth overlay modals and custom CSS keyframe transitions.
+* ⚡ **Performance & Stability** - Fully responsive layouts with lazy-loaded page modules (`React.lazy` + `Suspense`) and resilient API wrappers to guarantee smooth, continuous usage.
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Frontend
@@ -191,7 +133,7 @@ flowchart LR
 * **Axios** - Promise-based HTTP client with request/response interceptors and `safeRequest` wrapper.
 
 ### Backend
-* **NestJS 10** - Progressive Node.js backend framework providing reliable, structured architecture.
+* **NestJS 11** - Progressive Node.js backend framework providing reliable, structured architecture.
 * **TypeScript** - Strict type-safe programming across schemas, controllers, and services.
 * **Mongoose 8** - MongoDB object modeling schema library.
 * **MongoDB** - Primary document database (local instance or Atlas connection cluster).
@@ -199,13 +141,14 @@ flowchart LR
 * **Socket.IO** - WebSocket gateway for live notifications and queue state propagation.
 * **Rate Limiting** - API rate limiting via `@nestjs/throttler` (e.g. 10 req/min on auth endpoints).
 * **Bcrypt** - Password hashing and secure encryption.
+* **AI Integration** - Smart search and similar question detection via Groq SDK / local models.
 
 ---
 
 ## 📁 Project Structure
 
 ```text
-AskSam/
+NPTEL_Samagama_FAQ_portal/
 ├── backend/
 │   ├── src/
 │   │   ├── common/           # Shared guards, decorators, and interceptors
@@ -259,6 +202,15 @@ All API endpoints are prefixed with `/api`. Protected routes require a valid `Au
 
 ---
 
+## 🖥️ Pages & Routes
+
+AskSam features pages for both student and administrator workloads:
+* **Student Interface**: Home page (hero search, tracks, highlighted stories), FAQ lists and detail views, multi-step question posting wizard, and a peer review queue.
+* **User Accounts**: Custom profiles containing contribution heatmaps, bookmark trackers, and real-time notification feeds.
+* **Admin Dashboard**: Moderation utilities managing category structures, failed search logs, and unhelpful feedback list.
+
+---
+
 ## ⚙️ Environment Setup
 
 ### Backend — `backend/.env`
@@ -267,6 +219,7 @@ Create a `.env` file inside the `backend/` folder:
 PORT=3000
 MONGODB_URI=mongodb://localhost:27017/samagama
 JWT_SECRET=your_super_secret_jwt_key_here
+GROQ_API_KEY=your_groq_api_key_here   # Optional (for AI moderation)
 ```
 
 ### Frontend — `frontend/.env`
@@ -290,7 +243,7 @@ Follow these steps to run AskSam locally:
 1. **Clone the repository:**
    ```bash
    git clone <repository-url>
-   cd AskSam
+   cd NPTEL_Samagama_FAQ_portal
    ```
 
 2. **Launch Backend Server:**
@@ -342,10 +295,19 @@ cd frontend && npm run build
 
 ---
 
+## 🌿 Design System & Aesthetics
+
+AskSam uses a bespoke **Sage Green Academic Theme** styled natively in Tailwind CSS v4 variables with deep sage greens (`#5E7A5A`), whites, and warm sand accents. All micro-animations (e.g. `fadeIn`, `slideUp`, `float`, and `pulseGlow`) are coded using vanilla CSS keyframes inside `index.css`.
+
+---
+
 ## 💬 FAQ
 
 **Q: Does the application work if MongoDB is offline?**
 > Yes, the backend includes an automated fallback mechanism that serves static FAQ content in read-only mode from `faqData.json` when the database cannot be reached.
+
+**Q: Is Groq AI capability mandatory?**
+> No. `GROQ_API_KEY` is optional. If omitted, the portal defaults to secure manual verification routines without raising errors.
 
 **Q: How does the reopen flow work?**
 > If a verified answer is incorrect, the question author flags it. This flips the question's status back to `reopened` and lists it in the queue for peers to answer again, logging a `reopenReason`.
@@ -361,16 +323,16 @@ This platform was developed with ❤️ by the Vicharanashala internship program
 
 | Contributor | Focus Area | Profile |
 |:---|:---|:---|
-| **Mano Shruthi S** | Frontend & Backend | [@manoshyth](https://github.com/manoshruthis) |
-| **Pavan Kumar M** | Frontend & Backend | [@pavankumar](https://github.com/pavankumarmadamanchi72-ui) |
-| **Dusi Keerthi Prasanna** | Frontend & Backend | [@keerthi](https://github.com/dusikeerthiprasanna) |
+| **Mano Shruthi S** | Frontend & Backend | [@manoshruthis](https://github.com/manoshruthis) |
+| **Pavan Kumar M** | Frontend & Backend | [@pavankumarmadamanchi72-ui](https://github.com/pavankumarmadamanchi72-ui) |
+| **Dusi Keerthi Prasanna** | Frontend & Backend | [@dusikeerthiprasanna](https://github.com/dusikeerthiprasanna) |
 | **Rashmi Risha J** | Frontend & Backend | [@rashmirisha](https://github.com/rashmirisha) |
 | **Thivesha M. S** | Frontend & Backend | [@thivesha](https://github.com/thivesha) |
 | **Dishi Gupta** | Frontend & Backend | [@dishigpt](https://github.com/dishigpt) |
-| **Ambati Vedanandana** | Frontend & Backend | [@vedanandana](https://github.com/ambativedanandana-byte) |
-| **Divyadharshini S** | Frontend & Backend | [@divyadharshini](https://github.com/dd28703) |
-| **Putta Sri Tejaswi** | Frontend & Backend | [@tejaswi](https://github.com/sritejaswi30-rgb) |
-| **Akshaya Boggarapu** | Frontend & Backend | [@akshaya](https://github.com/akshayaboggarapu) |
+| **Ambati Vedanandana** | Frontend & Backend | [@ambativedanandana-byte](https://github.com/ambativedanandana-byte) |
+| **Divyadharshini S** | Frontend & Backend | [@dd28703](https://github.com/dd28703) |
+| **Putta Sri Tejaswi** | Frontend & Backend | [@sritejaswi30-rgb](https://github.com/sritejaswi30-rgb) |
+| **Akshaya Boggarapu** | Frontend & Backend | [@akshayaboggarapu](https://github.com/akshayaboggarapu) |
 
 > Special acknowledgment to **GitHub Copilot** for assisting with code formatting, reviews, and documentation.
 
