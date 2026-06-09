@@ -36,6 +36,8 @@
 - [Contributors](#-contributors)
 
 ---
+## Demo Video
+https://drive.google.com/file/d/1mr4TfA0GNu_sOrY3HePQdcapf6Emra83/view?usp=drive_link
 
 ## 🌟 Standout Innovations (Why AskSam Stands Out)
 
