@@ -22,6 +22,7 @@
 ## 📋 Table of Contents
 
 - [🌟 Standout Innovations](#-standout-innovations)
+- [🎯 Comprehensive Feature List](#-comprehensive-feature-list)
 - [📱 Interactive Project Walkthrough \& Demo](#-interactive-project-walkthrough--demo)
 - [🔔 Real-Time Notifications](#-real-time-notifications)
 - [🎨 UI \& Design System](#-ui--design-system)
@@ -44,6 +45,46 @@ When building AskSam, we focused heavily on enterprise-grade reliability and fri
 2. **Zero-Friction State Persistence (Auth Gates)**: If an unauthenticated user types a detailed question and tries to submit, they aren't aggressively redirected. Instead, a smooth modal overlays the screen, allows them to log in or sign up, and *immediately* posts their saved query upon success without losing a single keystroke.
 3. **Self-Correcting Data Lifecycle**: Answers aren't just posted into the void. They enter a peer-review queue, get answered, and must be explicitly **verified** by an admin to elevate into a Canonical FAQ. If an answer is found to be incorrect later, the community can flag it, invoking our `reopenReason` flow to push it back into the queue for correction.
 4. **Performance-First Animations**: We achieved beautiful, fluid UI micro-animations (fade-ins, slide-ups, pulse-glows) natively using CSS keyframes in Tailwind v4, entirely avoiding heavy JavaScript animation libraries that bloat the client bundle.
+
+---
+
+## 🎯 Comprehensive Feature List
+
+AskSam was designed with a massive suite of features tailored for a perfect academic Q&A experience. Here is an exhaustive list of every feature currently running in the platform:
+
+### 🔐 Authentication & Security
+* **JWT-Based Authentication:** Secure, stateless login sessions utilizing HTTP-only cookies and Bearer tokens.
+* **Role-Based Access Control (RBAC):** Strict NestJS Guards differentiating privileges between standard `Users` and `Admins`.
+* **API Rate Limiting:** Built-in throttler protecting authentication and critical endpoints from spam.
+* **Bcrypt Password Encryption:** Hashing all user credentials before database storage.
+* **Frictionless Auth Flow:** An interactive modal that preserves users' typed text if they attempt to submit a question while logged out.
+
+### 🔍 Search & Discovery
+* **Predictive Smart Search:** Real-time dropdown search suggestions that query the database as the user types.
+* **Dynamic Category Tracks:** Pre-defined, admin-approved content tracks (e.g., *ViBe*, *NOC*, *Internships*) that users can click to filter the knowledge base immediately.
+* **Visual Tagging System:** Colored badge tags identifying the context of every FAQ for rapid skimming.
+
+### 📝 Question & Answer Mechanics
+* **Rich-Text Formatting:** React Quill editor integration allowing bolding, italics, code blocks, and list formatting.
+* **Media Embedding:** Support for pasting external image URLs directly into questions and answers for visual context.
+* **Community Voting System:** Upvote and downvote mechanics to organically push the highest quality answers to the top.
+* **Live Deflection Panel:** A sidebar that detects question similarities while typing to proactively stop duplicate submissions.
+
+### ⚖️ Moderation & Workflow (The Data Lifecycle)
+* **Oldest-First Queue Routing:** An algorithm ensuring no question is left behind by sorting the moderation queue chronologically.
+* **Verification Promotion:** A one-click admin action (`Convert to FAQ`) that permanently elevates verified answers to the canonical library.
+* **Community Flagging (Reopen Flow):** Allows users to report incorrect answers, requiring a `reopenReason`, which sends the question back to the moderation queue.
+* **Failed Search Analytics:** Automatically logs queries that yield zero results, generating a hit-list for admins to create new content.
+
+### ⚡ Real-Time & Reliability
+* **WebSocket Notifications:** Socket.IO integration powering instant, live toast alerts when interactions occur.
+* **Live State Propagation:** The moderation queue updates dynamically across all connected clients (if someone answers a question, it instantly vanishes from everyone else's queue).
+* **High-Availability Offline Mode:** The NestJS API gracefully falls back to a read-only `faqData.json` file if the primary MongoDB cluster crashes.
+
+### 👤 User Engagement & Profiles
+* **Contribution Heatmaps:** GitHub-style visual charts tracking the frequency of a user's answers.
+* **Personal Bookmarking:** A centralized tab for users to save and quickly reference important FAQs later.
+* **My Questions Dashboard:** A dedicated space tracking the live status (`open`, `answered`, `reopened`) of every query a student has submitted.
 
 ---
 
