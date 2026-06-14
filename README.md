@@ -499,7 +499,7 @@ This platform was developed with ❤️ by the Vicharanashala internship program
 | **Divyadharshini S** | Documentation | [@dd28703](https://github.com/dd28703) |
 | **Akshaya Boggarapu** | Documentation | [@akshayaboggarapu](https://github.com/akshayaboggarapu) |
 
-> Special acknowledgment to **GitHub Copilot** for assisting with code formatting, reviews, and documentation.
+> Special acknowledgment to **MiniMax - 2.7** for assisting with code formatting, reviews, and documentation.
 
 ---
 
