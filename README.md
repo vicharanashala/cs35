@@ -488,15 +488,15 @@ This platform was developed with ❤️ by the Vicharanashala internship program
 
 | Contributor | Focus Area | Profile |
 |:---|:---|:---|
-| **Mano Shruthi S** | Team Lead | [@manoshruthis](https://github.com/manoshruthis) |
-| **Pavan Kumar M** | Documentation | [@pavankumarmadamanchi72-ui](https://github.com/pavankumarmadamanchi72-ui) |
+| **Mano Shruthi S** | Team Lead & Project Developer | [@manoshruthis](https://github.com/manoshruthis) |
+| **Dishi Gupta** | Database Architecture | [@dishigpt](https://github.com/dishigpt) |
+| **Pavan Kumar M** | Documentation & Prototype | [@pavankumarmadamanchi72-ui](https://github.com/pavankumarmadamanchi72-ui) |
 | **Dusi Keerthi Prasanna** | Documentation | [@dusikeerthiprasanna](https://github.com/dusikeerthiprasanna) |
+| **Putta Sri Tejaswi** | Documentation | [@sritejaswi30-rgb](https://github.com/sritejaswi30-rgb) |
 | **Rashmi Risha J** | Documentation | [@rashmirisha](https://github.com/rashmirisha) |
 | **Thivesha M. S** | Documentation | [@thivesha](https://github.com/thivesha) |
-| **Dishi Gupta** | Database Architecture | [@dishigpt](https://github.com/dishigpt) |
-| **Ambati Vedanandana** | Frontend & Backend | [@ambativedanandana-byte](https://github.com/ambativedanandana-byte) |
+| **Ambati Vedanandana** | Documentation | [@ambativedanandana-byte](https://github.com/ambativedanandana-byte) |
 | **Divyadharshini S** | Documentation | [@dd28703](https://github.com/dd28703) |
-| **Putta Sri Tejaswi** | Documentation | [@sritejaswi30-rgb](https://github.com/sritejaswi30-rgb) |
 | **Akshaya Boggarapu** | Documentation | [@akshayaboggarapu](https://github.com/akshayaboggarapu) |
 
 > Special acknowledgment to **GitHub Copilot** for assisting with code formatting, reviews, and documentation.
